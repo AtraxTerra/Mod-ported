@@ -7,6 +7,8 @@
     "AbstractMinecartMixin",
     "BlockEntityLegacyDataMixin",
     "BlockItemMixin",
+    "EntityLegacyDataMixin",
+    "TagValueInputAccessor",
     "BlockPlaceContextMixin",
     "BlocksMixin",
     "BuiltInPackSourceMixin",

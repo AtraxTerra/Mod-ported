@@ -55,10 +55,18 @@ for block, nbt in MERGES.items():
 
 zr = half + 4
 y = -60
-# a bearing on a creative motor turns a plank: the bearing assembles it into a contraption entity
-fill += [f"setblock 0 {y} {zr} create:creative_motor[facing=up]",
-         f"setblock 0 {y + 1} {zr} create:mechanical_bearing[facing=up]",
-         f"setblock 0 {y + 2} {zr} minecraft:oak_planks"]
+
+def bearing(z, chest_items):
+    """A plank and a chest of items, glued together, on a bearing that a creative motor turns: the
+    bearing assembles them into a contraption entity, the chest becoming mounted storage."""
+    return [f"setblock 0 {y + 2} {z} minecraft:oak_planks",
+            f"setblock 0 {y + 3} {z} minecraft:chest{chest_items}",
+            f"summon create:super_glue 0 {y + 2} {z} {{From:[0.0d,0.0d,0.0d],To:[1.0d,2.0d,1.0d]}}",
+            f"setblock 0 {y} {z} create:creative_motor[facing=up]",
+            f"setblock 0 {y + 1} {z} create:mechanical_bearing[facing=up]"]
+
+
+fill += bearing(zr, ITEMS)
 # a chest of Create items with data components (and ids that were renamed or removed)
 components = ",".join([
     '{Slot:0b,id:"create:incomplete_precision_mechanism",count:1,components:{"create:sequenced_assembly":'
@@ -83,8 +91,8 @@ fill.append(f"setblock 16 {y + 1} {zr} minecraft:hopper[facing=down]{ITEMS}")
 unfill.append(f"setblock 16 {y + 1} {zr} minecraft:air")
 
 extra = [
-    f"execute if entity @e[type=create:contraption]",
-    f"data get entity @e[type=!minecraft:item,x=0,y={y + 2},z={zr},distance=..3,limit=1]",
+    f"execute if entity @e[type=create:stationary_contraption]",
+    f"data get entity @e[type=create:stationary_contraption,x=0,y={y + 2},z={zr},distance=..3,limit=1]",
     f"data get block 0 {y + 1} {zr}",
     f"data get block 4 {y} {zr}",
     f"data get block 8 {y} {zr}",
@@ -96,10 +104,6 @@ open(fill_file, "w").write("\n".join(fill) + "\n")
 open(unfill_file, "w").write("\n".join(unfill) + "\n")
 # phase B only: the same bearing built fresh under Create Fly, for its own contraption layout
 zf = zr + 4
-open(fresh_file, "w").write("\n".join([
-    f"setblock 0 {y} {zf} create:creative_motor[facing=up]",
-    f"setblock 0 {y + 1} {zf} create:mechanical_bearing[facing=up]",
-    f"setblock 0 {y + 2} {zf} minecraft:oak_planks",
-]) + "\n")
-open(fresh_file + ".get", "w").write(f"data get entity @e[type=!minecraft:item,x=0,y={y + 2},z={zf},distance=..3,limit=1]\n")
+open(fresh_file, "w").write("\n".join(bearing(zf, ITEMS)) + "\n")
+open(fresh_file + ".get", "w").write(f"data get entity @e[type=create:stationary_contraption,x=0,y={y + 2},z={zf},distance=..3,limit=1]\n")
 open(extra_file, "w").write("\n".join(extra) + "\n")

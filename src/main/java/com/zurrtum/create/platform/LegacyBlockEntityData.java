@@ -77,7 +77,8 @@ public final class LegacyBlockEntityData {
 
     // --- value encodings, everywhere in the tree ---------------------------------------------------
 
-    private static void values(CompoundTag tag) {
+    /** The value-encoding rewrites alone, recursively; also used for Create entities. */
+    static void values(CompoundTag tag) {
         for (String key : List.copyOf(tag.keySet())) {
             if (key.equals("components")) {
                 continue;
@@ -160,7 +161,9 @@ public final class LegacyBlockEntityData {
                         for (String k : level.keySet()) {
                             tank.put(k, level.get(k));
                         }
-                        CompoundTag fluid = fluidOf(tank.get("TankContent"));
+                        // the original Create: TankContent:{Fluid:{...}}; Create: Adapted: Fluid:{...}
+                        CompoundTag fluid = fluidOf(tank.contains("TankContent") ? tank.get("TankContent") : tank.get("Fluid"));
+                        tank.remove("Fluid");
                         if (fluid != null) {
                             millibucketsToDroplets(fluid);
                             tank.put("TankContent", fluid);
