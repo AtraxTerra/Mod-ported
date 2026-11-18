@@ -29,8 +29,10 @@ IMPORT_MAP = {
 
 # Symbol-level rewrites applied to the body, paired with the import changes above.
 BODY_SUBS = [
-    (re.compile(r"@Environment\(\s*EnvType\.CLIENT\s*\)"), "@OnlyIn(Dist.CLIENT)"),
-    (re.compile(r"@Environment\(\s*EnvType\.SERVER\s*\)"), "@OnlyIn(Dist.DEDICATED_SERVER)"),
+    # @Environment is DROPPED, not translated: Fabric really strips those members on the other side,
+    # but NeoForge 26 no longer strips @OnlyIn ones -- it only reports each use as a loading warning,
+    # and any loading warning puts a click-through screen in front of every launch.
+    (re.compile(r"[ \t]*@Environment\(\s*EnvType\.(?:CLIENT|SERVER)\s*\)[ \t]*\n?"), ""),
     (re.compile(r"\bEnvType\.CLIENT\b"), "Dist.CLIENT"),
     (re.compile(r"\bEnvType\.SERVER\b"), "Dist.DEDICATED_SERVER"),
 ]

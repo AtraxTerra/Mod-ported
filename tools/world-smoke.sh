@@ -43,6 +43,11 @@ PROPS
 ids=$(ls src/main/resources/assets/create/blockstates | sed 's/\.json$//' | grep -vE "$SKIP" | sort)
 total=$(echo "$ids" | wc -l)
 side=$(python3 -I -c "import math; print(math.ceil(math.sqrt($total + 1)))")
+# A dedicated server with nobody online keeps no chunks loaded in 26.x, and setblock answers
+# "That position is not loaded". The grid is force-loaded first, in a separate batch, with a pause
+# for the chunks to arrive.
+half=$(( (side / 2 + 1) * 2 ))
+printf 'forceload add %d %d %d %d\n' "-$half" "-$half" "$half" "$half" > world-smoke-forceload.txt
 {
     echo "setworldspawn 0 -60 0"
     i=0
@@ -68,7 +73,9 @@ echo "::endgroup::"
 
 status=0
 if [ "$up" -eq 1 ]; then
-    python3 -I tools/rcon.py --password "$PASSWORD" < world-smoke-commands.txt > world-smoke-results.tsv
+    python3 -I tools/rcon.py --password "$PASSWORD" < world-smoke-forceload.txt > world-smoke-results.tsv
+    sleep 10
+    python3 -I tools/rcon.py --password "$PASSWORD" < world-smoke-commands.txt >> world-smoke-results.tsv
     sleep "$TICK_SECONDS"
     printf 'save-all flush\nstop\n' | python3 -I tools/rcon.py --password "$PASSWORD" >> world-smoke-results.tsv 2>/dev/null || true
     for _ in $(seq 1 120); do kill -0 "$GRADLE_PID" 2>/dev/null || break; sleep 1; done

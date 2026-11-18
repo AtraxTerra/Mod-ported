@@ -1,7 +1,5 @@
 package com.zurrtum.create.foundation.blockEntity;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,7 +14,9 @@ public abstract class CachedRenderBBBlockEntity extends SyncedBlockEntity {
         super(type, pos, state);
     }
 
-    @OnlyIn(Dist.CLIENT)
+    // Port: upstream marks this @Environment(EnvType.CLIENT). NeoForge 26 no longer strips @OnlyIn
+    // members and reports each use as a loading warning, which puts a click-through warnings
+    // screen in front of every launch. Nothing here is client-only, so it is simply dropped.
     public AABB getRenderBoundingBox() {
         if (renderBoundingBox == null) {
             renderBoundingBox = createRenderBoundingBox();
