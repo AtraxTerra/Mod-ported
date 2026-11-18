@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.contraptions.mounted;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.*;
 import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
@@ -277,7 +279,7 @@ public class CartAssemblerBlockEntity extends SmartBlockEntity {
     public enum CartMovementMode implements StringRepresentable {
         ROTATE, ROTATE_PAUSED, ROTATION_LOCKED;
 
-        public static final Codec<CartMovementMode> CODEC = StringRepresentable.fromEnum(CartMovementMode::values);
+        public static final Codec<CartMovementMode> CODEC = LegacyEnumCodec.of(CartMovementMode::values);
 
         @Override
         public String getSerializedName() {

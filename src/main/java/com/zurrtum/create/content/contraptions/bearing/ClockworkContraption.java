@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.contraptions.bearing;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllContraptionTypes;
 import com.zurrtum.create.api.contraption.ContraptionType;
@@ -145,7 +147,7 @@ public class ClockworkContraption extends Contraption {
     public enum HandType implements StringRepresentable {
         HOUR, MINUTE;
 
-        public static final Codec<HandType> CODEC = StringRepresentable.fromEnum(HandType::values);
+        public static final Codec<HandType> CODEC = LegacyEnumCodec.of(HandType::values);
 
         @Override
         public String getSerializedName() {

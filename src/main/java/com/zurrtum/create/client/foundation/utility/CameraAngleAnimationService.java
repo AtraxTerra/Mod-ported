@@ -1,5 +1,7 @@
 package com.zurrtum.create.client.foundation.utility;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.animation.LerpedFloat;
 import com.zurrtum.create.catnip.math.AngleHelper;
@@ -100,7 +102,7 @@ public class CameraAngleAnimationService {
 
     public enum Mode implements StringRepresentable {
         LINEAR, EXPONENTIAL;
-        public static final Codec<Mode> CODEC = StringRepresentable.fromEnum(Mode::values);
+        public static final Codec<Mode> CODEC = LegacyEnumCodec.of(Mode::values);
 
         @Override
         public String getSerializedName() {

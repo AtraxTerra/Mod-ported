@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.trains.signal;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllBlockEntityTypes;
 import com.zurrtum.create.content.equipment.wrench.IWrenchable;
@@ -36,7 +38,7 @@ public class SignalBlock extends Block implements IBE<SignalBlockEntity>, IWrenc
 
     public enum SignalType implements StringRepresentable {
         ENTRY_SIGNAL, CROSS_SIGNAL;
-        public static final Codec<SignalType> CODEC = StringRepresentable.fromEnum(SignalType::values);
+        public static final Codec<SignalType> CODEC = LegacyEnumCodec.of(SignalType::values);
 
         @Override
         public String getSerializedName() {

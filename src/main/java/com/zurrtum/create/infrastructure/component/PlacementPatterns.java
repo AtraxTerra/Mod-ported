@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.google.common.base.Predicates;
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllDataComponents;
@@ -18,7 +20,7 @@ import java.util.function.Predicate;
 public enum PlacementPatterns implements StringRepresentable {
     Solid, Checkered, InverseCheckered, Chance25, Chance50, Chance75;
 
-    public static final Codec<PlacementPatterns> CODEC = StringRepresentable.fromEnum(PlacementPatterns::values);
+    public static final Codec<PlacementPatterns> CODEC = LegacyEnumCodec.of(PlacementPatterns::values);
     public static final StreamCodec<ByteBuf, PlacementPatterns> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         PlacementPatterns.class);
 

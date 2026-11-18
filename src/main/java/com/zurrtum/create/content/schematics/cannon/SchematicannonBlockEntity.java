@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.schematics.cannon;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.*;
 import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
@@ -934,7 +936,7 @@ public class SchematicannonBlockEntity extends SmartBlockEntity implements MenuP
     public enum State implements StringRepresentable {
         STOPPED, PAUSED, RUNNING;
 
-        public static final Codec<State> CODEC = StringRepresentable.fromEnum(State::values);
+        public static final Codec<State> CODEC = LegacyEnumCodec.of(State::values);
 
         @Override
         public String getSerializedName() {

@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.kinetics.belt;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllBlockEntityTypes;
 import com.zurrtum.create.AllBlocks;
@@ -62,7 +64,7 @@ public class BeltBlockEntity extends KineticBlockEntity implements Clearable {
     public enum CasingType implements StringRepresentable {
         NONE, ANDESITE, BRASS;
 
-        public static final Codec<CasingType> CODEC = StringRepresentable.fromEnum(CasingType::values);
+        public static final Codec<CasingType> CODEC = LegacyEnumCodec.of(CasingType::values);
 
         @Override
         public String getSerializedName() {

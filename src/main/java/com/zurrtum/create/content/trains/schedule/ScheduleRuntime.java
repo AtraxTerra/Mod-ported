@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.trains.schedule;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.*;
 import com.zurrtum.create.AllDataComponents;
 import com.zurrtum.create.AllItems;
@@ -40,7 +42,7 @@ public class ScheduleRuntime {
     public enum State implements StringRepresentable {
         PRE_TRANSIT, IN_TRANSIT, POST_TRANSIT;
 
-        public static final Codec<State> CODEC = StringRepresentable.fromEnum(State::values);
+        public static final Codec<State> CODEC = LegacyEnumCodec.of(State::values);
 
         @Override
         public String getSerializedName() {

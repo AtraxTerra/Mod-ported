@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.processing.burner;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.zurrtum.create.AllBlockEntityTypes;
@@ -323,7 +325,7 @@ public class BlazeBurnerBlock extends HorizontalDirectionalBlock implements IBE<
     public enum HeatLevel implements StringRepresentable {
         NONE, SMOULDERING, FADING, KINDLED, SEETHING;
 
-        public static final Codec<HeatLevel> CODEC = StringRepresentable.fromEnum(HeatLevel::values);
+        public static final Codec<HeatLevel> CODEC = LegacyEnumCodec.of(HeatLevel::values);
 
         public static HeatLevel byIndex(int index) {
             return values()[index];

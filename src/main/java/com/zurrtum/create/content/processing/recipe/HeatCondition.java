@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.processing.recipe;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import com.zurrtum.create.content.processing.burner.BlazeBurnerBlock.HeatLevel;
@@ -15,7 +17,7 @@ public enum HeatCondition implements StringRepresentable {
 
     private final int color;
 
-    public static final Codec<HeatCondition> CODEC = StringRepresentable.fromEnum(HeatCondition::values);
+    public static final Codec<HeatCondition> CODEC = LegacyEnumCodec.of(HeatCondition::values);
     public static final StreamCodec<ByteBuf, HeatCondition> PACKET_CODEC = CatnipStreamCodecBuilders.ofEnum(
         HeatCondition.class);
 

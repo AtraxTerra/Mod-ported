@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.trains.signal;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllBlockEntityTypes;
 import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
@@ -28,7 +30,7 @@ public class SignalBlockEntity extends SmartBlockEntity implements Transformable
 
     public enum OverlayState implements StringRepresentable {
         RENDER, SKIP, DUAL;
-        public static final Codec<OverlayState> CODEC = StringRepresentable.fromEnum(OverlayState::values);
+        public static final Codec<OverlayState> CODEC = LegacyEnumCodec.of(OverlayState::values);
 
         @Override
         public String getSerializedName() {
@@ -39,7 +41,7 @@ public class SignalBlockEntity extends SmartBlockEntity implements Transformable
     public enum SignalState implements StringRepresentable {
         RED, YELLOW, GREEN, INVALID;
 
-        public static final Codec<SignalState> CODEC = StringRepresentable.fromEnum(SignalState::values);
+        public static final Codec<SignalState> CODEC = LegacyEnumCodec.of(SignalState::values);
 
         @Override
         public String getSerializedName() {

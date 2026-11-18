@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.kinetics.transmission.sequencer;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -12,7 +14,7 @@ import java.util.Locale;
 public enum InstructionSpeedModifiers implements StringRepresentable {
     FORWARD_FAST(2), FORWARD(1), BACK(-1), BACK_FAST(-2);
 
-    public static final Codec<InstructionSpeedModifiers> CODEC = StringRepresentable.fromEnum(InstructionSpeedModifiers::values);
+    public static final Codec<InstructionSpeedModifiers> CODEC = LegacyEnumCodec.of(InstructionSpeedModifiers::values);
     public static final StreamCodec<ByteBuf, InstructionSpeedModifiers> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         InstructionSpeedModifiers.class);
 

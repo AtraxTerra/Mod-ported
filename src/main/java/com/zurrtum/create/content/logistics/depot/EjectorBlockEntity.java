@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.logistics.depot;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllBlockEntityTypes;
 import com.zurrtum.create.AllBlocks;
@@ -75,7 +77,7 @@ public class EjectorBlockEntity extends KineticBlockEntity {
     public enum State implements StringRepresentable {
         CHARGED, LAUNCHING, RETRACTING;
 
-        public static final Codec<State> CODEC = StringRepresentable.fromEnum(State::values);
+        public static final Codec<State> CODEC = LegacyEnumCodec.of(State::values);
 
         @Override
         public String getSerializedName() {

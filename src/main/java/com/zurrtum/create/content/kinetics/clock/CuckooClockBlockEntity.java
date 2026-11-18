@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.kinetics.clock;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllAdvancements;
 import com.zurrtum.create.AllBlockEntityTypes;
@@ -34,7 +36,7 @@ public class CuckooClockBlockEntity extends KineticBlockEntity {
 
     public enum Animation implements StringRepresentable {
         PIG, CREEPER, SURPRISE, NONE;
-        public static final Codec<Animation> CODEC = StringRepresentable.fromEnum(Animation::values);
+        public static final Codec<Animation> CODEC = LegacyEnumCodec.of(Animation::values);
 
         @Override
         public String getSerializedName() {

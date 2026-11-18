@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +13,7 @@ import java.util.Locale;
 public enum AttributeFilterWhitelistMode implements StringRepresentable {
     WHITELIST_DISJ, WHITELIST_CONJ, BLACKLIST;
 
-    public static final Codec<AttributeFilterWhitelistMode> CODEC = StringRepresentable.fromEnum(
+    public static final Codec<AttributeFilterWhitelistMode> CODEC = LegacyEnumCodec.of(
         AttributeFilterWhitelistMode::values);
     public static final StreamCodec<ByteBuf, AttributeFilterWhitelistMode> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         AttributeFilterWhitelistMode.class);

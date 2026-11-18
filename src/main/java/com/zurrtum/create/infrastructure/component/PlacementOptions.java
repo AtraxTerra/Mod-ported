@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +13,7 @@ import java.util.Locale;
 public enum PlacementOptions implements StringRepresentable {
     Merged, Attached, Inserted;
 
-    public static final Codec<PlacementOptions> CODEC = StringRepresentable.fromEnum(PlacementOptions::values);
+    public static final Codec<PlacementOptions> CODEC = LegacyEnumCodec.of(PlacementOptions::values);
     public static final StreamCodec<ByteBuf, PlacementOptions> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         PlacementOptions.class);
 

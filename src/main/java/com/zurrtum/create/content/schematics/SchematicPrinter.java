@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.schematics;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.AllBlocks;
 import com.zurrtum.create.AllDataComponents;
@@ -46,7 +48,7 @@ public class SchematicPrinter {
     public enum PrintStage implements StringRepresentable {
         BLOCKS, DEFERRED_BLOCKS, ENTITIES;
 
-        public static final Codec<PrintStage> CODEC = StringRepresentable.fromEnum(PrintStage::values);
+        public static final Codec<PrintStage> CODEC = LegacyEnumCodec.of(PrintStage::values);
 
         @Override
         public String getSerializedName() {

@@ -88,6 +88,7 @@ printf 'setworldspawn 0 -60 0\nforceload add %d %d %d %d\n' "-$half" "-$half" "$
 sleep 10
 awk -F'\t' '{print "setblock "$1" "$2" "$3" "$4}' grid.tsv | rcon > placeA.tsv
 sleep 20
+awk -F'\t' '{print "execute if block "$1" "$2" "$3" "$4}' grid.tsv | rcon > presentA.tsv
 awk -F'\t' '{print "data get block "$1" "$2" "$3}' grid.tsv | rcon > dataA.tsv
 stop
 echo "::endgroup::"
@@ -113,7 +114,8 @@ def load(name):
         return [l.rstrip("\n").split("\t", 1)[1] if "\t" in l else "" for l in open(name)]
     except FileNotFoundError:
         return []
-placeA, dataA, presentB, dataB = load("placeA.tsv"), load("dataA.tsv"), load("presentB.tsv"), load("dataB.tsv")
+placeA, presentA, dataA, presentB, dataB = (load(n) for n in ("placeA.tsv", "presentA.tsv", "dataA.tsv", "presentB.tsv", "dataB.tsv"))
+placeA, presentA, dataA, presentB, dataB = list(placeA), list(presentA), list(dataA), list(presentB), list(dataB)
 def keys(resp):
     m = re.search(r"has the following block data: (\{.*\})", resp)
     return set(re.findall(r"[{,]\s*\"?([A-Za-z_][\w]*)\"?\s*:", m.group(1))) if m else None
@@ -122,10 +124,12 @@ print("## World migration: Create: Adapted -> Create Fly\n")
 print(f"Phase A (Create: Adapted): placed **{placed}** of {len(grid)} blocks.")
 if not presentB:
     print("\n:x: Phase B produced no results (server did not start or RCON failed)."); raise SystemExit
-lost_blocks, lost_be, lost_keys = [], [], []
+lost_blocks, lost_be, lost_keys, unstable = [], [], [], []
 for i, (x, y, z, block) in enumerate(grid):
     if i >= len(placeA) or "Changed the block" not in placeA[i]:
         continue
+    if i < len(presentA) and "Test passed" not in presentA[i]:
+        unstable.append(block); continue  # removed itself under Create: Adapted already
     if i < len(presentB) and "Test passed" not in presentB[i]:
         lost_blocks.append(block); continue
     a, b = keys(dataA[i]) if i < len(dataA) else None, keys(dataB[i]) if i < len(dataB) else None
@@ -133,12 +137,20 @@ for i, (x, y, z, block) in enumerate(grid):
         lost_be.append(block)
     elif a and b is not None and (a - b) - {"id", "x", "y", "z"}:
         lost_keys.append((block, sorted((a - b) - {"id", "x", "y", "z"})))
-print(f"\n- blocks gone after the switch: **{len(lost_blocks)}**")
+print(f"\n- blocks that removed themselves before the switch (no support; not a migration issue): {len(unstable)} -- {', '.join(b.split(':')[1] for b in unstable)}")
+print(f"- blocks gone after the switch: **{len(lost_blocks)}**")
 for b in lost_blocks[:30]: print(f"  - `{b}`")
 print(f"- block entities gone (block kept, no data): **{len(lost_be)}**")
 for b in lost_be[:30]: print(f"  - `{b}`")
 print(f"- block entities that kept their block but lost NBT keys: **{len(lost_keys)}**")
-for b, k in lost_keys[:40]: print(f"  - `{b}`: {', '.join(k)}")
+for b, k in lost_keys[:120]: print(f"  - `{b}`: {', '.join(k)}")
+SAMPLES = ["item_vault", "fluid_tank", "basin", "depot", "black_toolbox", "black_postbox", "brass_tunnel",
+           "fluid_pipe", "copycat_panel", "stock_ticker", "mechanical_crafter", "weighted_ejector",
+           "creative_motor", "mechanical_press", "deployer", "smart_chute", "item_drain", "crushing_wheel_controller"]
+print("\n### NBT before / after, sample block entities\n")
+for i, (x, y, z, block) in enumerate(grid):
+    if block.split(":")[1] in SAMPLES and i < len(dataA):
+        print(f"- `{block}`\n  - Adapted: `{dataA[i][:700]}`\n  - Fly: `{dataB[i][:700] if i < len(dataB) else ''}`")
 EOF
 
 echo "::group::Phase B log: errors and Create warnings"

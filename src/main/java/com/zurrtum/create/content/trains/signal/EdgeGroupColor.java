@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.trains.signal;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import com.zurrtum.create.catnip.theme.Color;
@@ -22,7 +24,7 @@ public enum EdgeGroupColor implements StringRepresentable {
 
     WHITE(0xE5E1DC);
 
-    public static final Codec<EdgeGroupColor> CODEC = StringRepresentable.fromEnum(EdgeGroupColor::values);
+    public static final Codec<EdgeGroupColor> CODEC = LegacyEnumCodec.of(EdgeGroupColor::values);
     public static final StreamCodec<ByteBuf, EdgeGroupColor> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         EdgeGroupColor.class);
 

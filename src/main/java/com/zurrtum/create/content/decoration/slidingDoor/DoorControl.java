@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.decoration.slidingDoor;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -13,7 +15,7 @@ public enum DoorControl implements StringRepresentable {
 
     ALL, NORTH, EAST, SOUTH, WEST, NONE;
 
-    public static final Codec<DoorControl> CODEC = StringRepresentable.fromEnum(DoorControl::values);
+    public static final Codec<DoorControl> CODEC = LegacyEnumCodec.of(DoorControl::values);
     public static final StreamCodec<ByteBuf, DoorControl> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(DoorControl.class);
 
     @Override

@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import com.zurrtum.create.content.equipment.zapper.terrainzapper.*;
@@ -16,7 +18,7 @@ public enum TerrainBrushes implements StringRepresentable {
     Surface(new DynamicBrush(true)),
     Cluster(new DynamicBrush(false));
 
-    public static final Codec<TerrainBrushes> CODEC = StringRepresentable.fromEnum(TerrainBrushes::values);
+    public static final Codec<TerrainBrushes> CODEC = LegacyEnumCodec.of(TerrainBrushes::values);
     public static final StreamCodec<ByteBuf, TerrainBrushes> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         TerrainBrushes.class);
 

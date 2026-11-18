@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +13,7 @@ import java.util.Locale;
 public enum ClipboardType implements StringRepresentable {
     EMPTY, WRITTEN, EDITING;
 
-    public static final Codec<ClipboardType> CODEC = StringRepresentable.fromEnum(ClipboardType::values);
+    public static final Codec<ClipboardType> CODEC = LegacyEnumCodec.of(ClipboardType::values);
     public static final StreamCodec<ByteBuf, ClipboardType> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(
         ClipboardType.class);
 

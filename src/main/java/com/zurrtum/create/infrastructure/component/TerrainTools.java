@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import com.zurrtum.create.content.equipment.zapper.ZapperItem;
@@ -22,7 +24,7 @@ import java.util.Locale;
 public enum TerrainTools implements StringRepresentable {
     Fill, Place, Replace, Clear, Overlay, Flatten;
 
-    public static final Codec<TerrainTools> CODEC = StringRepresentable.fromEnum(TerrainTools::values);
+    public static final Codec<TerrainTools> CODEC = LegacyEnumCodec.of(TerrainTools::values);
     public static final StreamCodec<ByteBuf, TerrainTools> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(TerrainTools.class);
     public final String translationKey;
 

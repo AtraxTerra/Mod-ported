@@ -1,5 +1,7 @@
 package com.zurrtum.create.content.logistics.factoryBoard;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +13,7 @@ import java.util.Locale;
 public enum PanelSlot implements StringRepresentable {
     TOP_LEFT(1, 1), TOP_RIGHT(0, 1), BOTTOM_LEFT(1, 0), BOTTOM_RIGHT(0, 0);
 
-    public static final Codec<PanelSlot> CODEC = StringRepresentable.fromEnum(PanelSlot::values);
+    public static final Codec<PanelSlot> CODEC = LegacyEnumCodec.of(PanelSlot::values);
     public static final StreamCodec<ByteBuf, PanelSlot> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(PanelSlot.class);
 
     public final int xOffset;

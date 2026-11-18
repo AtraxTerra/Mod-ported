@@ -1,5 +1,7 @@
 package com.zurrtum.create.infrastructure.component;
 
+import com.zurrtum.create.platform.LegacyEnumCodec;
+
 import com.mojang.serialization.Codec;
 import com.zurrtum.create.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +13,7 @@ import java.util.Locale;
 public enum BottleType implements StringRepresentable {
     REGULAR, SPLASH, LINGERING;
 
-    public static final Codec<BottleType> CODEC = StringRepresentable.fromEnum(BottleType::values);
+    public static final Codec<BottleType> CODEC = LegacyEnumCodec.of(BottleType::values);
     public static final StreamCodec<ByteBuf, BottleType> STREAM_CODEC = CatnipStreamCodecBuilders.ofEnum(BottleType.class);
 
     @Override
