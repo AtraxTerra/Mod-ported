@@ -1,5 +1,7 @@
 package com.zurrtum.create.client.mixin;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -37,6 +39,19 @@ public class MixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
+        // A config plugin's getMixins() list is applied on EVERY side -- unlike the config's own
+        // "client" array, which Mixin only applies on the client. On Fabric that never mattered:
+        // fabric.mod.json loads the whole client config on the client only. NeoForge has no such
+        // per-config environment, so this plugin runs on the dedicated server too, and the first
+        // boot logged ten "Attempted to load class ... which is not present on the dedicated server"
+        // errors -- one per mixin below, each targeting a client-only renderer class.
+        //
+        // FMLEnvironment's dist is fixed before any mixin config loads (it is the first thing FML
+        // logs), so it is safe to read here, unlike ModList.
+        if (FMLEnvironment.getDist() != Dist.CLIENT) {
+            mixins = List.of();
+            return;
+        }
         mixins = new ArrayList<>(List.of(
             // Upstream's "no Fabric renderer API" branch -- the vanilla rendering path.
             "CuboidModelElementDeserializerMixin",

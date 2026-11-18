@@ -132,17 +132,10 @@ public abstract class EntityMixin implements SyncedDataHolder {
         return original.call(entity, pose);
     }
 
-    @WrapOperation(method = "playStepSound(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
-    private SoundType getStepSound(
-        BlockState state,
-        Operation<SoundType> original,
-        @Local(argsOnly = true) BlockPos pos
-    ) {
-        if (state.getBlock() instanceof SoundControlBlock block) {
-            return block.getSoundGroup(level, pos);
-        }
-        return original.call(state);
-    }
+    // Port note: upstream wraps BlockState.getSoundType() here so a SoundControlBlock can
+    // supply a position-aware sound. NeoForge patches that call away and routes the sound
+    // through IBlockExtension.getSoundType instead, which SoundControlBlock now overrides --
+    // so the wrap has no target on this loader and is not needed. See SoundControlBlock.
 
     @WrapOperation(method = "move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;getOnPosLegacy()Lnet/minecraft/core/BlockPos;"))
     private BlockPos fixSeatBouncing(Entity instance, Operation<BlockPos> original) {

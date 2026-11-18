@@ -24,8 +24,15 @@ public final class EarlyModDetection {
      */
     public static boolean isPresent(String modId) {
         try {
+            // FML 11 (NeoForge 26.x) made the loader an instance: getLoadingModList() hangs off
+            // FMLLoader.getCurrent(), it is no longer static. The static call this first used would
+            // have thrown, been caught, and answered false for every mod, silently.
             Class<?> fmlLoader = Class.forName("net.neoforged.fml.loading.FMLLoader");
-            Object loadingModList = fmlLoader.getMethod("getLoadingModList").invoke(null);
+            Object loader = fmlLoader.getMethod("getCurrent").invoke(null);
+            if (loader == null) {
+                return false;
+            }
+            Object loadingModList = loader.getClass().getMethod("getLoadingModList").invoke(loader);
             if (loadingModList == null) {
                 return false;
             }

@@ -227,17 +227,8 @@ public abstract class LivingEntityMixin extends Entity {
         return original.call(state, block) || state.getBlock() instanceof ScaffoldingControlBlock;
     }
 
-    @WrapOperation(method = "playBlockFallSound()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
-    private SoundType getBlockFallSound(
-        BlockState state,
-        Operation<SoundType> original,
-        @Local(ordinal = 0) int x,
-        @Local(ordinal = 1) int y,
-        @Local(ordinal = 2) int z
-    ) {
-        if (state.getBlock() instanceof SoundControlBlock block) {
-            return block.getSoundGroup(level(), new BlockPos(x, y, z));
-        }
-        return original.call(state);
-    }
+    // Port note: upstream wraps BlockState.getSoundType() here so a SoundControlBlock can
+    // supply a position-aware sound. NeoForge patches that call away and routes the sound
+    // through IBlockExtension.getSoundType instead, which SoundControlBlock now overrides --
+    // so the wrap has no target on this loader and is not needed. See SoundControlBlock.
 }
