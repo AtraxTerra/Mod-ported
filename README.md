@@ -37,7 +37,9 @@ amounts across the swap (checked on a world whose oil fields were set under the 
 The jars are the Build workflow's artifacts (`createdieselgenerators-neoforge-<commit>`, which also
 holds the Create Fly jar it was built against).
 
-Not ported yet: the Strut Your Stuff and recipe-viewer integrations (`deferred/excludes.txt`).
+JEI shows the seven Diesel Generators recipe types (basin and bulk fermenting, compression molding,
+casting, distillation, hammering, wire cutting) through `compat/jei`, which replaces the Fabric
+build's "Create Fly: Recipe Viewer" categories. Not ported yet: Strut Your Stuff (`deferred/excludes.txt`).
 
 ## Building
 

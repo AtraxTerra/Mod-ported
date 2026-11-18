@@ -61,10 +61,19 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+// JEI, compile-only: its categories are in compat/jei and load only when JEI is installed.
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = 'https://maven.blamejared.com' } }
+        filter { includeGroup 'mezz.jei' }
+    }
+}
+
 dependencies {
     compileOnly createFly
     localRuntime createFly
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+    compileOnly "mezz.jei:jei-${project.jei_version}"
 }
 
 sourceSets {
