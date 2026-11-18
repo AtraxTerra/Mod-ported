@@ -32,9 +32,11 @@ import com.zurrtum.create.infrastructure.worldgen.AllConfiguredFeatures;
 import com.zurrtum.create.infrastructure.worldgen.AllFeatures;
 import com.zurrtum.create.infrastructure.worldgen.AllPlacedFeatures;
 import com.zurrtum.create.infrastructure.worldgen.AllPlacementModifiers;
+import com.zurrtum.create.platform.BreathingHooks;
 import com.zurrtum.create.platform.Platform;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.server.MinecraftServer;
 import org.jspecify.annotations.Nullable;
@@ -90,6 +92,8 @@ public class Create {
     public Create(IEventBus modEventBus) {
         AllConfigs.register();
         modEventBus.addListener(AllTransfer::registerCapabilities);
+        // Diving helmet breathing; replaces two LivingEntity.baseTick wraps NeoForge patches away.
+        NeoForge.EVENT_BUS.addListener(BreathingHooks::onLivingBreathe);
     }
 
     public static void register() {

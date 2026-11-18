@@ -34,6 +34,11 @@ It does not read bytecode. A call whose parameter TYPES changed but whose argume
 invisible, as is a call that moved into a different method with nothing removed. It only knows about
 classes NeoForge patches; an unpatched class is assumed vanilla, which is right. A clean run is
 evidence, not proof -- the server boot remains the authority.
+
+It also cannot see `if (false)` guards: NeoForge disables some vanilla blocks that way, javac drops
+every call inside, and the patch still shows them as unchanged context (often past the end of the
+hunk). LivingEntity.baseTick lost two Create targets like that. audit_mixin_targets.py, which reads
+the patched bytecode, catches this and runs in CI; this script stays as the fast offline check.
 """
 import re
 import sys

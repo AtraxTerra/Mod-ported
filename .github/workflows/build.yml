@@ -105,6 +105,57 @@ jobs:
         if: steps.compile.outcome != 'success'
         run: exit 1
 
+      # Gates 3 and 4 at bytecode level: every injector's method and @At target, checked against
+      # the patched Minecraft jar ModDevGradle just produced. Unlike the boot test it covers the
+      # CLIENT mixins too, and it reports every failure at once instead of one per server launch.
+      # Report-only for now, like the boot test; flip continue-on-error off once it is clean.
+      - name: Mixin target audit (bytecode)
+        id: mixin-audit
+        shell: bash
+        continue-on-error: true
+        run: |
+          # Prefer the joined (client + server) jar so client mixins are covered too. Look in
+          # ModDevGradle's own output first; the Gradle cache is only a fallback (it is large).
+          mc=""
+          pick() {
+            while IFS= read -r jar; do
+              if unzip -l "$jar" 2>/dev/null | grep -q 'net/minecraft/world/entity/LivingEntity.class'; then
+                echo "candidate: $jar"
+                if unzip -l "$jar" | grep -q 'net/minecraft/client/Minecraft.class'; then mc="$jar"; fi
+                if [ -z "$mc" ]; then mc="$jar"; fi
+              fi
+            done
+            return 0  # bash -e: never let a false test leak out as the function's status
+          }
+          pick < <(find build/moddev -name '*.jar' ! -name '*sources*' 2>/dev/null)
+          if [ -z "$mc" ]; then pick < <(find "$HOME/.gradle/caches" -name '*.jar' ! -name '*sources*' \
+            \( -iname '*neoforge*' -o -iname '*minecraft*' \) 2>/dev/null); fi
+          if [ -z "$mc" ]; then
+            echo "::warning::no patched Minecraft jar found; jars under build/moddev:"
+            find build/moddev -name '*.jar' 2>/dev/null
+            exit 1
+          fi
+          echo "auditing against $mc"
+          python3 -I tools/audit_mixin_targets.py --src src/main/java --resources src/main/resources \
+            --classes build/classes/java/main --jar "$mc" | tee mixin-audit.log
+
+      - name: Summarise mixin audit
+        if: always() && steps.mixin-audit.outcome != 'skipped'
+        run: |
+          {
+            echo "## Mixin target audit"
+            echo
+            if [ "${{ steps.mixin-audit.outcome }}" = "success" ]; then
+              echo ":white_check_mark: every checked injector target exists in the patched bytecode."
+            else
+              echo ":x: injectors whose target is missing from the patched bytecode (each one fails Mixin's apply step):"
+            fi
+            echo
+            echo '```'
+            cat mixin-audit.log 2>/dev/null | head -200
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build jar
         run: ./gradlew build --stacktrace --console=plain
 

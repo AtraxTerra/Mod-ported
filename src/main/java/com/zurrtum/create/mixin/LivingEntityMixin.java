@@ -67,32 +67,10 @@ public abstract class LivingEntityMixin extends Entity {
     // patches this call to the level-sensitive IBlockExtension.getFriction, which
     // SlipperinessControlBlock now overrides, so the wrap has no target and is not needed.
 
-    @WrapOperation(method = "baseTick()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
-    private boolean breatheInLava(
-        LivingEntity entity,
-        TagKey<Fluid> tagKey,
-        Operation<Boolean> original,
-        @Local ServerLevel level
-    ) {
-        if (original.call(entity, tagKey)) {
-            return true;
-        }
-        if (entity instanceof ServerPlayer serverPlayer && !serverPlayer.getAbilities().invulnerable && entity.isInLava()) {
-            DivingHelmetItem.breatheInLava(serverPlayer, level);
-        }
-        return false;
-    }
-
-    @WrapOperation(method = "baseTick()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/effect/MobEffectUtil;hasWaterBreathing(Lnet/minecraft/world/entity/LivingEntity;)Z"))
-    private boolean canBreatheInWater(LivingEntity mob, Operation<Boolean> original, @Local ServerLevel level) {
-        if (original.call(mob)) {
-            return true;
-        }
-        if (mob instanceof ServerPlayer serverPlayer && !serverPlayer.getAbilities().invulnerable) {
-            return DivingHelmetItem.breatheUnderwater(serverPlayer, level);
-        }
-        return false;
-    }
+    // Port note: upstream wraps isEyeInFluid(WATER) and MobEffectUtil.hasWaterBreathing in baseTick()
+    // for the diving helmet. NeoForge disables that vanilla block with `if (false)` (handled in
+    // CommonHooks.onLivingBreathe), so both calls are gone from the bytecode. The same logic now
+    // runs on LivingBreatheEvent: see com.zurrtum.create.platform.BreathingHooks.
 
     @Inject(method = "collectEquipmentChanges(Ljava/util/Map;)Ljava/util/Map;", at = @At(value = "INVOKE", target = "Ljava/util/Map;entrySet()Ljava/util/Set;"))
     private void onLivingEquipmentChange(CallbackInfoReturnable<Map<EquipmentSlot, ItemStack>> cir) {
