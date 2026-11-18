@@ -117,8 +117,24 @@ mixin_failures=$(grep -cE 'FAILED during APPLY|was not applied|Found a remappabl
 
 # The verdict above goes to the run summary; the log tail goes to stdout unconditionally, because
 # the summary is not readable from the job log and a failing gate is useless if its reason is not.
-echo "::group::Last 80 lines of the Gradle/server log"
-tail -80 "$LOG" 2>/dev/null || echo "(no log produced -- Gradle never started)"
-echo "::endgroup::"
+# A tail is nearly useless here: a Gradle failure ends in eighty lines of its own stack frames and
+# the cause is far above them. So pull out the parts that actually say something.
+if [ -s "$LOG" ]; then
+    echo "::group::Why Gradle failed"
+    sed -n '/^FAILURE:/,/^\* Get more help/p' "$LOG" | head -40 || true
+    echo "::endgroup::"
+
+    echo "::group::Server output"
+    # Minecraft and NeoForge log with a [HH:MM:SS] [thread/LEVEL] prefix; Gradle's own noise does
+    # not, so this separates the game's story from the build tool's.
+    grep -E '^\[[0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$LOG" | tail -60 || echo "(the game never logged a line)"
+    echo "::endgroup::"
+
+    echo "::group::First 40 lines"
+    head -40 "$LOG"
+    echo "::endgroup::"
+else
+    echo "(no log produced -- Gradle never started)"
+fi
 
 exit "$status"
