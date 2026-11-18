@@ -117,32 +117,31 @@ mixin_failures=$(grep -cE 'FAILED during APPLY|was not applied|Found a remappabl
 
 # The verdict above goes to the run summary; the log tail goes to stdout unconditionally, because
 # the summary is not readable from the job log and a failing gate is useless if its reason is not.
-# A tail is nearly useless here: a Gradle failure ends in eighty lines of its own stack frames and
-# the cause is far above them. So pull out the parts that actually say something.
+# A tail is nearly useless on its own: a Gradle failure ends in eighty lines of its own stack
+# frames and the cause sits far above them. So each source of truth is printed separately, with
+# stack frames filtered, because the first three runs of this gate each failed with nothing to go
+# on for a different reason.
+strip_frames() {
+    grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$1"
+}
+
 if [ -s "$LOG" ]; then
     echo "::group::Why Gradle failed"
-    sed -n '/^FAILURE:/,/^\* Get more help/p' "$LOG" | head -40 || true
+    sed -n '/^FAILURE:/,/^\* Get more help/p' "$LOG" | head -40
     echo "::endgroup::"
 
-    echo "::group::Server output"
-    # Minecraft and NeoForge log with a [HH:MM:SS] [thread/LEVEL] prefix; Gradle's own noise does
-    # not, so this separates the game's story from the build tool's.
-    grep -E '^\[[0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$LOG" | tail -60 || echo "(the game never logged a line)"
+    echo "::group::Console, stack frames filtered (last 120 lines)"
+    strip_frames "$LOG" | tail -120
     echo "::endgroup::"
-
-    # The useful content is whatever is NOT a stack frame. Gradle and the JVM both bury the one
-    # line that matters under hundreds of "at ..." lines, and the first run of this gate showed
-    # nothing but those.
-    echo "::group::Log without stack frames (last 120 lines)"
-    grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$LOG" | tail -120
-    echo "::endgroup::"
+else
+    echo "(no console log -- Gradle never started)"
 fi
 
 # The game keeps its own log and writes crash reports to files, and that is where a startup death
-# actually explains itself -- stdout showed the server exiting with code 1 and nothing else.
+# explains itself. The console showed the server exiting with code 1 and nothing else.
 if [ -f "$RUN_DIR/logs/latest.log" ]; then
-    echo "::group::run/logs/latest.log (last 100 lines, stack frames filtered)"
-    grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$RUN_DIR/logs/latest.log" | tail -100
+    echo "::group::run/logs/latest.log, stack frames filtered (last 100 lines)"
+    strip_frames "$RUN_DIR/logs/latest.log" | tail -100
     echo "::endgroup::"
 else
     echo "(no run/logs/latest.log -- the game died before opening its own log)"
@@ -157,9 +156,7 @@ if [ ${#reports[@]} -gt 0 ]; then
         echo "::endgroup::"
     done
 else
-    echo "(no crash report)"
-else
-    echo "(no log produced -- Gradle never started)"
+    echo "(no crash report written)"
 fi
 
 exit "$status"
