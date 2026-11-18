@@ -1,0 +1,3 @@
+# Create's own registration plugin. Replaces the "create_plugin" entrypoint that
+# fabric.mod.json declared on the Fabric build.
+com.zurrtum.create.AllEarlyRegistries

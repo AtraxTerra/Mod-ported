@@ -1,0 +1,203 @@
+plugins {
+    id 'java-library'
+    id 'idea'
+    id 'net.neoforged.moddev' version "${moddev_version}"
+}
+
+version = "${project.mod_version}-${project.build_number}"
+group = project.maven_group
+
+base {
+    archivesName = "${project.archives_base_name}-${project.minecraft_version}-neoforge"
+}
+
+// 26.2 requires Java 25 on every loader.
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
+    // The port carries ~3.5k files from the Fabric source; keep the signal usable.
+    options.compilerArgs << '-Xmaxerrs' << '100000'
+}
+
+neoForge {
+    version = project.neoforge_version
+
+    // Converted from the upstream Fabric access widener (create.classtweaker)
+    // by tools/aw2at.py. Regenerate after any upstream change; do not hand-edit.
+    accessTransformers.from file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    // The two `transitive-inject-interface` directives in the access widener have
+    // no access-transformer equivalent -- NeoForge expresses them here instead.
+    interfaceInjectionData.from file('interface-injection.json')
+
+    // Fails the build when an AT line targets a member that no longer exists.
+    // Keep this ON: a stale AT line is otherwise a silent runtime failure.
+    validateAccessTransformers = true
+
+    parchment {
+        // Not used: 26.x is mojmap everywhere, and the Fabric source is already
+        // written against Mojang names. Adding Parchment would rename parameters
+        // out from under 3.5k ported files.
+        enabled = false
+    }
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+        clientData {
+            clientData()
+        }
+    }
+
+    mods {
+        "${project.mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Code that cannot apply on this loader.
+//
+// Upstream excludes a similar set for its own reasons (Fabric-only recipe viewers). This list adds
+// the parts that are specifically Fabric-bound. They are excluded rather than deleted so a future
+// multiloader split can switch them back on, and so the diff against upstream stays readable.
+// ---------------------------------------------------------------------------
+sourceSets {
+    main {
+        java {
+            // Recipe viewers that only exist for Fabric.
+            exclude 'com/zurrtum/create/client/compat/rrv/**'
+            // Explicitly Fabric-targeted compat.
+            exclude 'com/zurrtum/create/client/compat/fabric/**'
+            exclude 'com/zurrtum/create/compat/fabric/**'
+
+            // Fabric Renderer API (FRAPI) rendering path. Create Fly ships a second, vanilla
+            // rendering path that the client MixinPlugin selects when FRAPI is absent -- which is
+            // always the case here -- so none of this can ever load. See client/mixin/MixinPlugin.
+            exclude 'com/zurrtum/create/client/flywheel/lib/model/baked/FabricEmitterSupplier.java'
+            exclude 'com/zurrtum/create/client/foundation/model/FabricBakedModelHelper.java'
+            exclude 'com/zurrtum/create/client/mixin/SimpleModelPartMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/SimpleModelWrapperMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/WrapperBlockStateModelMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/WrapperBlockStateModelAccessor.java'
+            exclude 'com/zurrtum/create/client/mixin/CopycatModelMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/CopycatStepModelMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/CopycatPanelModelMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/ModelRenderHelperMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/ItemModelRenderHelperMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/BakedModelHelperMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/BufferEmitterMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/BufferPoseEmitterMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/BufferColorPoseEmitterMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/BufferAoPoseEmitterMixin.java'
+            // Patches fabric-block-api-v1, which is not present.
+            exclude 'com/zurrtum/create/client/mixin/ConnectedTextureBehaviourMixin.java'
+            // Target Fabric Sodium / Iris internals.
+            exclude 'com/zurrtum/create/client/mixin/QuadRenderHelperMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/IrisPipelinesMixin.java'
+            // Target the Fabric-only rrv recipe viewer.
+            exclude 'com/zurrtum/create/client/mixin/RrvRecipeViewMenuMixin.java'
+            exclude 'com/zurrtum/create/client/mixin/RrvRecipeViewScreenMixin.java'
+
+            // Patch Fabric API modules that are not present; nothing to patch here.
+            exclude 'com/zurrtum/create/mixin/MenuProviderMixin.java'
+            exclude 'com/zurrtum/create/mixin/ReloadListenerMixin.java'
+            // Replaced by client/platform/CreatePackFinders, which uses AddPackFindersEvent.
+            exclude 'com/zurrtum/create/client/mixin/ClientPackSourceMixin.java'
+
+            // Optional integrations, off until their NeoForge side is wired up. The JEI categories
+            // still call Fabric's custom-ingredient API, so switching enable_jei on means porting
+            // those call sites to NeoForge ICustomIngredient first -- see PORTING.md.
+            if (!project.enable_jei.toBoolean()) {
+                exclude 'com/zurrtum/create/client/compat/jei/**'
+            }
+            if (!project.enable_cct.toBoolean()) {
+                exclude 'com/zurrtum/create/compat/computercraft/**'
+            }
+        }
+    }
+}
+
+repositories {
+    def exclusive = { String url, String... groups ->
+        exclusiveContent {
+            forRepository { maven { it.url = url } }
+            filter { groups.each { includeGroup it } }
+        }
+    }
+    exclusive('https://maven.blamejared.com', 'mezz.jei')
+    exclusive('https://maven.squiddev.cc', 'cc.tweaked')
+    exclusive('https://api.modrinth.com/maven', 'maven.modrinth')
+    mavenCentral()
+}
+
+dependencies {
+    // jspecify annotations are used throughout the upstream source for @Nullable.
+    compileOnly 'org.jspecify:jspecify:1.0.0'
+
+    // Optional integrations stay off until their NeoForge side is wired up.
+    if (project.enable_jei.toBoolean()) {
+        compileOnly "mezz.jei:jei-${project.jei_version}"
+    }
+    if (project.enable_cct.toBoolean()) {
+        compileOnly "cc.tweaked:cc-tweaked-${project.cct_version}"
+    }
+}
+
+processResources {
+    def props = [
+        version              : version,
+        mod_id               : project.mod_id,
+        mod_name             : project.mod_name,
+        minecraft_version_range: project.minecraft_version_range,
+        neoforge_version_range : project.neoforge_version_range,
+    ]
+    inputs.properties props
+
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand props
+    }
+
+    // Datagen inputs; upstream keeps them out of the shipped jar too.
+    exclude '_data'
+}
+
+jar {
+    from('LICENSE')
+    from('licenses') { into 'licenses' }
+    manifest {
+        attributes([
+            'Specification-Title'     : project.mod_id,
+            'Specification-Vendor'    : 'ZurrTum',
+            'Specification-Version'   : '1',
+            'Implementation-Title'    : project.mod_name,
+            'Implementation-Version'  : project.version,
+            'Implementation-Vendor'   : 'ZurrTum',
+        ])
+    }
+}
+
+tasks.named('sourcesJar', Jar) {
+    from('LICENSE')
+    from('licenses') { into 'licenses' }
+    exclude '_data'
+    exclude 'assets'
+    exclude 'data'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
