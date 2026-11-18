@@ -106,6 +106,8 @@ public class Create {
         CameraAngleAnimationService.register();
         PonderIndex.addPlugin(new CreatePonderPlugin());
         CompatMod.register();
+        // Port: addons' Fabric `client` entrypoints, right after Create's (see AddonEntrypoint).
+        com.zurrtum.create.platform.AddonEntrypoint.initializeClient();
     }
 
     public static Identifier asResource(String path) {

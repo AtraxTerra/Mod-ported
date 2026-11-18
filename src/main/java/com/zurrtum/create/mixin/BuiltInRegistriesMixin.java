@@ -29,6 +29,8 @@ public class BuiltInRegistriesMixin {
     @Inject(method = "freeze()V", at = @At("HEAD"))
     private static void onInitialize(CallbackInfo ci) {
         Create.register();
+        // Port: addons' Fabric `main` entrypoints, at the same moment (see AddonEntrypoint).
+        com.zurrtum.create.platform.AddonEntrypoint.initialize();
     }
 
     @Inject(method = "freeze()V", at = @At("TAIL"))
