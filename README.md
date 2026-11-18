@@ -21,6 +21,11 @@ this mod, and on every push:
 - boots a server and a headless client with the survival server's mod list (see Create Fly's
   `PORTING.md`, section 1e).
 
+The oil left in each chunk (`data/createdieselgenerators/oil_chunks.dat`) is outside that test.
+Create: Diesel Generators Adapted saved it as a flat `"x,z"` -> mB map; `OilChunksSavedData` reads
+that layout as well as this port's `OilChunks` list, and writes the map, so a world keeps its
+amounts across the swap (checked on a world whose oil fields were set under the Adapted mod).
+
 | Component | Version |
 | --- | --- |
 | Minecraft | `26.2` |
