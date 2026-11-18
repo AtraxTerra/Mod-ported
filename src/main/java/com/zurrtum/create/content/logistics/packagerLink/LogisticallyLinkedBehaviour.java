@@ -275,7 +275,8 @@ public class LogisticallyLinkedBehaviour extends BlockEntityBehaviour<SmartBlock
     @Override
     public void read(ValueInput view, boolean clientPacket) {
         super.read(view, clientPacket);
-        freqId = view.read("Freq", UUIDUtil.CODEC).orElse(null);
+        // port: an unreadable Freq used to leave freqId null, and every later save threw
+        view.read("Freq", UUIDUtil.CODEC).ifPresent(id -> freqId = id);
         redstonePower = view.getIntOr("Power", 0);
         addedGlobally = view.getBooleanOr("Added", false);
     }

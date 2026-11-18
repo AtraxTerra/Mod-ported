@@ -5,6 +5,7 @@
   "mixins": [
     "AbstractBoatMixin",
     "AbstractMinecartMixin",
+    "BlockEntityLegacyDataMixin",
     "BlockItemMixin",
     "BlockPlaceContextMixin",
     "BlocksMixin",

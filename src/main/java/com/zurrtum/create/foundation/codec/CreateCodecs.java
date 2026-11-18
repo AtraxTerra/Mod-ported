@@ -106,15 +106,27 @@ public class CreateCodecs {
         return new Codec<>() {
             @Override
             public <T> DataResult<com.mojang.datafixers.util.Pair<Map<K, V>, T>> decode(DynamicOps<T> ops, T input) {
-                MapLike<T> map = ops.getMap(input).getOrThrow();
-                Iterator<T> keys = ops.getStream(map.get("Keys")).getOrThrow().iterator();
-                Iterator<T> values = ops.getStream(map.get("Values")).getOrThrow().iterator();
+                // port: report bad input as an error instead of throwing, which took the whole
+                // block entity down with it (an original-Create list where a map is expected)
+                DataResult<MapLike<T>> mapResult = ops.getMap(input);
+                if (mapResult.isError()) {
+                    return DataResult.error(() -> "Not a {Keys, Values} map: " + input);
+                }
+                MapLike<T> map = mapResult.getOrThrow();
+                DataResult<java.util.stream.Stream<T>> keyStream = ops.getStream(map.get("Keys"));
+                DataResult<java.util.stream.Stream<T>> valueStream = ops.getStream(map.get("Values"));
+                if (keyStream.isError() || valueStream.isError()) {
+                    return DataResult.error(() -> "Missing Keys or Values: " + input);
+                }
+                Iterator<T> keys = keyStream.getOrThrow().iterator();
+                Iterator<T> values = valueStream.getOrThrow().iterator();
                 HashMap<K, V> result = new HashMap<>();
-                while (keys.hasNext()) {
-                    result.put(
-                        keyCodec.parse(ops, keys.next()).getOrThrow(),
-                        valueCodec.parse(ops, values.next()).getOrThrow()
-                    );
+                while (keys.hasNext() && values.hasNext()) {
+                    DataResult<K> key = keyCodec.parse(ops, keys.next());
+                    DataResult<V> value = valueCodec.parse(ops, values.next());
+                    if (key.isSuccess() && value.isSuccess()) {
+                        result.put(key.getOrThrow(), value.getOrThrow());
+                    }
                 }
                 return DataResult.success(com.mojang.datafixers.util.Pair.of(result, ops.empty()));
             }

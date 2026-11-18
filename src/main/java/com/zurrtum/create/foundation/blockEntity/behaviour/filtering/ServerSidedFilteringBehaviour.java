@@ -73,8 +73,9 @@ public class ServerSidedFilteringBehaviour extends ServerFilteringBehaviour {
     @Override
     public void read(ValueInput view, boolean clientPacket) {
         view.childrenListOrEmpty("Filters").forEach(item -> {
-            Direction side = item.read("Side", Direction.CODEC).orElseThrow();
-            ServerFilteringBehaviour filter = sidedFilters.get(side);
+            // port: skip an unreadable side instead of failing the whole block entity
+            Direction side = item.read("Side", Direction.CODEC).orElse(null);
+            ServerFilteringBehaviour filter = side == null ? null : sidedFilters.get(side);
             if (filter != null) {
                 filter.read(item, clientPacket);
             }
