@@ -3,7 +3,6 @@
 // Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.distillation;
 
-import net.neoforged.api.distmarker.OnlyInInterface;
 import com.jesz.createdieselgenerators.CDGBlockEntityTypes;
 import com.jesz.createdieselgenerators.CDGRecipes;
 import com.jesz.createdieselgenerators.CreateDieselGenerators;

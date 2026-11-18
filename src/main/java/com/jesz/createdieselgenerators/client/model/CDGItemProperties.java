@@ -9,14 +9,17 @@ import com.jesz.createdieselgenerators.content.track_layers_bag.TrackLayersBagIt
 import com.mojang.serialization.MapCodec;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterRangeSelectItemModelPropertyEvent;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemModelProperties;
 import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemModelProperty;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
+@EventBusSubscriber(modid = CreateDieselGenerators.ID, value = Dist.CLIENT)
 public final class CDGItemProperties {
     public static final Identifier OIL_SCANNER_STATE = CreateDieselGenerators.rl("oil_scanner_state");
     public static final Identifier TRACKS = CreateDieselGenerators.rl("tracks");
@@ -25,8 +28,14 @@ public final class CDGItemProperties {
     }
 
     public static void register() {
-        RangeSelectItemModelProperties.ID_MAPPER.put(OIL_SCANNER_STATE, OilScannerState.MAP_CODEC);
-        RangeSelectItemModelProperties.ID_MAPPER.put(TRACKS, Tracks.MAP_CODEC);
+        // Port: Fabric API widens RangeSelectItemModelProperties.ID_MAPPER; NeoForge registers through
+        // RegisterRangeSelectItemModelPropertyEvent instead, below.
+    }
+
+    @SubscribeEvent
+    public static void onRegisterRangeSelectProperties(RegisterRangeSelectItemModelPropertyEvent event) {
+        event.register(OIL_SCANNER_STATE, OilScannerState.MAP_CODEC);
+        event.register(TRACKS, Tracks.MAP_CODEC);
     }
 
     public record OilScannerState() implements RangeSelectItemModelProperty {

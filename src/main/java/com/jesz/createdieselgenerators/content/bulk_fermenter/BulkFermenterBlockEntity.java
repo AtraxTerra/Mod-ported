@@ -5,7 +5,6 @@ package com.jesz.createdieselgenerators.content.bulk_fermenter;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.api.distmarker.OnlyInInterface;
 import com.jesz.createdieselgenerators.CDGBlockEntityTypes;
 import com.jesz.createdieselgenerators.CDGRecipes;
 import com.zurrtum.create.api.connectivity.ConnectivityHandler;

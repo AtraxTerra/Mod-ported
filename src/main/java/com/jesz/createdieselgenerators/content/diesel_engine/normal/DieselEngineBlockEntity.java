@@ -3,7 +3,6 @@
 // Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.diesel_engine.normal;
 
-import net.neoforged.api.distmarker.OnlyInInterface;
 import com.jesz.createdieselgenerators.CDGBlockEntityTypes;
 import com.jesz.createdieselgenerators.CDGConfig;
 import com.jesz.createdieselgenerators.content.diesel_engine.EngineUpgrades;
