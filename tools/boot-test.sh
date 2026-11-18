@@ -136,6 +136,28 @@ if [ -s "$LOG" ]; then
     echo "::group::Log without stack frames (last 120 lines)"
     grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$LOG" | tail -120
     echo "::endgroup::"
+fi
+
+# The game keeps its own log and writes crash reports to files, and that is where a startup death
+# actually explains itself -- stdout showed the server exiting with code 1 and nothing else.
+if [ -f "$RUN_DIR/logs/latest.log" ]; then
+    echo "::group::run/logs/latest.log (last 100 lines, stack frames filtered)"
+    grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$RUN_DIR/logs/latest.log" | tail -100
+    echo "::endgroup::"
+else
+    echo "(no run/logs/latest.log -- the game died before opening its own log)"
+fi
+
+shopt -s nullglob
+reports=("$RUN_DIR"/crash-reports/*.txt)
+if [ ${#reports[@]} -gt 0 ]; then
+    for report in "${reports[@]}"; do
+        echo "::group::Crash report $(basename "$report")"
+        head -80 "$report"
+        echo "::endgroup::"
+    done
+else
+    echo "(no crash report)"
 else
     echo "(no log produced -- Gradle never started)"
 fi
