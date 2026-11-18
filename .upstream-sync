@@ -1,0 +1,11 @@
+# The upstream commit this port is synchronised with.
+#
+# Read and written by .github/workflows/upstream-sync.yml. The workflow diffs upstream between this
+# commit and its current head, rewrites the paths to this tree's layout, and applies the result --
+# it does NOT merge, because the port moved src/client/java into src/main/java and a merge would
+# conflict on the path of every upstream-touched file.
+#
+# Only ever change this to a commit whose changes are actually in the tree.
+repo=https://github.com/ZurrTum/Create-Fly
+branch=26.2
+commit=3a9fe3e6c6b7981629a30143f0f73b5bf35bc459

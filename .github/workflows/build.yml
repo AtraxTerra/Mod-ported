@@ -1,0 +1,131 @@
+name: Build
+
+# The point of this workflow, beyond producing a jar: GitHub runners can reach the NeoForged and
+# Mojang Maven repositories, which the environment this port was written in could not. This is the
+# first place the code is actually compiled, so the error summary below is the real deliverable
+# until the build goes green.
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A new push supersedes an in-flight build of the same ref.
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        # Minecraft 26.x requires Java 25 on every loader.
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != format('refs/heads/{0}', 'port/neoforge-26.2') }}
+
+      - run: chmod +x ./gradlew
+
+      # Compile on its own first. A green compile proves nothing about mixins or runtime, but a
+      # failing one makes everything after it noise, and this keeps the failure easy to find.
+      - name: Compile
+        id: compile
+        run: ./gradlew clean compileJava --stacktrace --console=plain 2>&1 | tee compile.log
+        continue-on-error: true
+
+      - name: Summarise compile errors
+        if: always()
+        run: |
+          {
+            echo "## Compile"
+            if [ "${{ steps.compile.outcome }}" = "success" ]; then
+              echo
+              echo ":white_check_mark: \`compileJava\` succeeded."
+            else
+              total=$(grep -cE '^/.*\.java:[0-9]+: error:' compile.log || true)
+              echo
+              echo ":x: \`compileJava\` failed with **${total:-?}** error(s)."
+              echo
+              echo "### Errors by file"
+              echo
+              echo '| errors | file |'
+              echo '|---|---|'
+              grep -oE '^/.*\.java:[0-9]+: error:' compile.log \
+                | sed -E 's/:[0-9]+: error:$//' \
+                | sed "s|^${GITHUB_WORKSPACE}/||" \
+                | sort | uniq -c | sort -rn | head -40 \
+                | awk '{printf "| %s | `%s` |\n", $1, $2}'
+              echo
+              echo "### First 60 errors"
+              echo
+              echo '```'
+              grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log \
+                | sed "s|^${GITHUB_WORKSPACE}/||" | head -180
+              echo '```'
+              echo
+              echo "See PORTING.md section 3 for the order to work through these, and the list of"
+              echo "NeoForge signatures most likely to have moved between versions."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if compilation failed
+        if: steps.compile.outcome != 'success'
+        run: exit 1
+
+      - name: Build jar
+        run: ./gradlew build --stacktrace --console=plain
+
+      - name: Upload jars
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: create-fly-neoforge-${{ github.sha }}
+          path: |
+            build/libs/*.jar
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload compile log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-log-${{ github.sha }}
+          path: compile.log
+          retention-days: 14
+
+  release:
+    # A tag pushed as v<something> publishes the jars as a GitHub release.
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: create-fly-neoforge-${{ github.sha }}
+          path: jars
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" jars/*.jar \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Create Fly ported to NeoForge 26.2. See PORTING.md for known gaps."

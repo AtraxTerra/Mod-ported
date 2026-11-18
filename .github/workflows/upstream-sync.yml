@@ -1,0 +1,216 @@
+name: Upstream sync
+
+# Watches ZurrTum/Create-Fly branch 26.2 and opens a pull request when it moves.
+#
+# WHY THIS APPLIES A PATCH AND DOES NOT MERGE
+#
+# The obvious design is to keep upstream as a remote and `git merge` it. That does not work here,
+# for a reason specific to this port: upstream splits its code across two source sets,
+# src/main/java and src/client/java, and NeoForge has no equivalent, so the port merged them into
+# src/main/java. Every file upstream touches under src/client/ therefore sits at a different path
+# in this tree, and a merge would conflict on the *path* of essentially every upstream-touched
+# file -- not on its content, which is usually mergeable.
+#
+# So instead: diff upstream between the last synced commit and its head, rewrite the paths into
+# this tree's layout, and apply with `git apply --3way`, which still does a real three-way content
+# merge per file. Whatever will not apply is left as a .rej file and listed in the PR.
+#
+# The last synced commit lives in .upstream-sync, which the PR updates. That file is the only state
+# this workflow keeps.
+
+on:
+  schedule:
+    # Daily, at an odd minute, outside the busiest hosted-runner window.
+    - cron: '37 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PORT_BRANCH: port/neoforge-26.2
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PORT_BRANCH }}
+
+      - name: Read the sync state
+        id: state
+        run: |
+          # shellcheck disable=SC2002
+          repo=$(grep -E '^repo='   .upstream-sync | cut -d= -f2-)
+          branch=$(grep -E '^branch=' .upstream-sync | cut -d= -f2-)
+          commit=$(grep -E '^commit=' .upstream-sync | cut -d= -f2-)
+          for v in repo branch commit; do
+            if [ -z "${!v}" ]; then
+              echo "::error::.upstream-sync is missing '$v='"
+              exit 1
+            fi
+          done
+          echo "repo=$repo"     >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "from=$commit"   >> "$GITHUB_OUTPUT"
+
+      - name: Fetch upstream
+        id: upstream
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            "${{ steps.state.outputs.repo }}" /tmp/upstream
+          cd /tmp/upstream
+          git fetch --no-tags origin "${{ steps.state.outputs.branch }}"
+          head=$(git rev-parse FETCH_HEAD)
+          # Fail loudly rather than silently syncing from the wrong place.
+          if ! git cat-file -e "${{ steps.state.outputs.from }}^{commit}" 2>/dev/null; then
+            echo "::error::.upstream-sync names commit ${{ steps.state.outputs.from }}, which is not in ${{ steps.state.outputs.repo }}"
+            exit 1
+          fi
+          count=$(git rev-list --count "${{ steps.state.outputs.from }}..$head")
+          echo "head=$head"   >> "$GITHUB_OUTPUT"
+          echo "short=$(git rev-parse --short "$head")" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -eq 0 ]; then
+            echo "Already synced with upstream ${{ steps.state.outputs.branch }} at \`$head\`." \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**$count** new upstream commit(s), up to \`$head\`." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Skip if this upstream head was already proposed
+        id: existing
+        if: steps.upstream.outputs.count != '0'
+        run: |
+          branch="upstream-sync/${{ steps.upstream.outputs.short }}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Branch \`$branch\` already exists -- nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the path-rewritten patch
+        id: patch
+        if: steps.upstream.outputs.count != '0' && steps.existing.outputs.exists == 'false'
+        run: |
+          cd /tmp/upstream
+          git log --no-merges --pretty='- [`%h`](${{ steps.state.outputs.repo }}/commit/%H) %s' \
+            "${{ steps.state.outputs.from }}..${{ steps.upstream.outputs.head }}" > /tmp/commits.md
+
+          # Only the parts of upstream this tree still carries. Its build files, Fabric metadata
+          # and access widener are all replaced by the port, so changes there must be read by a
+          # human rather than applied -- they are reported separately below.
+          git diff "${{ steps.state.outputs.from }}" "${{ steps.upstream.outputs.head }}" \
+            -- src/main/java src/client/java src/main/resources src/client/resources \
+            > /tmp/raw.patch
+
+          # Anything outside those paths: report, never apply.
+          git diff --name-only "${{ steps.state.outputs.from }}" "${{ steps.upstream.outputs.head }}" \
+            -- . ':(exclude)src' > /tmp/outside.txt
+
+          # Rewrite upstream's two source sets onto this tree's single one.
+          sed -E \
+            -e 's#\bsrc/client/java/#src/main/java/#g' \
+            -e 's#\bsrc/client/resources/#src/main/resources/#g' \
+            /tmp/raw.patch > /tmp/rewritten.patch
+
+          if [ ! -s /tmp/rewritten.patch ]; then
+            echo "applied=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "${{ steps.existing.outputs.branch }}"
+
+          # --3way does a real per-file content merge; --reject leaves what cannot be resolved as
+          # .rej files instead of refusing the whole patch, so a single awkward file does not block
+          # the rest of the sync.
+          git apply --3way --reject --verbose /tmp/rewritten.patch 2>/tmp/apply.log || true
+          find . -name '*.rej' -not -path './.git/*' | sed 's|^\./||' | sort > /tmp/rejects.txt
+
+          if [ -s /tmp/rejects.txt ]; then
+            echo "applied=partial" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=clean" >> "$GITHUB_OUTPUT"
+          fi
+          echo "rejects=$(wc -l < /tmp/rejects.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, push and open the pull request
+        if: steps.patch.outputs.applied == 'clean' || steps.patch.outputs.applied == 'partial'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed -i "s|^commit=.*|commit=${{ steps.upstream.outputs.head }}|" .upstream-sync
+
+          {
+            echo "Upstream \`${{ steps.state.outputs.branch }}\` moved to"
+            echo "\`${{ steps.upstream.outputs.head }}\` (${{ steps.upstream.outputs.count }} commit(s))."
+            echo
+            if [ "${{ steps.patch.outputs.applied }}" = "clean" ]; then
+              echo "The upstream diff applied cleanly, with paths rewritten from upstream's two"
+              echo "source sets onto this tree's single one."
+            else
+              echo ":warning: **${{ steps.patch.outputs.rejects }} file(s) did not apply.** Their"
+              echo "rejected hunks are committed as \`.rej\` files on this branch and must be"
+              echo "applied by hand; delete each \`.rej\` as you resolve it. The rest of the diff"
+              echo "applied."
+              echo
+              echo "### Did not apply"
+              echo
+              while read -r f; do echo "- \`$f\`"; done < /tmp/rejects.txt
+            fi
+            echo
+            echo "**A clean apply is not a working build.** Check the Build run on this PR."
+            echo
+            if [ -s /tmp/outside.txt ]; then
+              echo "### Changed upstream outside \`src/\` — not applied, read these yourself"
+              echo
+              echo "These are files the port replaced (build scripts, Fabric metadata, the access"
+              echo "widener). A change here usually needs a deliberate decision, not a patch."
+              echo
+              while read -r f; do echo "- \`$f\`"; done < /tmp/outside.txt
+              echo
+              echo "If \`src/main/resources/create.classtweaker\` is in that list, regenerate the"
+              echo "access transformer with \`python3 -I tools/aw2at.py\` rather than editing it."
+              echo
+            fi
+            echo "### Upstream commits"
+            echo
+            cat /tmp/commits.md
+            echo
+            echo "---"
+            echo
+            echo "If this touched item or fluid transfer, the mixin plugins, or either entry point,"
+            echo "read PORTING.md section 2 before merging: those are the files the port rewrote."
+          } > /tmp/body.md
+
+          git add -A
+          git commit -q \
+            -m "Sync upstream ${{ steps.state.outputs.branch }} to ${{ steps.upstream.outputs.short }}" \
+            -m "${{ steps.upstream.outputs.count }} upstream commit(s), applied as a path-rewritten patch (src/client/java -> src/main/java, src/client/resources -> src/main/resources) with git apply --3way." \
+            -m "Files whose hunks were rejected and still need hand-applying: ${{ steps.patch.outputs.rejects }}"
+
+          git push -u origin "${{ steps.existing.outputs.branch }}"
+
+          if [ "${{ steps.patch.outputs.applied }}" = "clean" ]; then
+            title="Sync upstream 26.2 to ${{ steps.upstream.outputs.short }} (${{ steps.upstream.outputs.count }} commits)"
+          else
+            title="Sync upstream 26.2 to ${{ steps.upstream.outputs.short }} — ${{ steps.patch.outputs.rejects }} file(s) need hand-applying"
+          fi
+
+          gh pr create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --base "${PORT_BRANCH}" \
+            --head "${{ steps.existing.outputs.branch }}" \
+            --title "$title" \
+            --body-file /tmp/body.md
+
+          echo "Opened a pull request: $title" >> "$GITHUB_STEP_SUMMARY"
