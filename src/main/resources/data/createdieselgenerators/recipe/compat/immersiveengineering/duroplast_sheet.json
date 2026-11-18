@@ -1,12 +1,10 @@
 {
   "type": "createdieselgenerators:casting",
   "mold": "createdieselgenerators:bar",
-  "fabric:load_conditions": [
+  "neoforge:conditions": [
     {
-      "condition": "fabric:all_mods_loaded",
-      "values": [
-        "immersiveengineering"
-      ]
+      "type": "neoforge:mod_loaded",
+      "modid": "immersiveengineering"
     }
   ],
   "fluid_ingredients": [

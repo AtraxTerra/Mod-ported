@@ -1,11 +1,9 @@
 {
   "type": "createdieselgenerators:hammering",
-  "fabric:load_conditions": [
+  "neoforge:conditions": [
     {
-      "condition": "fabric:all_mods_loaded",
-      "values": [
-        "immersiveengineering"
-      ]
+      "type": "neoforge:mod_loaded",
+      "modid": "immersiveengineering"
     }
   ],
   "ingredient": "#c:ingots/steel",

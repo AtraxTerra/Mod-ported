@@ -46,6 +46,13 @@ jobs:
           ./gradlew jar --console=plain
           ls -l build/libs
 
+      # Datapack syntax never fails a build: a leftover fabric: key is a "Couldn't parse data file"
+      # at server start, or a compat recipe that loads when its mod is absent.
+      - name: No Fabric data left (load conditions, custom ingredients)
+        run: |
+          python3 -I deps/create-fly/tools/convert_fabric_data.py src/main/resources --check
+          python3 -I deps/create-fly/tools/convert_fabric_data.py src/generated/resources --check
+
       - name: Compile
         id: compile
         shell: bash

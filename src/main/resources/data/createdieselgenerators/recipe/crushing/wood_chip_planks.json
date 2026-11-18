@@ -11,10 +11,10 @@
     }
   ],
   "ingredient": {
-    "fabric:type": "fabric:difference",
+    "neoforge:ingredient_type": "neoforge:difference",
     "base": {
-      "fabric:type": "fabric:any",
-      "ingredients": [
+      "neoforge:ingredient_type": "neoforge:compound",
+      "children": [
         "#minecraft:planks",
         "minecraft:bamboo_mosaic"
       ]

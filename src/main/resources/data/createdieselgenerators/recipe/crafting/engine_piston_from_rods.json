@@ -14,13 +14,14 @@
     "id": "createdieselgenerators:engine_piston",
     "count": 2
   },
-  "fabric:load_conditions": [
+  "neoforge:conditions": [
     {
-      "condition": "fabric:tags_populated",
-      "registry": "minecraft:item",
-      "values": [
-        "c:rods/iron"
-      ]
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:tag_empty",
+        "registry": "minecraft:item",
+        "tag": "c:rods/iron"
+      }
     }
   ]
 }

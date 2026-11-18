@@ -1,8 +1,8 @@
 {
   "type": "create:crushing",
   "ingredient": {
-    "fabric:type": "fabric:any",
-    "ingredients": [
+    "neoforge:ingredient_type": "neoforge:compound",
+    "children": [
       "#create:casing",
       "create:linear_chassis",
       "create:secondary_linear_chassis",
