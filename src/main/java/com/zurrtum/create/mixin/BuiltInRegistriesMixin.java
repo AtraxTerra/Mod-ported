@@ -29,6 +29,8 @@ public class BuiltInRegistriesMixin {
     @Inject(method = "freeze()V", at = @At("HEAD"))
     private static void onInitialize(CallbackInfo ci) {
         Create.register();
+        // Port: ids of the original Create that Create Fly renamed (worlds from Create: Adapted).
+        com.zurrtum.create.platform.LegacyCreateIds.register();
         // Port: addons' Fabric `main` entrypoints, at the same moment (see AddonEntrypoint).
         com.zurrtum.create.platform.AddonEntrypoint.initialize();
     }
