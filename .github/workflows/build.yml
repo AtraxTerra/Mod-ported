@@ -123,6 +123,21 @@ jobs:
           echo "create_fly_libs=deps/create-fly/build/libs" >> gradle.properties
           ./tools-boot-test.sh 600
 
+      # The world this port is for ran "Create: Diesel Generators Adapted" on Create: Adapted. Same
+      # test as Create Fly's migration-test job, with both mods on each side.
+      - name: World migration (Create: Adapted + Diesel Generators Adapted -> Create Fly + this port)
+        id: migration
+        continue-on-error: true
+        shell: bash
+        env:
+          MIGRATION_EXTRA_A: https://mediafilez.forgecdn.net/files/8879/67/createdieselgenerators-26.2-1.3.15-adapted-0.605.jar
+          MIGRATION_BLOCKSTATES: src/generated/resources/assets/createdieselgenerators/blockstates
+        run: |
+          fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources' | head -1)
+          cdg=$(ls build/libs/createdieselgenerators-*.jar | grep -v -- '-sources' | head -1)
+          echo "Create Fly: $fly / Diesel Generators: $cdg"
+          bash deps/create-fly/tools/migration-test.sh "$fly" 26.2.0.93 "$cdg"
+
       - name: Upload the boot log
         if: always()
         uses: actions/upload-artifact@v4

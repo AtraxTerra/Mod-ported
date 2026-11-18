@@ -5,6 +5,7 @@ package com.jesz.createdieselgenerators;
 
 import com.jesz.createdieselgenerators.client.CDGClient;
 import com.zurrtum.create.platform.AddonEntrypoint;
+import com.zurrtum.create.platform.LegacyBlockEntityData;
 
 /**
  * The Fabric {@code main} and {@code client} entrypoints (CreateDieselGeneratorsFabric and
@@ -16,6 +17,9 @@ public final class CreateDieselGeneratorsEntrypoints implements AddonEntrypoint 
     public void onInitialize() {
         CreateDieselGeneratorsPlugin.verifyEarlyRegistrationComplete();
         CreateDieselGenerators.init();
+        // port: worlds saved with "Create: Diesel Generators Adapted" (on Create: Adapted) store
+        // block entities and entities in the original layout; Create Fly converts them on load.
+        CDGLegacyData.register();
     }
 
     @Override
