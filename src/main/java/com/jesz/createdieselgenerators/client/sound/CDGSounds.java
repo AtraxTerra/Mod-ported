@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.sound;
 
 import com.jesz.createdieselgenerators.CDGConfig;
@@ -15,8 +18,8 @@ import com.zurrtum.create.content.trains.entity.CarriageContraption;
 import com.zurrtum.create.content.trains.entity.CarriageContraptionEntity;
 import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
 import net.minecraft.util.Mth;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.core.BlockPos;
@@ -32,7 +35,6 @@ import java.util.Map;
 
 import static com.jesz.createdieselgenerators.content.diesel_engine.modular.ModularDieselEngineBlock.FACING;
 
-@Environment(EnvType.CLIENT)
 public final class CDGSounds {
     private static final Map<BlockPos, EngineSoundInstance> ENGINES = new HashMap<>();
     private static final Map<BlockPos, AbstractTickableSoundInstance> LOOPS = new HashMap<>();
@@ -218,7 +220,6 @@ public final class CDGSounds {
             Minecraft.getInstance().getSoundManager().stop(instance);
     }
 
-    @Environment(EnvType.CLIENT)
     public static class LoopingSoundInstance extends AbstractTickableSoundInstance {
         public LoopingSoundInstance(SoundEvent event, float volume, float pitch, Vec3 pos) {
             super(event, SoundSource.BLOCKS, RandomSource.create());

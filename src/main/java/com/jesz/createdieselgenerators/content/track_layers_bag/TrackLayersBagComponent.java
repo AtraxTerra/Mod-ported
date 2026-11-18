@@ -1,13 +1,15 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.track_layers_bag;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.world.item.ItemStack;
 
-@Environment(EnvType.CLIENT)
 public record TrackLayersBagComponent(ItemStack stack) implements ClientTooltipComponent {
     @Override
     public int getHeight(Font font) {

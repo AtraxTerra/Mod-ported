@@ -1,11 +1,14 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.model;
 
 import com.jesz.createdieselgenerators.CDGDataComponents;
 import com.jesz.createdieselgenerators.CreateDieselGenerators;
 import com.jesz.createdieselgenerators.content.track_layers_bag.TrackLayersBagItem;
 import com.mojang.serialization.MapCodec;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemModelProperties;
 import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemModelProperty;
@@ -14,7 +17,6 @@ import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
-@Environment(EnvType.CLIENT)
 public final class CDGItemProperties {
     public static final Identifier OIL_SCANNER_STATE = CreateDieselGenerators.rl("oil_scanner_state");
     public static final Identifier TRACKS = CreateDieselGenerators.rl("tracks");

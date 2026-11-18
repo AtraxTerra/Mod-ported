@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.model;
 
 import com.jesz.createdieselgenerators.CDGDataComponents;
@@ -5,8 +8,8 @@ import com.jesz.createdieselgenerators.CreateDieselGenerators;
 import com.mojang.serialization.MapCodec;
 import com.zurrtum.create.client.catnip.animation.AnimationTickHolder;
 import com.zurrtum.create.client.flywheel.lib.model.baked.ItemModelRenderHelper;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.ItemModel;
@@ -26,7 +29,6 @@ import org.joml.Vector3fc;
 import java.util.List;
 import java.util.function.Supplier;
 
-@Environment(EnvType.CLIENT)
 public class WireCuttersModel implements ItemModel {
     public static final Identifier ID = CreateDieselGenerators.rl("model/wire_cutters");
     public static final Identifier CLOSED_ID = CreateDieselGenerators.rl("item/wire_cutters");

@@ -1,48 +1,129 @@
-name: Build
+name: Build (Diesel Generators, NeoForge)
 
-on: [push, pull_request, workflow_dispatch]
+# Builds the NeoForge port of Create Fly: Diesel Generators against the NeoForge port of Create
+# Fly, which lives on another branch of this repository (port/neoforge-26.2). That branch is built
+# first, in deps/create-fly, and its jar is what this mod compiles against and runs with.
+
+on:
+  push:
+    branches: ['port/cdg-neoforge-26.2']
+  pull_request:
+    branches: ['port/cdg-neoforge-26.2']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cdg-build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - name: Checkout repository
+      - uses: actions/checkout@v4
+
+      - name: Check out the Create Fly NeoForge port
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          fetch-tags: true
+          ref: port/neoforge-26.2
+          path: deps/create-fly
 
-      - name: Setup JDK 25
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
+          distribution: temurin
           java-version: '25'
-          distribution: 'temurin'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
 
-      - name: Fetch the Create Fly Recipe Viewer jar this mod nests and compiles against
-        env:
-          VIEWER_JAR_NAME: CreateReiViewer-1.0.3+fly-mc26.2.jar
-          VIEWER_JAR_URL: https://github.com/chaevsfe/CreateReiViewer-Fly/releases/download/1.0.3%2Bfly-mc26.2/CreateReiViewer-1.0.3%2Bfly-mc26.2.jar
+      - name: Build Create Fly (NeoForge)
+        shell: bash
+        working-directory: deps/create-fly
         run: |
-          mkdir -p libs
-          curl -fsSL -o "libs/$VIEWER_JAR_NAME" "$VIEWER_JAR_URL"
+          chmod +x ./gradlew
+          ./gradlew jar --console=plain
+          ls -l build/libs
 
-      - name: Fetch the Strut Your Stuff jar this mod compiles against
-        env:
-          STRUTS_JAR_NAME: StrutYourStuff-1.3.1+fly-mc26.2.jar
-          STRUTS_JAR_URL: https://github.com/chaevsfe/StrutYourStuff/releases/download/1.3.1%2Bfly-mc26.2/StrutYourStuff-1.3.1%2Bfly-mc26.2.jar
+      - name: Compile
+        id: compile
+        shell: bash
+        continue-on-error: true
         run: |
-          mkdir -p libs
-          curl -fsSL -o "libs/$STRUTS_JAR_NAME" "$STRUTS_JAR_URL"
+          chmod +x ./gradlew
+          ./gradlew clean compileJava -Pcreate_fly_libs=deps/create-fly/build/libs --console=plain 2>&1 | tee compile.log
 
-      - name: Build from scratch
-        run: ./gradlew clean build --no-build-cache --no-daemon
+      - name: Summarise compile errors
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Compile"
+            if [ "${{ steps.compile.outcome }}" = "success" ]; then
+              echo ":white_check_mark: \`compileJava\` succeeded."
+            else
+              total=$(grep -cE '^/.*\.java:[0-9]+: error:' compile.log || true)
+              echo ":x: \`compileJava\` failed with **${total:-0}** error(s)."
+              echo
+              echo '```'
+              if [ "${total:-0}" -eq 0 ]; then
+                sed -n '/What went wrong/,/^\* Get more help/p' compile.log | head -40
+              else
+                grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" | head -200
+              fi
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" | head -300 || true
+
+      - name: Fail if compilation failed
+        if: steps.compile.outcome != 'success'
+        run: exit 1
+
+      - name: Mixin target audit (bytecode)
+        id: mixin-audit
+        shell: bash
+        continue-on-error: true
+        run: |
+          mc=$(find build/moddev/artifacts -name 'minecraft-patched-*.jar' | head -1)
+          fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v sources | head -1)
+          echo "auditing against $mc and $fly"
+          python3 -I deps/create-fly/tools/audit_mixin_targets.py --src src/main/java --resources src/main/resources \
+            --classes build/classes/java/main --jar "$mc" --jar "$fly" | tee mixin-audit.log
+
+      - name: Build jar
+        run: ./gradlew build -Pcreate_fly_libs=deps/create-fly/build/libs --console=plain
 
       - name: Upload jars
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: createdieselgenerators-fabric-26.2
-          path: build/libs/*.jar
-          if-no-files-found: error
+          name: createdieselgenerators-neoforge-${{ github.sha }}
+          path: |
+            build/libs/*.jar
+            deps/create-fly/build/libs/*.jar
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Boot a dedicated server with Create Fly + Diesel Generators
+        id: boot
+        continue-on-error: true
+        shell: bash
+        run: |
+          cp deps/create-fly/tools/boot-test.sh tools-boot-test.sh 2>/dev/null || true
+          chmod +x tools-boot-test.sh
+          echo "create_fly_libs=deps/create-fly/build/libs" >> gradle.properties
+          ./tools-boot-test.sh 600
+
+      - name: Upload the boot log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdg-boot-log-${{ github.sha }}
+          path: |
+            boot-test.log
+            run/logs/*.log
+            run/crash-reports/*.txt
+          if-no-files-found: ignore
+          retention-days: 14

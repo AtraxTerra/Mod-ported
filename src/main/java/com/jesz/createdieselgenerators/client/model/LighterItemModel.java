@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.model;
 
 import com.google.gson.JsonElement;
@@ -7,8 +10,8 @@ import com.jesz.createdieselgenerators.CreateDieselGenerators;
 import com.jesz.createdieselgenerators.content.tools.lighter.LighterState;
 import com.mojang.serialization.MapCodec;
 import com.zurrtum.create.client.flywheel.lib.model.baked.ItemModelRenderHelper;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.ItemModel;
@@ -32,7 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-@Environment(EnvType.CLIENT)
 public class LighterItemModel implements ItemModel {
     public static final Identifier ID = CreateDieselGenerators.rl("model/lighter");
     public static final String STANDARD = "standard";

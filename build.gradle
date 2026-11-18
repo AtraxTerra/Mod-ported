@@ -1,0 +1,204 @@
+import java.util.zip.ZipFile
+import javax.imageio.ImageIO
+
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version "${moddev_version}"
+}
+
+version = "${project.mod_version}+neoforge-mc${project.mc_line}"
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xmaxerrs' << '10000' << '-Xmaxwarns' << '1000'
+}
+
+tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// The NeoForge build of Create Fly, as a plain jar: compiled against, and loaded as a mod in runs.
+def createFlyLibs = file(project.create_fly_libs)
+def createFly = fileTree(dir: createFlyLibs, include: 'create-fly-*.jar', exclude: ['*-sources.jar', '*-javadoc.jar'])
+
+neoForge {
+    version = project.neoforge_version
+    // Converted from createdieselgenerators.accesswidener (tools/aw2at.py in the Create Fly port).
+    accessTransformers.from file('src/main/resources/META-INF/accesstransformer.cfg')
+    // Create Fly's Container -> ContainerExtension injections, so its inventory API resolves here too.
+    interfaceInjectionData.from file('create-fly-interface-injection.json')
+    validateAccessTransformers = true
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        createdieselgenerators {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    compileOnly createFly
+    localRuntime createFly
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+}
+
+sourceSets {
+    main {
+        resources.srcDir 'src/generated/resources'
+        java {
+            exclude file('deferred/excludes.txt').readLines()
+                .collect { it.trim() }
+                .findAll { !it.isEmpty() && !it.startsWith('#') }
+        }
+    }
+}
+
+// --- mod metadata ---------------------------------------------------------------------------
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def props = [
+        mod_version            : project.version.toString(),
+        minecraft_version_range: project.minecraft_version_range,
+        neoforge_version_range : project.neoforge_version_range,
+        create_fly_version_range: project.create_fly_version_range,
+    ]
+    inputs.properties props
+    expand props
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+// --- connected-texture sprites (ported unchanged from the Fabric build.gradle.kts) -----------
+def generatedConnectedTextureResources = layout.buildDirectory.dir('generated/connected-texture-resources')
+def crossTileIndexes = (1..15).toList()
+def rectangleTileIndexes = (0..11).toList() + (13..15).toList()
+def connectedTextureSheets = [
+    'assets/createdieselgenerators/textures/block/diesel_engine_big_connected.png'           : [4, crossTileIndexes],
+    'assets/createdieselgenerators/textures/block/bulk_fermenter/*_connected.png'           : [4, rectangleTileIndexes],
+    'assets/createdieselgenerators/textures/block/distillation_tower/*_connected.png'       : [4, rectangleTileIndexes],
+    'assets/createdieselgenerators/textures/block/oil_barrel/**/*_connected.png'            : [4, rectangleTileIndexes],
+]
+def connectedTextureSheetsAlsoUsedByModels = [
+    'assets/createdieselgenerators/textures/block/bulk_fermenter/*_connected.png',
+    'assets/createdieselgenerators/textures/block/distillation_tower/*_connected.png',
+]
+
+def generateConnectedTextureSprites = tasks.register('generateConnectedTextureSprites') {
+    def resourceRoot = file('src/main/resources')
+    inputs.files(fileTree(resourceRoot) { include connectedTextureSheets.keySet() })
+        .withPropertyName('connectedTextureSheets')
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.property('connectedTextureLayout', 'create-fly-26.2-v1')
+    outputs.dir(generatedConnectedTextureResources)
+    doLast {
+        def outputRoot = generatedConnectedTextureResources.get().asFile
+        project.delete(outputRoot)
+        int sheetCount = 0
+        int spriteCount = 0
+        connectedTextureSheets.each { pattern, layout ->
+            int gridSize = layout[0]
+            List<Integer> tileIndexes = layout[1]
+            fileTree(resourceRoot) { include pattern }.files.sort { it.path }.each { sheetFile ->
+                def sheet = ImageIO.read(sheetFile)
+                if (sheet == null) throw new GradleException("Could not decode $sheetFile")
+                if (sheet.width != sheet.height || sheet.width % gridSize != 0) {
+                    throw new GradleException("$sheetFile must be a $gridSize x $gridSize grid of square tiles, but is ${sheet.width} x ${sheet.height}")
+                }
+                int tileSize = sheet.width.intdiv(gridSize)
+                def relativeSheet = resourceRoot.toPath().relativize(sheetFile.toPath()).toString()
+                def spriteDirectory = new File(outputRoot, relativeSheet.substring(0, relativeSheet.length() - '.png'.length()))
+                spriteDirectory.mkdirs()
+                tileIndexes.eachWithIndex { int sourceTileIndex, int index ->
+                    def tile = sheet.getSubimage((sourceTileIndex % gridSize) * tileSize, sourceTileIndex.intdiv(gridSize) * tileSize, tileSize, tileSize)
+                    if (!ImageIO.write(tile, 'png', new File(spriteDirectory, "${index + 1}.png"))) {
+                        throw new GradleException("No PNG writer is available for $spriteDirectory")
+                    }
+                    spriteCount++
+                }
+                sheetCount++
+            }
+        }
+        logger.lifecycle("Generated $spriteCount connected-texture sprites from $sheetCount sheets")
+    }
+}
+
+processResources {
+    dependsOn generateConnectedTextureSprites
+    from generatedConnectedTextureResources
+    exclude(connectedTextureSheets.keySet() - connectedTextureSheetsAlsoUsedByModels.toSet())
+    // Fabric-only metadata; NeoForge reads META-INF/neoforge.mods.toml from src/main/templates.
+    exclude 'fabric.mod.json', 'createdieselgenerators.accesswidener'
+}
+
+jar {
+    from('LICENSE')
+    from('NOTICE')
+}
+
+tasks.named('sourcesJar', Jar) {
+    from('LICENSE')
+    from('NOTICE')
+}
+
+// --- namespace check (ported from the Fabric build) ------------------------------------------
+def ownedSourceRoots = ['com/jesz/createdieselgenerators/']
+def allowedResourceRoots = [
+    'assets/createdieselgenerators/', 'data/createdieselgenerators/', 'data/c/', 'data/create/',
+    'data/minecraft/', 'data/neoforge/', 'data/railways/', 'data/farmersdelight/', 'data/immersiveengineering/',
+]
+def allowedRootFiles = [
+    'createdieselgenerators.mixins.json', 'createdieselgenerators.client.mixins.json',
+    'icon.png', 'LICENSE', 'NOTICE', 'pack.mcmeta',
+]
+def checkNamespaces = tasks.register('checkNamespaces') {
+    description = "Fails if the mod jar or the sources jar carries an entry outside the mod's own namespace."
+    group = 'verification'
+    dependsOn tasks.named('jar'), tasks.named('sourcesJar')
+    doLast {
+        def problems = []
+        [tasks.jar.archiveFile.get().asFile, tasks.sourcesJar.archiveFile.get().asFile].each { archive ->
+            new ZipFile(archive).withCloseable { zip ->
+                zip.entries().each { entry ->
+                    if (entry.directory) return
+                    def name = entry.name
+                    if (name.startsWith('META-INF/') || name in allowedRootFiles) return
+                    if (allowedResourceRoots.any { name.startsWith(it) }) return
+                    if (name.endsWith('.class') || name.endsWith('.java')) {
+                        if (ownedSourceRoots.every { !name.startsWith(it) }) problems << "${archive.name}: $name"
+                        return
+                    }
+                    problems << "${archive.name}: $name"
+                }
+            }
+        }
+        if (!problems.isEmpty()) throw new GradleException("Foreign entries in the published artifacts:\n" + problems.join('\n'))
+        logger.lifecycle('checkNamespaces: archives clean')
+    }
+}
+tasks.named('check') { dependsOn checkNamespaces }

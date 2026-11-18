@@ -1,8 +1,11 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
@@ -12,7 +15,6 @@ import org.joml.Vector3fc;
 
 import java.util.function.Consumer;
 
-@Environment(EnvType.CLIENT)
 public final class SubItemRenderer implements SpecialModelRenderer<SubItemRenderer.Argument> {
     public static final SubItemRenderer INSTANCE = new SubItemRenderer();
 

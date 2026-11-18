@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.render;
 
 import com.jesz.createdieselgenerators.CDGPartialModels;
@@ -15,8 +18,8 @@ import com.zurrtum.create.client.foundation.virtualWorld.VirtualRenderWorld;
 import com.zurrtum.create.content.contraptions.ControlledContraptionEntity;
 import com.zurrtum.create.content.contraptions.bearing.BearingContraption;
 import com.zurrtum.create.content.contraptions.behaviour.MovementContext;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -25,7 +28,6 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
-@Environment(EnvType.CLIENT)
 public class PumpjackHeadRenderBehaviour implements MovementRenderBehaviour {
     @Override
     public @Nullable MovementRenderState getRenderState(Vec3 cameraPos, Font font, MovementContext context, VirtualRenderWorld renderWorld,

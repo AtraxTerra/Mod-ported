@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.render;
 
 import com.jesz.createdieselgenerators.CDGBlocks;
@@ -9,8 +12,8 @@ import com.zurrtum.create.catnip.data.Pair;
 import com.zurrtum.create.catnip.math.VecHelper;
 import com.zurrtum.create.catnip.theme.Color;
 import com.zurrtum.create.client.catnip.outliner.Outliner;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -23,7 +26,6 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.Arrays;
 
-@Environment(EnvType.CLIENT)
 public final class AndesiteGirderWrenchPreview {
     private AndesiteGirderWrenchPreview() {
     }

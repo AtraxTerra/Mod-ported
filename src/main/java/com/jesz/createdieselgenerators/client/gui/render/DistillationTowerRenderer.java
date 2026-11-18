@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.gui.render;
 
 import com.jesz.createdieselgenerators.CDGPartialModels;
@@ -7,13 +10,12 @@ import com.zurrtum.create.client.catnip.render.CachedBuffers;
 import com.zurrtum.create.client.flywheel.lib.model.baked.PartialModel;
 import com.zurrtum.create.client.foundation.gui.render.GuiBlockRenderer;
 import com.zurrtum.create.catnip.data.Iterate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;
 
-@Environment(EnvType.CLIENT)
 public class DistillationTowerRenderer extends GuiBlockRenderer<DistillationTowerRenderState> {
     @Override
     protected void renderToTexture(DistillationTowerRenderState state, PoseStack matrices, SubmitNodeCollector queue) {

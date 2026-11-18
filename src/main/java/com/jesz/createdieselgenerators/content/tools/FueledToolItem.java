@@ -1,7 +1,10 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.tools;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.jesz.createdieselgenerators.CDGConfig;
 import com.jesz.createdieselgenerators.CDGDataComponents;
 import com.zurrtum.create.AllEnchantments;
@@ -52,7 +55,6 @@ public interface FueledToolItem {
         return readFluid(stack).getAmount();
     }
 
-    @Environment(EnvType.CLIENT)
     default void createTooltip(List<Component> tooltip, ItemStack stack){
         if(stack.has(CDGDataComponents.FLUID_CONTENTS)) {
             FluidStack fluid = readFluid(stack);

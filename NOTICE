@@ -33,3 +33,11 @@ Assets
 All textures, models, sounds and data files are the upstream project's own work
 and ship under its MIT licence. Assets belonging to Create Fly are not bundled;
 the mod resolves them from Create Fly at runtime.
+
+NeoForge port
+-------------
+Ported from the Create Fly (Fabric) port above to NeoForge 26.2, against the NeoForge
+port of Create Fly, in https://github.com/AtraxTerra/Mod-ported (branch
+port/cdg-neoforge-26.2), 2026, with AI assistance. Every source file this port
+changes or adds carries the attribution header requested by AGENTS.md. Same MIT
+License; the chain of attribution above is unchanged.

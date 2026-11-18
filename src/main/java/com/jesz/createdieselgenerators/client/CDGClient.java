@@ -1,5 +1,9 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client;
 
+import com.zurrtum.create.platform.Platform;
 import com.jesz.createdieselgenerators.CreateDieselGenerators;
 import com.jesz.createdieselgenerators.foundation.CDGAnimationTicks;
 import com.zurrtum.create.client.catnip.animation.AnimationTickHolder;
@@ -10,7 +14,6 @@ import com.zurrtum.create.client.foundation.item.TooltipModifier;
 import com.jesz.createdieselgenerators.CDGPartialModels;
 import com.jesz.createdieselgenerators.CDGSpriteShifts;
 import com.jesz.createdieselgenerators.client.model.CDGItemModels;
-import com.jesz.createdieselgenerators.compat.strut_your_stuff.StrutYourStuffClient;
 import com.jesz.createdieselgenerators.client.behaviour.CDGTooltipBehaviours;
 import com.jesz.createdieselgenerators.client.gui.CDGScreens;
 import com.jesz.createdieselgenerators.client.gui.CDGTooltipComponents;
@@ -22,11 +25,9 @@ import com.jesz.createdieselgenerators.client.valuebox.CDGValueBoxes;
 import com.jesz.createdieselgenerators.ponder.CDGPonderPlugin;
 import com.zurrtum.create.client.ponder.foundation.PonderIndex;
 import com.jesz.createdieselgenerators.client.model.CDGItemProperties;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
-@Environment(EnvType.CLIENT)
 public final class CDGClient {
     private CDGClient() {
     }
@@ -39,8 +40,7 @@ public final class CDGClient {
         CDGPartialModels.init();
         CDGSpriteShifts.init();
         CDGRegistrateClient.flush();
-        if (FabricLoader.getInstance().isModLoaded("struts"))
-            StrutYourStuffClient.register();
+        // Port: Strut Your Stuff has no NeoForge build; its compat (compat/strut_your_stuff) is excluded.
         CDGItemProperties.register();
         CDGItemModels.register();
         CDGModels.register();

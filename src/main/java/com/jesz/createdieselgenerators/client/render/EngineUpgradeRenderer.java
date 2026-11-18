@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client.render;
 
 import com.jesz.createdieselgenerators.CDGPartialModels;
@@ -12,14 +15,13 @@ import com.jesz.createdieselgenerators.content.diesel_engine.normal.DieselEngine
 import com.zurrtum.create.client.catnip.render.CachedBuffers;
 import com.zurrtum.create.client.catnip.render.SuperByteBufferRenderState;
 import com.zurrtum.create.client.flywheel.lib.model.baked.PartialModel;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 
-@Environment(EnvType.CLIENT)
 public final class EngineUpgradeRenderer {
     private static final Identifier SILENCER = CreateDieselGenerators.rl("silencer");
     private static final Identifier TURBOCHARGER = CreateDieselGenerators.rl("turbocharger");

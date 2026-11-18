@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.track_layers_bag;
 
 import com.jesz.createdieselgenerators.CDGDataComponents;
@@ -40,8 +43,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.*;
 import com.jesz.createdieselgenerators.foundation.CDGInv;
@@ -591,7 +594,6 @@ public class TrackLayersBagPlacement {
     static int hintAngle;
     static Couple<List<BlockPos>> hints;
 
-    @Environment(EnvType.CLIENT)
     public static void clientTick() {
 
         Minecraft mc = Minecraft.getInstance();
@@ -790,7 +792,6 @@ public class TrackLayersBagPlacement {
         lastLineCount = segCount;
     }
 
-    @Environment(EnvType.CLIENT)
     private static void line(int id, Vec3 v1, Vec3 o1, Vec3 ex) {
         int color = Color.mixColors(0xEA5C2B, 0x95CD41, animation.getValue());
         Outliner.getInstance().showLine(Pair.of("start", id), v1.subtract(o1), v1.add(ex))

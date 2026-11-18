@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.entity_filter;
 
 import com.jesz.createdieselgenerators.CreateDieselGenerators;
@@ -13,7 +16,7 @@ import com.zurrtum.create.client.foundation.gui.widget.Label;
 import com.zurrtum.create.client.foundation.gui.widget.SelectionScrollInput;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -26,7 +29,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 
-@net.fabricmc.api.Environment(net.fabricmc.api.EnvType.CLIENT)
+@net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
 public class EntityFilterScreen extends AbstractFilterScreen<EntityFilterMenu> {
     IconButton whitelistCon, whitelistDis, blacklist, add, addInverted;
     Indicator whitelistConIndicator, whitelistDisIndicator, blacklistIndicator;
@@ -151,7 +154,7 @@ public class EntityFilterScreen extends AbstractFilterScreen<EntityFilterMenu> {
         add.active = false;
         addInverted.active = false;
         EntityAttribute attribute = attributesOfItem.get(index);
-        ClientPlayNetworking.send(new EntityFilterScreenPacket(inverted ? FilterScreenPacket.Option.ADD_INVERTED_TAG : FilterScreenPacket.Option.ADD_TAG, attribute));
+        ClientPacketDistributor.sendToServer(new EntityFilterScreenPacket(inverted ? FilterScreenPacket.Option.ADD_INVERTED_TAG : FilterScreenPacket.Option.ADD_TAG, attribute));
         menu.appendSelectedAttribute(attribute, inverted);
         if (menu.selectedAttributes.size() == 1)
             selectedAttributes.set(0,
@@ -221,6 +224,6 @@ public class EntityFilterScreen extends AbstractFilterScreen<EntityFilterMenu> {
 
     @Override
     protected void sendOptionUpdate(FilterScreenPacket.Option option) {
-        ClientPlayNetworking.send(new EntityFilterScreenPacket(option, EntityAttribute.IS_MOB));
+        ClientPacketDistributor.sendToServer(new EntityFilterScreenPacket(option, EntityAttribute.IS_MOB));
     }
 }

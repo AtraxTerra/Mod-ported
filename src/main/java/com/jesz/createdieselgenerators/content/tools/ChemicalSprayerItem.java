@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.tools;
 
 import com.jesz.createdieselgenerators.CDGRegistries;
@@ -18,8 +21,8 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluids;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 
 import java.util.List;
@@ -36,7 +39,6 @@ public class ChemicalSprayerItem extends Item implements FueledToolItem {
         this.lighter = lighter;
     }
 
-    @Environment(EnvType.CLIENT)
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> adder, TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, display, adder, tooltipFlag);

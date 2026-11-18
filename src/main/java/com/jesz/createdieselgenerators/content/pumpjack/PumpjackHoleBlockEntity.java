@@ -1,6 +1,9 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.pumpjack;
 
-import net.fabricmc.api.EnvironmentInterface;
+import net.neoforged.api.distmarker.OnlyInInterface;
 import com.jesz.createdieselgenerators.CDGBlockEntityTypes;
 import com.jesz.createdieselgenerators.CDGTags;
 import com.jesz.createdieselgenerators.CreateDieselGenerators;
@@ -45,8 +48,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import com.zurrtum.create.infrastructure.fluids.FluidInventory;
 
@@ -57,8 +60,6 @@ import static net.minecraft.world.level.block.state.properties.BlockStatePropert
 import com.jesz.createdieselgenerators.foundation.CDGInv;
 import com.jesz.createdieselgenerators.CDGFluids;
 
-@EnvironmentInterface(value = EnvType.CLIENT, itf = IHaveGoggleInformation.class)
-@EnvironmentInterface(value = EnvType.CLIENT, itf = IHaveHoveringInformation.class)
 public class PumpjackHoleBlockEntity extends SmartBlockEntity implements IHaveGoggleInformation, IHaveHoveringInformation {
     BlockState state;
 
@@ -81,7 +82,6 @@ public class PumpjackHoleBlockEntity extends SmartBlockEntity implements IHaveGo
 
     public int oilAmount = 0;
 
-    @Environment(EnvType.CLIENT)
     @Override
     public boolean addToTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         if (valid)
@@ -95,7 +95,6 @@ public class PumpjackHoleBlockEntity extends SmartBlockEntity implements IHaveGo
         return true;
     }
 
-    @Environment(EnvType.CLIENT)
     @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         if (!valid || !started)
@@ -203,7 +202,6 @@ public class PumpjackHoleBlockEntity extends SmartBlockEntity implements IHaveGo
             spawnOilParticles(new FluidStack(stackList.get(0), 1000));
     }
 
-    @Environment(EnvType.CLIENT)
     private void spawnOilParticles(FluidStack stack) {
         FluidFX.spawnPouringLiquid(level, worldPosition, 20, FluidFX.getFluidParticle(stack), 0.3f, new Vec3(0.1, 1, 0.1), true);
     }

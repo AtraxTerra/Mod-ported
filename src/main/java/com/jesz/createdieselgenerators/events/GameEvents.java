@@ -1,5 +1,13 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.events;
 
+import net.minecraft.core.registries.Registries;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import com.jesz.createdieselgenerators.CDGConfig;
 import com.jesz.createdieselgenerators.CDGItems;
 import com.jesz.createdieselgenerators.CDGRegistries;
@@ -9,10 +17,6 @@ import com.jesz.createdieselgenerators.fuel_type.FuelType;
 import com.jesz.createdieselgenerators.mixins.LootItemAccessor;
 import com.jesz.createdieselgenerators.mixins.LootPoolAccessor;
 import com.jesz.createdieselgenerators.mixins.LootTableAccessor;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
-import net.fabricmc.fabric.api.registry.FuelValueEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -35,13 +39,20 @@ public class GameEvents {
     private static final Map<Level, Set<BlockPos>> toExplode = new HashMap<>();
 
     public static void register() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> new CDGCommands(dispatcher));
-        LootTableEvents.ALL_LOADED.register((resourceManager, registry) -> {
+        NeoForge.EVENT_BUS.addListener(RegisterCommandsEvent.class, event -> new CDGCommands(event.getDispatcher()));
+        // Port: NeoForge loads every loot table (LootTableLoadEvent, per table) before it posts
+        // AddServerReloadListenersEvent, so indexing here sees the complete set, like ALL_LOADED.
+        NeoForge.EVENT_BUS.addListener(AddServerReloadListenersEvent.class, event -> {
             ReverseLootTable.ALL.clear();
-            registry.listElements().forEach(holder -> indexLootTable(holder.key().identifier(), holder.value()));
+            event.getServerResources().fullRegistries().lookup().lookupOrThrow(Registries.LOOT_TABLE).listElements()
+                .forEach(holder -> indexLootTable(holder.key().identifier(), holder.value()));
         });
-        ServerTickEvents.END_LEVEL_TICK.register(GameEvents::onServerTick);
-        FuelValueEvents.BUILD.register((builder, context) -> builder.add(CDGItems.WOOD_CHIPS.get(), CDGItems.WOOD_CHIPS.get().getBurnTime()));
+        NeoForge.EVENT_BUS.addListener(LevelTickEvent.Post.class, event -> {
+            if (event.getLevel() instanceof ServerLevel level)
+                onServerTick(level);
+        });
+        // Port: wood chips' fuel value is data on NeoForge (FuelValues come from the
+        // neoforge:furnace_fuels data map): data/neoforge/data_maps/item/furnace_fuels.json.
     }
 
     private static void indexLootTable(Identifier tableId, LootTable table) {

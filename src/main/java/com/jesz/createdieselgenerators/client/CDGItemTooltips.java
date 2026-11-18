@@ -1,3 +1,6 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.client;
 
 import com.jesz.createdieselgenerators.CDGBlocks;
@@ -14,9 +17,10 @@ import com.zurrtum.create.client.foundation.utility.CreateLang;
 import com.zurrtum.create.content.equipment.goggles.GogglesItem;
 import com.zurrtum.create.content.kinetics.base.IRotate;
 import com.zurrtum.create.infrastructure.config.CKinetics;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -29,13 +33,12 @@ import net.minecraft.world.level.material.Fluid;
 import java.util.Arrays;
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 public final class CDGItemTooltips {
     private CDGItemTooltips() {
     }
 
     public static void register() {
-        ItemTooltipCallback.EVENT.register((stack, context, flag, tooltip) -> addToItemTooltip(stack, tooltip));
+        NeoForge.EVENT_BUS.addListener(ItemTooltipEvent.class, event -> addToItemTooltip(event.getItemStack(), event.getToolTip()));
     }
 
     private static void addToItemTooltip(ItemStack stack, List<Component> tooltip) {

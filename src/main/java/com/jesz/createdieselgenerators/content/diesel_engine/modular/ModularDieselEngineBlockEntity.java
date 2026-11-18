@@ -1,6 +1,9 @@
+// Adapted from chaevsfe / Create Fly: Diesel Generators (https://github.com/chaevsfe/Create-Diesel-Generators)
+// Based on original work from Create: Diesel Generators by George VI (https://github.com/george8188625/Create-Diesel-Generators)
+// Licensed under MIT — extracted/adapted with AI assistance.
 package com.jesz.createdieselgenerators.content.diesel_engine.modular;
 
-import net.fabricmc.api.EnvironmentInterface;
+import net.neoforged.api.distmarker.OnlyInInterface;
 import com.jesz.createdieselgenerators.CDGBlockEntityTypes;
 import com.jesz.createdieselgenerators.CDGBlocks;
 import com.jesz.createdieselgenerators.CDGConfig;
@@ -32,8 +35,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import com.zurrtum.create.infrastructure.fluids.FluidInventory;
 import com.zurrtum.create.foundation.fluid.FluidTank;
@@ -48,7 +51,6 @@ import com.jesz.createdieselgenerators.foundation.CDGInv;
 import com.zurrtum.create.client.api.goggles.IHaveGoggleInformation;
 import com.jesz.createdieselgenerators.CDGFluids;
 
-@EnvironmentInterface(value = EnvType.CLIENT, itf = IHaveGoggleInformation.class)
 public class ModularDieselEngineBlockEntity extends GeneratingKineticBlockEntity implements IHaveGoggleInformation, IEngine, IMultiBlockEntityContainer.Fluid {
     protected ServerScrollOptionBehaviour<WindmillBearingBlockEntity.RotationDirection> movementDirection;
     public int length = 1;
@@ -90,7 +92,6 @@ public class ModularDieselEngineBlockEntity extends GeneratingKineticBlockEntity
         super.addBehaviours(behaviours);
     }
 
-    @Environment(EnvType.CLIENT)
     @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         if (!isController()) {
