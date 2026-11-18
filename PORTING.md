@@ -290,6 +290,19 @@ directions of the script are exact and idempotent), so upstream's shader changes
 
 ---
 
+## 1g. Recipe viewers: Create's recipe types are sent to clients
+
+Since 1.21.2 a client receives only the recipe types something asks the loader to send. Upstream
+asks through Fabric API's `RecipeSynchronization` (`compat/fabric/RecipeCommonPlugin`, excluded
+here), and nothing asked on NeoForge: in JEI, every Create category built on Create's own recipes
+(crushing, milling, mixing, pressing, deploying, sequenced assembly...) was empty, single player
+included -- 967 recipes of those sixteen types, counted in CI with the server's mod list and JEI
+30.39. Only the categories made from vanilla recipes (automatic packing and shapeless, bulk
+blasting and smoking) and mystery conversion had any. `platform/RecipeSync` asks for the same
+sixteen types on every datapack sync.
+
+---
+
 ## 2. What changed
 
 ### Build and metadata
