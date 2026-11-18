@@ -125,7 +125,7 @@ jobs:
 
       # The world this port is for ran "Create: Diesel Generators Adapted" on Create: Adapted. Same
       # test as Create Fly's migration-test job, with both mods on each side.
-      - name: World migration (Create: Adapted + Diesel Generators Adapted -> Create Fly + this port)
+      - name: "World migration (Create: Adapted + Diesel Generators Adapted -> Create Fly + this port)"
         id: migration
         continue-on-error: true
         shell: bash
