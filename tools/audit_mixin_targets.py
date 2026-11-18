@@ -25,7 +25,7 @@ What it checks (per active mixin -- listed in a mixin config or added by its con
   * the target class exists in the jar
   * each injector's `method` exists there (name, and descriptor when given)
   * INVOKE / INVOKE_ASSIGN / FIELD / NEW @At targets occur in that method, and at least ordinal+1
-    times when an ordinal is given (FIELD honours `opcode`)
+    times when an ordinal is given (FIELD honours `opcode`); RETURN ordinals and TAIL likewise
   * @Shadow, @Accessor and @Invoker members exist in the target class (by name)
 
 What it cannot see
@@ -48,6 +48,7 @@ IMPORT = re.compile(r"^import\s+([\w.]+);", re.M)
 WILDCARD = re.compile(r"^import\s+([\w.]+)\.\*;", re.M)
 STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
 CHECKED_AT = {"INVOKE", "INVOKE_ASSIGN", "INVOKE_STRING", "FIELD", "NEW"}
+RETURN_INSN = re.compile(r"\s+\d+: [ilfda]?return\b")
 
 
 # --------------------------------------------------------------------------- source parsing
@@ -227,7 +228,7 @@ def javap(classpath: str, names: list[str]) -> dict[str, ClassInfo]:
                     current.fields.add(name)
                 pending = None
                 continue
-            if member is not None and "//" in line:
+            if member is not None and re.match(r"\s+\d+: ", line):
                 member[2].append(line)
     return out
 
@@ -378,6 +379,17 @@ def main() -> int:
                         continue
                     for at in at_annotations(args):
                         value = at_value(at)
+                        if value in ("RETURN", "TAIL"):
+                            # NeoForge patches add and remove early returns; an ordinal past the
+                            # last one matches nothing (KeyboardHandler.keyPress, RETURN ordinal 4).
+                            ordinal = attr(at, "ordinal")
+                            need = int(ordinal) + 1 if value == "RETURN" and ordinal and ordinal.isdigit() else 1
+                            counts = [sum(bool(RETURN_INSN.match(l)) for l in m[2]) for m in methods]
+                            if max(counts, default=0) < need:
+                                sink.append((fq, handler, f"@{kind} @At(\"{value}\""
+                                             + (f", ordinal = {ordinal}" if ordinal else "")
+                                             + f"): {target.rsplit('/', 1)[-1]}.{selector} has {max(counts, default=0)} return(s)"))
+                            continue
                         if value not in CHECKED_AT:
                             continue
                         raw = attr(at, "target")

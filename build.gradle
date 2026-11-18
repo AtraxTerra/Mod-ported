@@ -127,6 +127,8 @@ sourceSets {
             // @Overwrites NeoForge-patched tesselateBlock; replaced by VanillinModelLayerMixin plus
             // WrapperBlockStateModel.collectParts(level, ...). ModelLighter is NeoForge's AO's job.
             exclude 'com/zurrtum/create/client/mixin/ModelBlockRendererMixin.java'
+            // keyPress RETURN ordinal moved; client/platform/CreateKeyInput uses InputEvent.Key.
+            exclude 'com/zurrtum/create/client/mixin/KeyboardHandlerMixin.java'
 
             // Trinkets is a Fabric accessory mod; the NeoForge equivalent is Curios, which needs a
             // new renderer rather than a port of this one. Only client/compat/CompatMod referenced
