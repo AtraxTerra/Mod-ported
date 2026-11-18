@@ -252,7 +252,41 @@ model or texture error. Among them Lithium, FerriteCore, EntityCulling, Particle
 Modrinth under the file name the server uses (several look private): arc, berskar, capturenet,
 cupboard, day-counter, elytraslot, enchantmenttransfer, eplus, farsight, foxified-classtweaker,
 hbm, hbmspace, itemrestrictions, netschematic, tabbylib, uilib, yamlconfig. A URL after a tab in
-`server-mods.txt` brings one into the test.
+`server-mods.txt` brings one into the test. Without hbm and hbmspace, CrankShaft has no visual to
+warm up, which is why the clash in 1f did not show here.
+
+## 1f. Two Flywheels in one client: CrankShaft, and why the embedded one is `create_flywheel`
+
+Create Fly carries its own Flywheel (1.0.6, `com.zurrtum.create.client.flywheel`), and upstream
+keeps its shaders, textures and lang under `assets/flywheel/`. CrankShaft, the standalone Flywheel
+(1.6.0), keeps its shaders there too -- and NTM NEXT and NTM Space declare CrankShaft as a required
+client dependency, so the survival server's clients run both. On NeoForge every mod's resources
+share one pack: 55 shader files have the same path in both jars, 27 of them differ, and each path
+resolves to one jar's copy. The client stops before the title screen:
+
+```
+Warming CrankShaft shaders
+ShaderException$Compile: Failed to compile culling/uber18.glsl:
+error: 13:75(14): error: syntax error, unexpected NEW_IDENTIFIER, expecting ',' or ';'
+```
+
+The embedded Flywheel now has its own namespace, `create_flywheel` (`tools/relocate_flywheel.py`):
+the resource directory moves, the 67 `flywheel:` references in the shaders (Create's and Vanillin's
+included) are rewritten, and so are the five Java strings that name the namespace --
+`Flywheel.MOD_ID` first, which `ResourceUtil.rl`, the config file (now
+`config/create_flywheel-client.json`) and the loggers follow. Each shader loader still lists every
+`*/flywheel/` folder, so each Flywheel also reads the other's files; that is harmless, because every
+include names its namespace.
+
+Checked in CI with this port, the Diesel Generators port, NTM NEXT 1.0.3, NTM Space 1.0.0, CrankShaft
+1.6.0 and the server's own mod: CrankShaft's warm-up completes (18 instance types, 86 material
+variants), and Create's motor, shafts and cogwheels render next to a chest, a bell, a shulker box
+and a minecart. Not checked: whether a vanilla block entity is now drawn twice -- this port's
+Vanillin and CrankShaft's Vanillate both visualise chests, bells, shulker boxes and minecarts.
+Nothing looked doubled on screen.
+
+The upstream sync undoes the relocation before applying upstream's diff and redoes it after (both
+directions of the script are exact and idempotent), so upstream's shader changes keep applying.
 
 ---
 
@@ -453,6 +487,7 @@ src/main/java/com/zurrtum/create/
   infrastructure/transfer/       the capability bridge (5 classes)
 reference/fabric-transfer/       the Fabric adapters this replaced; NOT compiled
 tools/aw2at.py                   access widener → access transformer
+tools/relocate_flywheel.py       embedded Flywheel → create_flywheel namespace (1f); --undo
 tools/codemod_fabric_imports.py  re-runnable import codemod
 tools/audit_mixin_targets.py     every mixin target vs the patched bytecode (CI)
 tools/audit_mixins_vs_patches.py same, from source patches; offline, weaker

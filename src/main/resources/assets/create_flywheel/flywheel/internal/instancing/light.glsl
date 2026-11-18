@@ -1,4 +1,4 @@
-#include "flywheel:internal/light_lut.glsl"
+#include "create_flywheel:internal/light_lut.glsl"
 
 uniform usamplerBuffer _flw_lightLut;
 uniform usamplerBuffer _flw_lightSections;

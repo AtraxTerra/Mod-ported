@@ -1,5 +1,5 @@
-#include "flywheel:util/quaternion.glsl"
-#include "flywheel:util/matrix.glsl"
+#include "create_flywheel:util/quaternion.glsl"
+#include "create_flywheel:util/matrix.glsl"
 
 void flw_instanceVertex(in FlwInstance instance) {
     flw_vertexPos = vec4(rotateByQuaternion(flw_vertexPos.xyz - .5, instance.rotation) + instance.pos + .5, 1.);

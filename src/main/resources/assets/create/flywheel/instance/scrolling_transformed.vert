@@ -1,4 +1,4 @@
-#include "flywheel:util/matrix.glsl"
+#include "create_flywheel:util/matrix.glsl"
 
 void flw_instanceVertex(in FlwInstance instance) {
     flw_vertexPos = instance.pose * flw_vertexPos;

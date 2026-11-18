@@ -1,4 +1,4 @@
-#include "flywheel:internal/light_lut.glsl"
+#include "create_flywheel:internal/light_lut.glsl"
 
 layout(std430, binding = _FLW_LIGHT_LUT_BUFFER_BINDING) restrict readonly buffer LightLut {
     uint _flw_lightLut[];

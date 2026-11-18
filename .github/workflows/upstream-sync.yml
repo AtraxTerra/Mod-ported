@@ -130,10 +130,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "${{ steps.existing.outputs.branch }}"
 
+          # The port moved the embedded Flywheel's resources to the create_flywheel namespace
+          # (PORTING.md, 1f): undo that so upstream's diff applies to upstream's layout; redone below.
+          python3 -I tools/relocate_flywheel.py . --undo
+          git add -A
           # --3way does a real per-file content merge; --reject leaves what cannot be resolved as
           # .rej files instead of refusing the whole patch, so a single awkward file does not block
           # the rest of the sync.
           git apply --3way --reject --verbose /tmp/rewritten.patch 2>/tmp/apply.log || true
+          python3 -I tools/relocate_flywheel.py .
           find . -name '*.rej' -not -path './.git/*' | sed 's|^\./||' | sort > /tmp/rejects.txt
 
           if [ -s /tmp/rejects.txt ]; then

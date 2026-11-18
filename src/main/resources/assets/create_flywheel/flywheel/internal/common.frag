@@ -1,8 +1,8 @@
-#include "flywheel:internal/packed_material.glsl"
-#include "flywheel:internal/diffuse.glsl"
-#include "flywheel:internal/colorizer.glsl"
-#include "flywheel:internal/wavelet.glsl"
-#include "flywheel:internal/depth.glsl"
+#include "create_flywheel:internal/packed_material.glsl"
+#include "create_flywheel:internal/diffuse.glsl"
+#include "create_flywheel:internal/colorizer.glsl"
+#include "create_flywheel:internal/wavelet.glsl"
+#include "create_flywheel:internal/depth.glsl"
 
 // optimize discard usage
 #if defined(GL_ARB_conservative_depth) && defined(_FLW_USE_DISCARD)

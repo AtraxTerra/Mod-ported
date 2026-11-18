@@ -1,6 +1,6 @@
-#include "flywheel:internal/common.vert"
-#include "flywheel:internal/packed_material.glsl"
-#include "flywheel:internal/instancing/light.glsl"
+#include "create_flywheel:internal/common.vert"
+#include "create_flywheel:internal/packed_material.glsl"
+#include "create_flywheel:internal/instancing/light.glsl"
 
 uniform uvec2 _flw_packedMaterial;
 uniform int _flw_baseInstance = 0;

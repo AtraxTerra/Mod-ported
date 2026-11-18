@@ -1,9 +1,9 @@
-#include "flywheel:internal/common.vert"
-#include "flywheel:internal/packed_material.glsl"
-#include "flywheel:internal/indirect/buffer_bindings.glsl"
-#include "flywheel:internal/indirect/draw_command.glsl"
-#include "flywheel:internal/indirect/light.glsl"
-#include "flywheel:internal/indirect/matrices.glsl"
+#include "create_flywheel:internal/common.vert"
+#include "create_flywheel:internal/packed_material.glsl"
+#include "create_flywheel:internal/indirect/buffer_bindings.glsl"
+#include "create_flywheel:internal/indirect/draw_command.glsl"
+#include "create_flywheel:internal/indirect/light.glsl"
+#include "create_flywheel:internal/indirect/matrices.glsl"
 
 layout(std430, binding = _FLW_DRAW_INSTANCE_INDEX_BUFFER_BINDING) restrict readonly buffer TargetBuffer {
     uint _flw_instanceIndices[];
