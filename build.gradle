@@ -39,12 +39,9 @@ neoForge {
     // Keep this ON: a stale AT line is otherwise a silent runtime failure.
     validateAccessTransformers = true
 
-    parchment {
-        // Not used: 26.x is mojmap everywhere, and the Fabric source is already
-        // written against Mojang names. Adding Parchment would rename parameters
-        // out from under 3.5k ported files.
-        enabled = false
-    }
+    // No Parchment block on purpose. 26.x is mojmap on every loader and the Fabric source is
+    // already written against Mojang names; adding Parchment would rename parameters out from
+    // under 3.5k ported files.
 
     runs {
         client {
@@ -154,20 +151,31 @@ dependencies {
     }
 }
 
-processResources {
-    def props = [
-        version              : version,
-        mod_id               : project.mod_id,
-        mod_name             : project.mod_name,
+// Mod metadata is interpolated out of src/main/templates, following the MDK convention, rather
+// than through processResources. Expanding in place would run Groovy's template engine over the
+// whole resource tree -- 67 MB of Create's assets and data, much of it containing '$' -- and a
+// single stray one is a build failure. Keeping the templated files in their own small directory
+// avoids that entirely.
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+        mod_id                 : project.mod_id,
+        mod_name               : project.mod_name,
+        // The full version string, including the build counter, as the jar reports it.
+        mod_version_full       : project.version.toString(),
         minecraft_version_range: project.minecraft_version_range,
         neoforge_version_range : project.neoforge_version_range,
     ]
-    inputs.properties props
+    inputs.properties replaceProperties
+    // A property referenced in a template but missing here fails the build, rather than shipping
+    // a literal '${...}' into the jar where it would surface as a broken dependency range.
+    expand replaceProperties
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/sources/modMetadata')
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
 
-    filesMatching('META-INF/neoforge.mods.toml') {
-        expand props
-    }
-
+processResources {
     // Datagen inputs; upstream keeps them out of the shipped jar too.
     exclude '_data'
 }

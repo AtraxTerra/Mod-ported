@@ -141,9 +141,12 @@ conversion therefore goes through `FluidUnits` and nowhere else. The rules:
 
 Work in this order. Each stage is blind to what the next one catches.
 
-1. **Fix `moddev_version` in `gradle.properties`.** It is a guess (`2.0.78`) — nothing could be
-   resolved offline. Check <https://projects.neoforged.net/neoforged/moddevgradle> and set the real
-   one. Nothing else can proceed until Gradle resolves the plugin.
+1. **Versions are settled.** `moddev_version` (2.0.148) and `neoforge_version` (26.2.0.95) come
+   from the official [MDK-26.2-ModDevGradle](https://github.com/NeoForgeMDKs/MDK-26.2-ModDevGradle)
+   template, and CI confirmed ModDevGradle resolves and reaches
+   `:createMinecraftArtifacts`. An earlier guess of `2.0.78` resolved too but ran its NeoForm step
+   under Java 21, which 26.2 does not accept — so if that task fails again, the plugin version is
+   the first thing to check, not the code.
 2. **`./gradlew clean compileJava`.** Always `clean`: javac short-circuits per file, so unresolved
    imports hide body errors and a shrinking error count is not progress. Measure by a green compile,
    not by the error number going down.
@@ -220,7 +223,7 @@ Ordered by how likely they are to bite.
 
 ```
 build.gradle                     ModDevGradle; also the exclusion list with a reason per entry
-gradle.properties                versions — moddev_version NEEDS VERIFYING
+gradle.properties                versions, matching the official 26.2 MDK
 interface-injection.json         the 2 interfaces the access widener injected
 src/main/resources/META-INF/
   neoforge.mods.toml             mod metadata, mixin configs, AT declaration
