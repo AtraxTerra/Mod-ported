@@ -525,8 +525,12 @@ def main() -> int:
                 if info and name not in info.fields and all(m[0] != name for m in info.methods):
                     problems.append((fq, member, f"@{kind} {name} not found in {target}"))
 
+    with_lvt = sum(1 for i in infos.values() for m in i.methods if m[3])
+    total_methods = sum(len(i.methods) for i in infos.values())
     print(f"{len(mixins)} active mixin(s), {checked} injector/method pair(s) checked against "
-          f"{len(infos)} class(es) from {', '.join(j.name for j in opts.jar)}\n")
+          f"{len(infos)} class(es) from {', '.join(j.name for j in opts.jar)}")
+    print(f"local variable tables: {with_lvt} of {total_methods} target-class methods "
+          f"(implicit @Local checks need them; 0 means that check could not run)\n")
     for title, rows in (("PROBLEMS (each one fails Mixin's apply step)", problems),
                         ("notes (optional injectors, @Pseudo, unverified selectors)", notes)):
         if not rows:
