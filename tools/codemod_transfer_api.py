@@ -91,7 +91,8 @@ SUBS: list[tuple[str, str]] = [
 NEEDS_HAND = [
     (r"supportsInsertion|supportsExtraction",
      "no ResourceHandler counterpart -- decide whether the guard is still needed"),
-    (r"\bDebugMessages\b", "Fabric-internal debug helper, drop the call"),
+    (r"\bDebugMessages\b",
+     "Fabric-internal debug helper -- remove the CALL BY HAND. A regex that matches up to the\n      first closing paren mangles a nested call and javac then aborts early on the syntax error,\n      printing a fake low error count"),
     (r"net\.fabricmc", "still references Fabric"),
     (r"\bexceptionHandler\b|\bTransactionContext\.Result\b", "check the transaction callback shape"),
 ]

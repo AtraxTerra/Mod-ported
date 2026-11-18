@@ -85,10 +85,10 @@ public interface FluidInventoryStorage extends ResourceHandler<FluidResource> {
         String result = inventory.toString();
 
         if (inventory instanceof BlockEntity blockEntity) {
-            result += " (%s, %s)".formatted(
-                blockEntity.getBlockState(),
-                "" /* Fabric DebugMessages dropped */, blockEntity.getBlockPos())
-            );
+            // Upstream formats the position through Fabric's internal DebugMessages helper, which
+            // has no NeoForge counterpart. This is a debug string, so the position is printed
+            // directly instead.
+            result += " (%s, %s)".formatted(blockEntity.getBlockState(), blockEntity.getBlockPos());
         }
 
         return result;
