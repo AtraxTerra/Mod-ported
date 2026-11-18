@@ -4,13 +4,11 @@
 26.2. Upstream is ZurrTum's Fabric port of [Create](https://github.com/Creators-of-Create/Create);
 this repository carries the loader change only, on the same Minecraft version.
 
-> **Status: compiling, not yet compiled.** CI resolves Minecraft and NeoForge and reaches `javac`.
-> The first run reported 417 errors; a triage pass cut that to **99 across 18 files** (the log
-> triples each error, so roughly 33 distinct). The **Build** workflow run summary lists them grouped
-> by file. The largest remaining piece is the transfer layer — see
-> [PORTING.md section 1b](PORTING.md), which is the first thing to read: 26.2 replaced
-> `IItemHandler`/`IFluidHandler` with a `ResourceHandler` API, and the upstream Fabric adapters kept
-> in `reference/` are the right starting point for it.
+> **Status: 18 compile errors.** CI resolves Minecraft and NeoForge and compiles. The first run
+> reported 417 (~139 distinct — the log triples each); successive passes took that to
+> 105 → 73 → 41 → 28 → **18**. The transfer layer is ported onto NeoForge's `ResourceHandler` API;
+> what remains is three small groups, listed in [PORTING.md](PORTING.md) step 4 of First build.
+> Nothing has been *run* yet: a green compile is the first of eight validation gates.
 
 **Read [PORTING.md](PORTING.md)** for what changed, the order to work through the first build, and
 the 11 known gaps. The two sharp edges, in short: fluid amounts are droplets inside Create and

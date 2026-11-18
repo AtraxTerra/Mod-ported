@@ -3,10 +3,11 @@
 Port of [ZurrTum/Create-Fly](https://github.com/ZurrTum/Create-Fly) (branch `26.2`, commit
 `3a9fe3e`, Create 6.0.9) from Fabric to NeoForge, same Minecraft version.
 
-> **This has never been compiled.** It was written without network access to the NeoForged, Mojang
-> or Fabric Maven repositories, so Gradle could not resolve a single dependency and no `javac` ever
-> ran over it. Treat every NeoForge API signature in the new code as *unverified*. Section
-> [First build](#first-build) is the order to work through.
+> **Status: 18 compile errors.** CI resolves Minecraft and NeoForge and compiles; the first run
+> reported 417 (~139 distinct, since the log triples each). Successive passes took that to
+> 105 → 73 → 41 → 28 → **18**. The transfer layer is ported; what is left is listed in
+> [First build](#first-build) step 4. Nothing has been *run* yet — a green compile is the first of
+> eight validation gates, not the finish line.
 
 ---
 
@@ -41,14 +42,11 @@ files still reference `net.fabricmc`.**
 
 ---
 
-## 1b. ⚠ Correction: the transfer layer targets the wrong API
+## 1b. The transfer layer, and the API that caught me out
 
-**Read this before touching `infrastructure/transfer/`.** The adapters in that package were written
-against NeoForge's `IItemHandler` / `IFluidHandler`. That is the right API for NeoForge 1.21.x. It is
-**not** the API in NeoForge 26.2, and CI proved it: `Capabilities.ItemHandler` does not exist.
-
-26.2 replaced both with a unified resource-transfer API under
-`net.neoforged.neoforge.transfer`:
+The adapters were first written against NeoForge's `IItemHandler` / `IFluidHandler`. That is right
+for 1.21.x and wrong for 26.2, which CI proved immediately: `Capabilities.ItemHandler` does not
+exist. 26.2 replaced both with a unified resource API under `net.neoforged.neoforge.transfer`:
 
 ```java
 Capabilities.Item.BLOCK   // BlockCapability<ResourceHandler<ItemResource>,  @Nullable Direction>
@@ -66,43 +64,66 @@ public interface ResourceHandler<T extends Resource> {
 }
 ```
 
-**This is good news, and it inverts the plan.** Note the `TransactionContext`: 26.2 adopted a
-transaction model, and immutable resource values (`ItemResource`, `FluidResource`) instead of
-mutable stacks. That is essentially Fabric's Transfer API design. So the claim made in section 2
-below -- that Fabric's transaction bookkeeping has no counterpart and collapses away -- **is wrong
-for this version**, and the 4,025 lines of upstream Fabric adapters are not dead weight: they are
-the right starting point, needing a largely mechanical type-rename rather than a rewrite.
+Note the `TransactionContext`. 26.2 adopted a transaction model and immutable resource values, which
+is Fabric's Transfer API design. So upstream's 4,000 lines of Fabric adapters were not dead weight
+but the right starting point, and the layer is now a **port of them** rather than a rewrite.
 
-They are preserved, uncompiled, in `reference/fabric-transfer/`. The mapping:
+**`ResourceView` is the hinge.** Fabric models a storage as a collection of `StorageView` objects;
+NeoForge's handler is flat and takes an `int index`. Semantically identical, addressed differently.
+`ResourceView` is a two-field record over (handler, index) that re-creates the view, so upstream's
+call sites port by renaming types instead of being restructured around an index parameter.
 
-| Fabric Transfer API | NeoForge 26.2 |
+`tools/codemod_transfer_api.py` does the rename pass and is re-runnable:
+
+| Fabric | NeoForge 26.2 |
 |---|---|
-| `Storage<ItemVariant>` | `ResourceHandler<ItemResource>` |
-| `Storage<FluidVariant>` | `ResourceHandler<FluidResource>` |
-| `SlottedStorage` / `SingleSlotStorage` | the indexed `ResourceHandler` itself |
-| `ItemVariant` | `ItemResource` (`of(stack)`, `toStack(count)`) |
-| `FluidVariant` | `FluidResource` |
-| `Transaction` / `TransactionContext` | `net.neoforged.neoforge.transfer.transaction.TransactionContext` |
-| `SnapshotParticipant` | `SnapshotJournal` |
-| `CombinedStorage` | `CombinedResourceHandler` |
-| `ContainerStorage.of(container, side)` | **`VanillaContainerWrapper`** — NeoForge ships it |
+| `Storage` / `SlottedStorage` | `ResourceHandler` |
+| `StorageView` / `SingleSlotStorage` | `ResourceView` (consuming) or a one-slot `ResourceHandler` (implementing) |
+| `ItemVariant` / `FluidVariant` | `ItemResource` / `FluidResource` |
+| `Transaction.openOuter()` | `Transaction.openRoot()` |
+| `transaction.abort()` | nothing — close without commit rolls back |
+| `SnapshotParticipant` | `SnapshotJournal` (`readSnapshot` → `revertToSnapshot`) |
 | `StoragePreconditions` | `TransferPreconditions` |
-| `ContainerItemContext` | `ItemAccess` / `ItemAccessResourceHandler` |
-| `ItemStorage.SIDED.registerForBlockEntity` | `RegisterCapabilitiesEvent.registerBlockEntity` |
+| `ContainerStorage.of(c, null)` / `(c, side)` | `VanillaContainerWrapper.of(c)` / `new WorldlyContainerWrapper(c, side)` |
+| `ContainerItemContext` | `ItemAccess` (`ItemAccess.forStack`) |
+| `BlockApiCache` | `BlockCapabilityCache` |
+| `*.SIDED.registerForBlockEntity` | `RegisterCapabilitiesEvent.registerBlockEntity` |
+| amounts are `long` | amounts are `int` |
 
-`VanillaContainerWrapper` is worth singling out: it is NeoForge's own vanilla-`Container`-to-handler
-adapter, so it replaces upstream's `ContainerStorage.of(...)` directly, and `ContainerItemHandler`
-in this port exists only because the old API had no such thing.
+Four things needed judgement rather than a rename:
 
-**Fluid units still need converting.** `FluidType.BUCKET_VOLUME` is 1000 and Create counts 81000
-per bucket, so `FluidUnits` and its rounding rules stand unchanged — that part of section 2 is
-still correct, and still the sharpest edge in the port.
+- **The `Direct`/`Slotted` split is gone.** It existed because Fabric's `Storage` came in an opaque
+  iterable shape and an indexed one; `ResourceHandler` is always indexed, so `Direct` would have
+  been unreachable code pretending to handle a case that no longer exists.
+- **`Filter` is unreachable.** `ResourceHandler` exposes no insert/extract capability query to
+  branch on, and its contract is that a refused operation returns 0. The 25
+  `supportsInsertion`/`supportsExtraction` call sites route through two documented helpers on
+  `ResourceView` so the assumption sits in one place.
+- **A class that *implements* a one-slot storage cannot implement `ResourceView`,** which is a
+  record. Those become `ResourceHandler` with `size() == 1` and an ignored index. The blanket
+  `SingleSlotStorage` → `ResourceView` rename is right in a consuming position and wrong in an
+  implementing one — this was the first pass's mistake.
+- **`CombinedResourceHandler` cannot stand in for Fabric's `CombinedStorage`.** Its children are
+  final and its javadoc says the wrapper must be recreated to follow a size change; Create's fluid
+  inventories resize at runtime. Both impls hold their own part list, and the delegation lives in
+  the `FluidInventoryStorage` interface as defaults.
 
-**What to do.** Delete the five adapters in `infrastructure/transfer/` (keeping `SlotRangeCache`),
-restore the files from `reference/fabric-transfer/`, and run the rename table above over them. Then
-point `AllTransfer` and the three `Cached*InventoryBehaviour`s at `ResourceHandler`. Expect this to
-remove most of the 417 errors CI currently reports, since `AllTransfer` alone accounts for 39 of
-them.
+**Fluid units are unchanged by any of this.** `FluidType.BUCKET_VOLUME` is 1000 against Create's
+81000, so `FluidUnits` and its rounding rules stand, and remain the sharpest edge in the port.
+
+### Two lessons worth keeping
+
+**A falling error count can be a lie.** A regex that matched `DebugMessages.forGlobalPos(...)` up to
+the first closing paren mangled a nested call. javac aborted on the syntax error and reported
+`1 error` — down from 315, and meaningless. Always read what the remaining error *is*.
+
+**`extendable` in an access widener strips `final`.** Translating it as a plain `public` access
+transformer line applies cleanly and then fails far away: ten errors, including every
+`cannot override` on `moveOrInterpolateTo`, `isLocalInstanceAuthoritative`,
+`AbstractWidget.extractRenderState` and `Screen.init`, plus `cannot inherit from final Ingredient`.
+NeoForge spells it `public-f`. Separately, an access widener implicitly opens the owning class when
+a member is widened and an access transformer does not, so each member line needs one for its owner.
+Both rules are documented in `tools/aw2at.py`.
 
 ---
 
@@ -220,7 +241,14 @@ Work in this order. Each stage is blind to what the next one catches.
 2. **`./gradlew clean compileJava`.** Always `clean`: javac short-circuits per file, so unresolved
    imports hide body errors and a shrinking error count is not progress. Measure by a green compile,
    not by the error number going down.
-3. Expect the first wave in the **new code only** — the five `platform` classes, the five transfer
+3. The remaining 18 errors fall into three groups, none of them structural:
+   - **transfer layer, 8** — a misapplied `ResourceView.all`, two stale `@Override`s, and the
+     inner `Iterator` classes of the two wrappers
+   - **client platform seams, 8** — `FlwImplXplatImpl`, `VanillinXplatImpl`, `CopycatModel`,
+     `PonderTagIndexScreen`, and `CreatePackFinders` (whose `addPackFinders` signature was flagged
+     as a guess when it was written)
+   - **`Collection<EnderDragonPart>` variance, 2** — in `WrappedLevel` and `VirtualRenderWorld`
+4. Expect any new wave in the **new code only** — the five `platform` classes, the five transfer
    adapters, `AllTransfer`, the three `Cached*InventoryBehaviour`s, the two entry points, the two
    `MixinPlugin`s. Everything else was already loader-neutral. Specific things to check against the
    pinned NeoForge build, because they move between versions:
@@ -230,14 +258,14 @@ Work in this order. Each stage is blind to what the next one catches.
    - `IModInfo.getModProperties()` value types (`VanillinConfig`)
    - `IClientFluidTypeExtensions.getTintColor` signature (`FluidRendering`)
    - NeoForge `FluidStack` constructor: `Fluid` vs `Holder<Fluid>` (`FluidHandlerInventory`)
-4. **Boot a dedicated server to `Done`.** This is the authoritative common-mixin check. Then grep
+5. **Boot a dedicated server to `Done`.** This is the authoritative common-mixin check. Then grep
    the log for `FAILED during APPLY`, `was not applied`, `Found a remappable @Shadow` — **after every
    fix**, because mixin faults surface in waves, each hiding the next.
-5. **Client mixins are invisible to a server boot.** A dedicated server never loads the `client`
+6. **Client mixins are invisible to a server boot.** A dedicated server never loads the `client`
    array. Launch a real client.
-6. **Bake gate.** Resolve blockstate → model → parent → texture across the whole resource view.
+7. **Bake gate.** Resolve blockstate → model → parent → texture across the whole resource view.
    Anything purple or invisible is a bake failure, not a render bug.
-7. **In-world QA.** Place every block, run fluid through pipes into and out of a foreign tank, push
+8. **In-world QA.** Place every block, run fluid through pipes into and out of a foreign tank, push
    items through a hopper into a Create inventory and back. The fluid-unit rules above are what this
    is really testing.
 
