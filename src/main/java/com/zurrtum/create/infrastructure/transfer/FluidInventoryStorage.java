@@ -87,7 +87,7 @@ public interface FluidInventoryStorage extends ResourceHandler<FluidResource> {
         if (inventory instanceof BlockEntity blockEntity) {
             result += " (%s, %s)".formatted(
                 blockEntity.getBlockState(),
-                DebugMessages.forGlobalPos(blockEntity.getLevel(), blockEntity.getBlockPos())
+                "" /* Fabric DebugMessages dropped */, blockEntity.getBlockPos())
             );
         }
 

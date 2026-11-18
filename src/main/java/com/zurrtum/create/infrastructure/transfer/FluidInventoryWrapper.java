@@ -350,7 +350,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
 
     protected void init() {
         int max = 0;
-        for (ResourceView<FluidResource> view : storage) {
+        for (ResourceView<FluidResource> view : ResourceView.all(storage)) {
             long capacity = view.getCapacity();
             if (max < capacity) {
                 max = (int) capacity;
@@ -610,7 +610,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         }
         FluidResource variant = view.getResource();
         long amount = view.getAmount();
-        if (variant.isBlank() || amount == 0) {
+        if (variant.isEmpty() || amount == 0) {
             return FluidStack.EMPTY;
         }
         try (Transaction transaction = Transaction.openRoot()) {
@@ -630,7 +630,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             return FluidStack.EMPTY;
         }
         FluidResource variant = view.getResource();
-        if (variant.isBlank() || view.getAmount() == 0) {
+        if (variant.isEmpty() || view.getAmount() == 0) {
             return FluidStack.EMPTY;
         }
         try (Transaction transaction = Transaction.openRoot()) {
@@ -651,7 +651,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         }
         FluidResource variant = view.getResource();
         try (Transaction transaction = Transaction.openRoot()) {
-            if (variant.isBlank() || view.getAmount() == 0) {
+            if (variant.isEmpty() || view.getAmount() == 0) {
                 if (stack.isEmpty()) {
                     return;
                 }
@@ -1136,7 +1136,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                         remaining -= insert;
                     }
                 }
-                for (ResourceView<FluidResource> target : emptys) {
+                for (ResourceView<FluidResource> target : ResourceView.all(emptys)) {
                     long insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         transaction.commit();

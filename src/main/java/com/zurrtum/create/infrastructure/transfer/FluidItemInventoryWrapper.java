@@ -179,7 +179,7 @@ public class FluidItemInventoryWrapper extends FluidInventoryWrapper<ResourceHan
             return new ResourceView<>(slottedStorage, slot);
         }
         int current = 0;
-        for (ResourceView<FluidResource> view : storage) {
+        for (ResourceView<FluidResource> view : ResourceView.all(storage)) {
             if (current == slot) {
                 return view;
             }
@@ -196,7 +196,7 @@ public class FluidItemInventoryWrapper extends FluidInventoryWrapper<ResourceHan
         } else {
             int count = 0;
             int max = 0;
-            for (ResourceView<FluidResource> view : storage) {
+            for (ResourceView<FluidResource> view : ResourceView.all(storage)) {
                 long capacity = view.getCapacity();
                 if (max < capacity) {
                     max = (int) capacity;

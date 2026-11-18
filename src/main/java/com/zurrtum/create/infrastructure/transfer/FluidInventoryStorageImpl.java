@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class FluidInventoryStorageImpl extends CombinedResourceHandler<FluidResource, ResourceView<FluidResource>> implements FluidInventoryStorage {
+public class FluidInventoryStorageImpl extends CombinedResourceHandler<FluidResource> implements FluidInventoryStorage {
     private static final Map<FluidInventory, FluidInventoryStorageImpl> WRAPPERS = new MapMaker().weakValues()
         .makeMap();
 
@@ -76,7 +76,7 @@ public class FluidInventoryStorageImpl extends CombinedResourceHandler<FluidReso
         }
 
         @Override
-        protected void readSnapshot(Boolean snapshot) {
+        protected void revertToSnapshot(Boolean snapshot) {
         }
 
         @Override

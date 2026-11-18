@@ -30,12 +30,12 @@ public class FluidInventorySlotWrapper extends SingleFluidStackStorage {
     }
 
     @Override
-    public long insert(FluidResource insertedVariant, long maxAmount, TransactionContext transaction) {
+    public int insert(int index, FluidResource insertedVariant, int maxAmount, TransactionContext transaction) {
         if (!canInsert(slot, FluidInventoryStorage.getCachedStack(insertedVariant))) {
             return 0;
         }
 
-        return super.insert(insertedVariant, maxAmount, transaction);
+        return super.insert(index, insertedVariant, maxAmount, transaction);
     }
 
     private boolean canInsert(int slot, FluidStack stack) {

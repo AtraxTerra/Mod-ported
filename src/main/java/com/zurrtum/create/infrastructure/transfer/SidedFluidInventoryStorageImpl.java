@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class SidedFluidInventoryStorageImpl extends CombinedResourceHandler<FluidResource, ResourceView<FluidResource>> implements FluidInventoryStorage {
+public class SidedFluidInventoryStorageImpl extends CombinedResourceHandler<FluidResource> implements FluidInventoryStorage {
     private final FluidInventoryStorageImpl backingStorage;
 
     SidedFluidInventoryStorageImpl(FluidInventoryStorageImpl storage, Direction direction) {
