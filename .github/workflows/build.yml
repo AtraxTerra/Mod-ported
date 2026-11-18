@@ -134,7 +134,7 @@ jobs:
           MIGRATION_BLOCKSTATES: src/generated/resources/assets/createdieselgenerators/blockstates
         run: |
           fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources' | head -1)
-          cdg=$(ls build/libs/createdieselgenerators-*.jar | grep -v -- '-sources' | head -1)
+          cdg=$(ls build/libs/CreateDieselGenerators-*.jar | grep -v -- '-sources' | head -1)
           echo "Create Fly: $fly / Diesel Generators: $cdg"
           bash deps/create-fly/tools/migration-test.sh "$fly" 26.2.0.93 "$cdg"
 
@@ -152,7 +152,7 @@ jobs:
         shell: bash
         run: |
           fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources' | head -1)
-          cdg=$(ls build/libs/createdieselgenerators-*.jar | grep -v -- '-sources' | head -1)
+          cdg=$(ls build/libs/CreateDieselGenerators-*.jar | grep -v -- '-sources' | head -1)
           bash deps/create-fly/tools/modlist-boot-test.sh modlist-mods "$fly" "$cdg"
 
       - name: Client boot with the full mod list (headless)
@@ -166,6 +166,8 @@ jobs:
           sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils
           rm -rf run/mods run/crash-reports run/logs
           mkdir -p run/mods && cp modlist-mods/*.jar run/mods/
+          fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources' | head -1)
+          python3 -I deps/create-fly/tools/prune_mods.py run/mods "$fly" build/libs
           cp deps/create-fly/tools/client-boot-test.sh tools-client-boot-test.sh
           xvfb-run -a -s "-screen 0 1280x720x24" bash tools-client-boot-test.sh 1500 60
           echo "## Survival mod list + this port: client boot" >> "$GITHUB_STEP_SUMMARY"
