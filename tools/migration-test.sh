@@ -16,6 +16,7 @@
 # For an addon (Diesel Generators): its jars for phase B go after the NeoForge version; set
 #   MIGRATION_EXTRA_A    space-separated URLs of the jars it replaces, installed for phase A only;
 #   MIGRATION_BLOCKSTATES space-separated assets/<namespace>/blockstates dirs whose blocks join the grid.
+#   MIGRATION_SKIP       a regex of block ids left out of the grid (ones that crash the phase A server)
 set -uo pipefail
 
 FLY_JAR="$(realpath "$1")"
@@ -67,7 +68,7 @@ echo "::endgroup::"
 # Positions: one per blockstate file (same ids on both sides), two apart, around spawn.
 # shellcheck disable=SC2086
 python3 -I - $BLOCKSTATE_DIRS > grid.tsv <<'EOF'
-import math, os, sys
+import math, os, re, sys
 # fluid source blocks would flow over the grid (Create's two, Diesel Generators' fuels and cements)
 FLUIDS = {"honey", "chocolate", "biodiesel", "crude_oil", "diesel", "ethanol", "gasoline", "plant_oil"}
 ids = []
@@ -75,6 +76,9 @@ for d in sys.argv[1:]:
     namespace = os.path.basename(os.path.dirname(d.rstrip("/")))
     names = (f[:-5] for f in os.listdir(d) if f.endswith(".json"))
     ids += sorted(f"{namespace}:{n}" for n in names if n not in FLUIDS and not n.endswith("_cement"))
+skip = os.environ.get("MIGRATION_SKIP")
+if skip:
+    ids = [i for i in ids if not re.search(skip, i)]
 side = math.ceil(math.sqrt(len(ids) + 1))
 i = 0
 for block in ids:

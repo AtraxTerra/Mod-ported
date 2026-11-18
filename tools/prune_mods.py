@@ -32,6 +32,9 @@ def mods_toml(data):
                 toml = tomllib.loads(z.read("META-INF/neoforge.mods.toml").decode("utf-8", "replace"))
             except tomllib.TOMLDecodeError:
                 toml = {}
+            loader = str(toml.get("modLoader", "javafml"))
+            if loader not in ("javafml", "lowcodefml"):
+                required.add(loader)  # a language provider, e.g. kotlinforforge (also its mod id)
             for mod in toml.get("mods", []):
                 provided.add(mod.get("modId"))
                 for p in mod.get("provides", []) or []:

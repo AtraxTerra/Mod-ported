@@ -47,8 +47,36 @@ def queries(filename):
     return list(dict.fromkeys(out))
 
 
+# Modrinth slugs for names the search does not find by their file name.
+SLUGS = {
+    "kotlinforforge": "kotlin-for-forge", "BiomesOPlenty": "biomes-o-plenty", "appliedenergistics2": "ae2",
+    "inventoryessentials": "inventory-essentials", "supermartijn642corelib": "supermartijn642s-core-lib",
+    "supermartijn642configlib": "supermartijn642s-config-lib", "elytraslot": "elytra-slot", "eplus": "enchanting-plus",
+    "cupboard": "cupboard", "farsight": "farsight", "day-counter": "day-counter", "capturenet": "capture-net",
+    "enchantmenttransfer": "enchantment-transfer", "utilitydrawers": "utility-drawers", "tabbylib": "tabbylib",
+}
+
+
+def versions_with(pid, filename):
+    versions = get(f"{API}/project/{pid}/version?" + urllib.parse.urlencode({"loaders": json.dumps(["neoforge"])}))
+    plain = re.sub(r"\s*\(\d+\)(?=\.jar$)", "", filename)
+    for v in versions:
+        for f in v["files"]:
+            if f["filename"] in (filename, plain):
+                return f["url"]
+    return None
+
+
 def find(filename):
     seen = set()
+    for key, slug in SLUGS.items():
+        if filename.lower().startswith(key.lower()):
+            try:
+                url = versions_with(slug, filename)
+            except Exception:
+                url = None
+            if url:
+                return slug, url
     for q in queries(filename):
         hits = get(f"{API}/search?" + urllib.parse.urlencode({"query": q, "limit": 8,
                                                               "facets": json.dumps([["project_type:mod"]])}))["hits"]
@@ -57,11 +85,9 @@ def find(filename):
             if pid in seen:
                 continue
             seen.add(pid)
-            versions = get(f"{API}/project/{pid}/version?" + urllib.parse.urlencode({"loaders": json.dumps(["neoforge"])}))
-            for v in versions:
-                for f in v["files"]:
-                    if f["filename"] == filename or f["filename"] == re.sub(r"\s*\(\d+\)(?=\.jar$)", "", filename):
-                        return hit["slug"], f["url"]
+            url = versions_with(pid, filename)
+            if url:
+                return hit["slug"], url
     return None, None
 
 
