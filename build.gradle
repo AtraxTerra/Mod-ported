@@ -141,9 +141,8 @@ sourceSets {
             // it, and that no longer does.
             exclude 'com/zurrtum/create/client/compat/trinkets/**'
 
-            // Optional integrations, off until their NeoForge side is wired up. The JEI categories
-            // still call Fabric's custom-ingredient API, so switching enable_jei on means porting
-            // those call sites to NeoForge ICustomIngredient first -- see PORTING.md.
+            // Optional integrations. JEI is ported (NeoForge fluid stacks in mB, NeoForge custom
+            // ingredients: see client/compat/jei/JeiPlatform); CC: Tweaked is still off.
             if (!project.enable_jei.toBoolean()) {
                 exclude 'com/zurrtum/create/client/compat/jei/**'
             }
@@ -180,9 +179,11 @@ dependencies {
     // jspecify annotations are used throughout the upstream source for @Nullable.
     compileOnly 'org.jspecify:jspecify:1.0.0'
 
-    // Optional integrations stay off until their NeoForge side is wired up.
+    // Optional integrations. JEI also runs in the dev client, so the client boot test loads the
+    // integration (its plugin registers when the test joins a world).
     if (project.enable_jei.toBoolean()) {
         compileOnly "mezz.jei:jei-${project.jei_version}"
+        runtimeOnly "mezz.jei:jei-${project.jei_version}"
     }
     if (project.enable_cct.toBoolean()) {
         compileOnly "cc.tweaked:cc-tweaked-${project.cct_version}"

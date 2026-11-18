@@ -7,8 +7,8 @@ this repository carries the loader change only, on the same Minecraft version.
 > **Status:** the jar builds, every mixin passes a bytecode audit against the patched game, and CI
 > boots a dedicated server and a headless client to the title screen on every push. It also takes
 > over a world saved by **Create: Adapted** without losing blocks, machine contents or
-> contraptions (the `migration-test` job). Not yet checked: real play on a client, JEI and
-> CC: Tweaked integration (both off). Download the jar from the Build workflow's artifacts.
+> contraptions (the `migration-test` job). JEI integration is on. Not yet checked: real play on a client;
+> CC: Tweaked integration is off. Download the jar from the Build workflow's artifacts.
 
 **Read [PORTING.md](PORTING.md)** for what changed, how a Create: Adapted world is converted, and the
 known gaps. The two sharp edges, in short: fluid amounts are droplets inside Create and

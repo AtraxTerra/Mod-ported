@@ -18,8 +18,6 @@ import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.types.IRecipeType;
-import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
-import net.fabricmc.fabric.api.recipe.v1.ingredient.FabricIngredient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -44,13 +42,13 @@ public class CrushingCategory extends CreateCategory<RecipeHolder<? extends Crea
         for (RecipeHolder<MillingRecipe> entry : preparedRecipes.byType(AllRecipeTypes.MILLING)) {
             MillingRecipe recipe = entry.value();
             Ingredient ingredient = recipe.ingredient();
-            CustomIngredient customIngredient = ((FabricIngredient) ingredient).getCustomIngredient();
+            net.minecraft.world.item.crafting.display.SlotDisplay customDisplay = com.zurrtum.create.client.compat.jei.JeiPlatform.customDisplay(ingredient);
             ItemStack firstInput;
-            if (customIngredient == null) {
+            if (customDisplay == null) {
                 firstInput = ingredient.values.stream().findFirst().map(item -> item.value().getDefaultInstance())
                     .orElse(ItemStack.EMPTY);
             } else {
-                firstInput = customIngredient.display().resolveForFirstStack(context.get());
+                firstInput = customDisplay.resolveForFirstStack(context.get());
             }
             if (!firstInput.isEmpty() && crushingRecipes.stream()
                 .anyMatch(e -> e.value().ingredient().test(firstInput))) {

@@ -21,7 +21,7 @@ import com.zurrtum.create.content.kinetics.press.PressingRecipe;
 import com.zurrtum.create.content.processing.recipe.ProcessingOutput;
 import com.zurrtum.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import com.zurrtum.create.infrastructure.component.BottleType;
-import mezz.jei.api.fabric.constants.FabricTypes;
+import mezz.jei.api.neoforge.NeoForgeTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
@@ -31,7 +31,6 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.types.IRecipeType;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -311,14 +310,14 @@ public class SequencedAssemblyCategory extends CreateCategory<RecipeHolder<Seque
     public static class FillingRenderer extends SequencedRenderer<FillingRecipe> {
         @Override
         public void render(GuiGraphicsExtractor graphics, int i, int x, int y, Optional<IRecipeSlotView> slot) {
-            slot.flatMap(s -> s.getDisplayedIngredient(FabricTypes.FLUID_STACK)).ifPresent(ingredient -> {
+            slot.flatMap(s -> s.getDisplayedIngredient(NeoForgeTypes.FLUID_STACK)).ifPresent(ingredient -> {
                 float scale = 35 / 46f;
                 Matrix3x2fStack matrices = graphics.pose();
                 matrices.pushMatrix();
                 matrices.translate(x, y);
                 matrices.scale(scale, scale);
                 matrices.translate(-x, -y);
-                FluidVariant fluidVariant = ingredient.getFluidVariant();
+                net.neoforged.neoforge.fluids.FluidStack fluidVariant = ingredient;
                 Fluid fluid = fluidVariant.getFluid();
                 DataComponentPatch components = fluidVariant.getComponentsPatch();
                 graphics.guiRenderState.addPicturesInPictureState(new SpoutRenderState(
@@ -336,8 +335,8 @@ public class SequencedAssemblyCategory extends CreateCategory<RecipeHolder<Seque
 
         @Override
         public Component getSequenceName(FillingRecipe recipe, Optional<IRecipeSlotView> slot) {
-            Component name = slot.flatMap(s -> s.getDisplayedIngredient(FabricTypes.FLUID_STACK)).map(ingredient -> {
-                FluidVariant fluidVariant = ingredient.getFluidVariant();
+            Component name = slot.flatMap(s -> s.getDisplayedIngredient(NeoForgeTypes.FLUID_STACK)).map(ingredient -> {
+                net.neoforged.neoforge.fluids.FluidStack fluidVariant = ingredient;
                 Fluid fluid = fluidVariant.getFluid();
                 if (fluid == AllFluids.POTION) {
                     DataComponentMap components = fluidVariant.getComponents();

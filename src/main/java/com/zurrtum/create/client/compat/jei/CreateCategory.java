@@ -1,5 +1,7 @@
 package com.zurrtum.create.client.compat.jei;
 
+import net.minecraft.world.item.crafting.display.SlotDisplay;
+
 import com.google.common.base.Suppliers;
 import com.zurrtum.create.AllFluids;
 import com.zurrtum.create.client.compat.jei.renderer.JunkSlotRenderer;
@@ -16,8 +18,6 @@ import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
-import net.fabricmc.fabric.api.recipe.v1.ingredient.FabricIngredient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.util.context.ContextMap;
@@ -48,20 +48,20 @@ public abstract class CreateCategory<T> implements IRecipeCategory<T> {
         if (count == 1) {
             return getStacks(ingredient, context);
         }
-        CustomIngredient customIngredient = ((FabricIngredient) ingredient).getCustomIngredient();
-        if (customIngredient == null) {
+        SlotDisplay customDisplay = JeiPlatform.customDisplay(ingredient);
+        if (customDisplay == null) {
             return ingredient.values.stream().map(entry -> new ItemStack(entry, count)).toList();
         }
-        return customIngredient.display().resolveForStacks(context.get()).stream()
+        return customDisplay.resolveForStacks(context.get()).stream()
             .map(stack -> stack.copyWithCount(stack.getCount() * count)).toList();
     }
 
     public static List<ItemStack> getStacks(Ingredient ingredient, Supplier<ContextMap> context) {
-        CustomIngredient customIngredient = ((FabricIngredient) ingredient).getCustomIngredient();
-        if (customIngredient == null) {
+        SlotDisplay customDisplay = JeiPlatform.customDisplay(ingredient);
+        if (customDisplay == null) {
             return ingredient.values.stream().map(ItemStack::new).toList();
         }
-        return customIngredient.display().resolveForStacks(context.get());
+        return customDisplay.resolveForStacks(context.get());
     }
 
     public static List<List<ItemStack>> condenseIngredients(List<Ingredient> ingredients) {
@@ -90,7 +90,7 @@ public abstract class CreateCategory<T> implements IRecipeCategory<T> {
     }
 
     public static IRecipeSlotBuilder addFluidSlot(IRecipeLayoutBuilder builder, int x, int y, FluidStack stack) {
-        int amount = stack.getAmount();
+        long amount = JeiPlatform.toJei(stack.getAmount());
         IRecipeSlotBuilder slot = builder.addOutputSlot(x, y).setFluidRenderer(amount, false, 16, 16)
             .add(stack.getFluid(), amount, stack.getComponentChanges());
         if (stack.isOf(AllFluids.POTION)) {
@@ -105,7 +105,7 @@ public abstract class CreateCategory<T> implements IRecipeCategory<T> {
         int y,
         FluidIngredient fluidIngredient
     ) {
-        int amount = fluidIngredient.amount();
+        long amount = JeiPlatform.toJei(fluidIngredient.amount());
         IRecipeSlotBuilder slot = builder.addInputSlot(x, y).setFluidRenderer(amount, false, 16, 16);
         DataComponentPatch components = DataComponentPatch.EMPTY;
         if (fluidIngredient instanceof FluidStackIngredient stackIngredient) {

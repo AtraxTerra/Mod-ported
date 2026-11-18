@@ -8,7 +8,7 @@ Port of [ZurrTum/Create-Fly](https://github.com/ZurrTum/Create-Fly) (branch `26.
 > block entity contents, contraptions) -- all checked in CI on every push. See
 > [Running it](#1c-running-it-what-neoforges-patches-changed-under-the-mixins) and
 > [Taking over a Create: Adapted world](#1d-taking-over-a-create-adapted-world).
-> Still unchecked: real play on a client (rendering, GUIs), JEI and CC: Tweaked (off).
+> Still unchecked: real play on a client (rendering, GUIs, JEI screens); CC: Tweaked is off.
 
 ---
 
@@ -406,10 +406,11 @@ Ordered by how likely they are to bite.
    `fabric-networking-api-v1`) and `ReloadListenerMixin` (patched `fabric-resource-loader-v1`).
    Nothing to patch here, but menu opening and resource reload are the two behaviours to watch. If
    either misbehaves, write a NeoForge equivalent — do not re-add these.
-7. **JEI is off** (`enable_jei = false`). The categories call Fabric's custom-ingredient API
-   (`FabricIngredient`, `CustomIngredient`, `DefaultCustomIngredients`); switching JEI on means
-   porting those to NeoForge `ICustomIngredient` first.
-8. **CC: Tweaked is off** (`enable_cct = false`), same shape.
+7. **JEI** is on. Its fluid ingredient is NeoForge's `FluidStack` in millibuckets, so fluid amounts
+   cross through `JeiPlatform.toJei` / `fromJei`; Fabric's custom-ingredient calls are NeoForge's
+   `Ingredient.getCustomIngredient()` / `DataComponentIngredient`. Checked by compiling and by the
+   client boot test loading JEI; the recipe screens themselves want a look in game.
+8. **CC: Tweaked is off** (`enable_cct = false`).
 9. **Shader mods.** `QuadRenderHelperMixin` / `IrisPipelinesMixin` target Fabric Sodium and Iris
    internals and are excluded. Supporting a NeoForge shader mod means rewriting them.
 10. **Vanillin addon overrides** now read `neoforge.mods.toml` mod properties instead of
