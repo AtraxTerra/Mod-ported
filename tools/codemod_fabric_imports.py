@@ -47,10 +47,18 @@ def port_file(path: Path) -> tuple[bool, list[str]]:
     text = original
     notes = []
 
+    # @EnvironmentInterface(s) strip an interface on the other side on Fabric; NeoForge has no
+    # equivalent and only warns about @OnlyIn, so they are dropped with their imports. This runs
+    # first: the plain map below would otherwise turn ...api.EnvironmentInterface into a
+    # non-existent ...distmarker.OnlyInInterface.
+    text = re.sub(r"[ \t]*@EnvironmentInterfaces\(\{.*?\}\)[ \t]*\n", "", text, flags=re.S)
+    text = re.sub(r"[ \t]*@EnvironmentInterface\([^)]*\)[ \t]*\n", "", text)
+    text = re.sub(r"^import net\.fabricmc\.api\.EnvironmentInterfaces?;\n", "", text, flags=re.M)
+
     for fabric_fqn, neo_fqn in IMPORT_MAP.items():
         if fabric_fqn in text:
-            text = text.replace(f"import {fabric_fqn};", f"import {neo_fqn};")
-            text = text.replace(fabric_fqn, neo_fqn)
+            # Whole names only: a prefix match would rewrite longer names that merely start alike.
+            text = re.sub(re.escape(fabric_fqn) + r"(?![\w])", neo_fqn, text)
 
     for pattern, replacement in BODY_SUBS:
         text = pattern.sub(replacement, text)
