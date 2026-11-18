@@ -301,6 +301,12 @@ included -- 967 recipes of those sixteen types, counted in CI with the server's 
 blasting and smoking) and mystery conversion had any. `platform/RecipeSync` asks for the same
 sixteen types on every datapack sync.
 
+With the recipes there, JEI's draining category built its recipes from every item stack JEI knows
+and stopped on the first one that drains into nothing (`ItemStackTemplate.fromNonEmptyStack` on an
+empty container): JEI drops the rest of a plugin's `registerRecipes`, so spout filling and block
+cutting were empty too. `DrainingCategory` now leaves such an item out, as `SpoutFillingCategory`
+already did for an empty result.
+
 ---
 
 ## 2. What changed

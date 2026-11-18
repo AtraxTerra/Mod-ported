@@ -71,6 +71,13 @@ public class DrainingCategory extends CreateCategory<RecipeHolder<EmptyingRecipe
                 if (fluid.isEmpty()) {
                     return;
                 }
+                // Port: an item used up by draining leaves no container, and ItemStackTemplate takes no
+                // empty stack. Throwing here stopped JEI's whole Create plugin, so spout filling and block
+                // cutting had no recipes either; that one emptying is left out of JEI instead.
+                ItemStack container = capability.getContainer();
+                if (container.isEmpty()) {
+                    return;
+                }
                 Identifier itemName = BuiltInRegistries.ITEM.getKey(stack.getItem());
                 Identifier fluidName = BuiltInRegistries.FLUID.getKey(fluid.getFluid());
                 Identifier id = Identifier.fromNamespaceAndPath(
@@ -82,7 +89,7 @@ public class DrainingCategory extends CreateCategory<RecipeHolder<EmptyingRecipe
                 recipes.add(new RecipeHolder<>(
                     ResourceKey.create(Registries.RECIPE, id),
                     new EmptyingRecipe(
-                        ItemStackTemplate.fromNonEmptyStack(capability.getContainer()),
+                        ItemStackTemplate.fromNonEmptyStack(container),
                         fluid,
                         ingredient
                     )
