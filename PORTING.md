@@ -129,6 +129,73 @@ NeoForge spells it `public-f`. Separately, an access widener implicitly opens th
 a member is widened and an access transformer does not, so each member line needs one for its owner.
 Both rules are documented in `tools/aw2at.py`.
 
+## 1c. Running it: what NeoForge's patches changed under the mixins
+
+Same Minecraft version, same mappings — and still most of the runtime work so far has been here.
+Create Fly's mixins target *vanilla*; NeoForge runs a *patched* Minecraft, and its patches move,
+rename or delete exactly the call sites Create hooks. Each mismatch compiles fine and is fatal only
+when Mixin applies that class, so the server boot reported them one per launch.
+
+### How they are found now
+
+`tools/audit_mixin_targets.py` runs in CI right after compile. It reads the patched jar
+ModDevGradle builds (`build/moddev/artifacts/minecraft-patched-<ver>.jar`) with `javap` and checks,
+for every mixin a config or plugin activates: the target class, each injector's method, every
+`INVOKE`/`FIELD`/`NEW` target (with ordinal and opcode), and `@Shadow`/`@Accessor`/`@Invoker`
+members. It covers **client mixins too**, which a server boot never applies, and lists the
+candidates when a method is missing (that is how the renumbered lambda below was retargeted without
+another round trip). Its first run found 13 real problems at once; it is clean now.
+
+The older `tools/audit_mixins_vs_patches.py` reads NeoForge's source patches and runs offline. It
+cannot see `if (false)` guards — NeoForge disables some vanilla blocks that way; javac drops every
+call inside, and the patch still shows those lines as unchanged context, often past the end of the
+hunk. Two `LivingEntity.baseTick` targets died like that.
+
+### The rule that keeps coming back: prefer the native hook
+
+Most of Create Fly's injectors exist to call a Create interface from a vanilla method. NeoForge
+patches many of those same methods to call **its own** extension hook instead — so the fix is
+usually to implement that hook, not to re-aim the injector. Re-aiming would often *apply* and still
+be wrong (the `FuelValues` case below), or erase NeoForge behaviour other mods rely on.
+
+| Upstream mixin target | NeoForge replacement used |
+|---|---|
+| sound, friction, bounce, explosion resistance, weak power, scaffolding (`*ControlBlock` checks in `Entity`, `LivingEntity`, `Leashable`, boats, orbs, items, `ExplosionDamageCalculator`, `SignalGetter`) | the `*ControlBlock` interface extends `IBlockExtension` and overrides the hook (`getSoundType`, `getFriction`, `getBounceRestitution`, `getExplosionResistance`, `shouldCheckWeakPower`, `isScaffolding`) |
+| `LivingEntity.baseTick` breathing (`isEyeInFluid`, `hasWaterBreathing`) | `LivingBreatheEvent` — `platform/BreathingHooks` |
+| `ItemStack.useOn` (glue, symmetry) | one wrap around `CommonHooks.onPlaceItemIntoWorld`, the server-side path NeoForge routes through |
+| `FuelValues.vanillaBurnTimes` | the `neoforge:furnace_fuels` data map (`data/neoforge/data_maps/item/furnace_fuels.json`), kept in step with `AllFuelTimes` by `tools/check_fuels.py` in CI. Retargeting the mixin would have applied and done nothing: on NeoForge that method only feeds datagen |
+| `StructureTemplate.placeEntities` | `StructureProcessor.processEntity`, overridden by `EntityControlStructureProcessor` |
+| `ReloadableServerResources.listeners()`, client `registerReloadListener` | `AddServerReloadListenersEvent` / `AddClientReloadListenersEvent` (`platform/CreateReloadListeners`, `client/platform/CreateClientReloadListeners`). NeoForge rejects listeners added any other way, fatally on the server |
+| `GuiRenderer` PiP renderer map | `RegisterPictureInPictureRenderersEvent` — `client/platform/CreatePictureInPictureRenderers` |
+| `Hud` train overlay | a GUI layer before the contextual bar that cancels the bar while it draws — `client/platform/TrainHudLayer` |
+| `ModelBlockRenderer.tesselateBlock` (`@Overwrite`) | not overwritten: that would erase NeoForge's renderer patches for every block. `VanillinModelLayerMixin` keeps the one Vanillin call; `WrapperBlockStateModel` overrides the level-aware `collectParts`; enhanced AO is NeoForge's `EnhancedBlockModelLighter` |
+| packs (`BuiltInPackSource`, `ClientPackSource`) | `AddPackFindersEvent` — `client/platform/CreatePackFinders` |
+| OBJ models (`LoadBlockModelMixin`, `CuboidModelMixin`) | NeoForge's `neoforge:obj` loader |
+
+Where no native hook exists the injector is re-aimed, with a `Port note` beside it saying why:
+`StructureTemplate.addEntitiesToWorld`, `EntityFluidInteraction.update(Entity, Predicate)`,
+`LevelExtractor.extractVisibleBlockEntities(..., Frustum)`, `BlockItem.getPlaceSound`,
+`ServerPlayerGameMode.removeBlock`, and `lambda$startDestroyBlock$1`, whose captures NeoForge
+changed. Upstream files whose mixin is fully replaced stay in the tree, excluded in `build.gradle`,
+so upstream-sync PRs still show upstream's changes to them.
+
+### Two more things the boot taught
+
+**Nothing loader-related in a static initialiser.** `ModList.get()` is null while the `@Mod` class is
+being constructed. The first boot died in `Create.<clinit>` reading the mod version.
+
+**A config plugin's `getMixins()` applies on every side.** Fabric loads the whole client config on
+the client only; NeoForge has no per-config environment, so the client `MixinPlugin` checks
+`FMLEnvironment.getDist()` itself.
+
+### Behaviour worth a second look
+
+- Upstream's `SchematicProcessor.skip` returns `true` — drop — for entities that are creatable and
+  not op-only, which is the set Create itself *keeps* on NeoForge. Kept as-is for parity; it looks
+  like an inversion upstream and should be reported there before being "fixed" here.
+- Copycat blocks on the flat (non-AO) render path now take light from their own state, not the
+  material's. Emission is unaffected; only an emissive-rendering material would look different.
+
 ---
 
 ## 2. What changed
@@ -142,7 +209,7 @@ Both rules are documented in `tools/aw2at.py`.
 | `create.classtweaker` (access widener, 283 lines) | `META-INF/accesstransformer.cfg` (281 lines), generated by `tools/aw2at.py` |
 | `transitive-inject-interface` ×2 | `interface-injection.json` + ModDevGradle `interfaceInjectionData` |
 | split `main` / `client` source sets | one source set; `@Mod(dist = Dist.CLIENT)` separates the client |
-| no `pack.mcmeta` (loader synthesises one) | `pack.mcmeta` added, `pack_format` **88** (the 26.2 resource format) |
+| no `pack.mcmeta` (loader synthesises one) | still none. An early version of this port added one with a bare `pack_format`; 26.x rejects that shape for formats past 81 (it wants `min_format`/`max_format`), and NeoForge, like the MDK, generates the metadata itself |
 
 The access-widener converter is re-runnable: `python3 -I tools/aw2at.py <in.classtweaker> <out.cfg>`.
 Re-run it if you rebase on upstream. `validateAccessTransformers = true` is on deliberately — a
@@ -308,9 +375,6 @@ Ordered by how likely they are to bite.
 10. **Vanillin addon overrides** now read `neoforge.mods.toml` mod properties instead of
     `fabric.mod.json` custom values, so an addon declares them differently. An un-updated addon
     contributes no overrides and degrades quietly.
-11. **Data pack format.** `pack.mcmeta` carries the 26.2 **resource** format (88). The 26.2 **data**
-    format is 107 — the two diverge in 26.x. Mod jars are lenient about this; if data-side resources
-    are rejected, that is the number to reach for.
 
 ---
 
@@ -325,12 +389,17 @@ src/main/resources/META-INF/
   accesstransformer.cfg          generated — do not hand-edit
   services/...CreateRegisterPlugin   replaces the create_plugin entrypoint
 src/main/java/com/zurrtum/create/
-  platform/                      the loader seam (4 classes)
-  client/platform/               client-side loader seam (1 class)
+  platform/                      the loader seam and native-hook listeners
+  client/platform/               the same, client side
   infrastructure/transfer/       the capability bridge (5 classes)
 reference/fabric-transfer/       the Fabric adapters this replaced; NOT compiled
 tools/aw2at.py                   access widener → access transformer
 tools/codemod_fabric_imports.py  re-runnable import codemod
+tools/audit_mixin_targets.py     every mixin target vs the patched bytecode (CI)
+tools/audit_mixins_vs_patches.py same, from source patches; offline, weaker
+tools/check_fuels.py             furnace_fuels data map vs AllFuelTimes (CI)
+tools/parse-check.sh             syntax-only javac pass, no Minecraft needed
+tools/boot-test.sh               dedicated-server boot to `Done` (CI)
 ```
 
 Both tools are idempotent — safe to re-run after rebasing on upstream.

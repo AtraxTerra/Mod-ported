@@ -225,6 +225,52 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  client-boot-test:
+    # Gates 4 and 5 as far as CI can take them: the client mixins actually applying, and every
+    # model and texture resolving during the first resource reload (the bake gate). Headless:
+    # Xvfb plus Mesa's software OpenGL. Report-only for now, like the server boot.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Install a virtual display and software OpenGL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils
+          xvfb-run -a glxinfo -B | grep -E "OpenGL (renderer|core profile version)" || true
+
+      - run: chmod +x ./gradlew tools/client-boot-test.sh
+
+      - name: Boot the client
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a -s "-screen 0 1280x720x24" tools/client-boot-test.sh 1200 45
+
+      - name: Upload the client log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-boot-log-${{ github.sha }}
+          path: |
+            client-boot-test.log
+            run/logs/*.log
+            run/crash-reports/*.txt
+          if-no-files-found: warn
+          retention-days: 14
+
   release:
     # A tag pushed as v<something> publishes the jars as a GitHub release.
     needs: build
