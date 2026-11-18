@@ -16,22 +16,8 @@ import java.io.Reader;
 
 @Mixin(ModelManager.class)
 public class LoadBlockModelMixin {
-    @Inject(method = "lambda$loadBlockModels$2", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/cuboid/CuboidModel;fromStream(Ljava/io/Reader;)Lnet/minecraft/client/resources/model/cuboid/CuboidModel;"), cancellable = true)
-    private static void deserialize(
-        CallbackInfoReturnable<Pair<Identifier, UnbakedModel>> cir,
-        @Local Identifier modelId,
-        @Local Reader reader
-    ) {
-        try {
-            UnbakedModel model = GsonHelper.fromJson(CuboidModel.GSON, reader, UnbakedModel.class);
-            cir.setReturnValue(Pair.of(modelId, model));
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (Exception ignore) {
-                }
-            }
-        }
-    }
+    // Port note: upstream swaps vanilla's CuboidModel.fromStream(reader) for
+    // GsonHelper.fromJson(CuboidModel.GSON, reader, UnbakedModel.class). NeoForge's patch makes the
+    // same swap, to UnbakedModelParser.parse(reader) -- whose body is that exact line. The mixin
+    // reimplemented NeoForge's own patch for Fabric and has nothing to add here.
 }

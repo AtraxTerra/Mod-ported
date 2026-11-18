@@ -157,13 +157,4 @@ public abstract class EntityMixin implements SyncedDataHolder {
     // NeoForge changes both the method (it gains a BlockPos) and the call (it becomes
     // getBlockBounciness(BlockPos, BlockState), backed by a per-block hook), so the wrap has no
     // target. BouncinessControlBlock overrides that hook instead.
-        Block onBlock,
-        Operation<Double> original,
-        @Local(argsOnly = true) BlockState effectState
-    ) {
-        if (onBlock instanceof BouncinessControlBlock block && block.skipBounciness(effectState)) {
-            return 0;
-        }
-        return original.call(instance, onBlock);
-    }
 }

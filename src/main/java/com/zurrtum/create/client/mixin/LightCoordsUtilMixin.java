@@ -13,16 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(LightCoordsUtil.class)
 public class LightCoordsUtilMixin {
-    @WrapOperation(method = "getLightCoords(Lnet/minecraft/util/LightCoordsUtil$BrightnessGetter;Lnet/minecraft/world/level/BlockAndLightGetter;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)I", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;getLightEmission()I"))
-    private static int getLuminance(
-        BlockState state,
-        Operation<Integer> original,
-        @Local(argsOnly = true) BlockAndLightGetter level,
-        @Local(argsOnly = true) BlockPos pos
-    ) {
-        if (state.getBlock() instanceof CopycatBlock block) {
-            return block.getLuminance(level, pos);
-        }
-        return original.call(state);
-    }
+    // Port note: NeoForge patches this call to IBlockExtension.getLightEmission(state, level,
+    // pos), which CopycatBlock now overrides -- the same override upstream Create has on NeoForge.
 }

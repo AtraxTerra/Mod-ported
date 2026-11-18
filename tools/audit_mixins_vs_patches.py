@@ -156,7 +156,7 @@ def main() -> int:
     print(f"checked {checked} injector(s) with an @At target; "
           f"{len(patched_classes)} of their target classes are patched by NeoForge\n")
     if not suspects:
-        print("no injector targets a call that NeoForge patches away (name-level check)")
+        print("no injector targets a call that NeoForge patches away (name- and arity-level check)")
         return 0
     print(f"{len(suspects)} SUSPECT injector(s): NeoForge removes the targeted call without re-adding it\n")
     for path, handler, kind, target, into, owner, name in suspects:

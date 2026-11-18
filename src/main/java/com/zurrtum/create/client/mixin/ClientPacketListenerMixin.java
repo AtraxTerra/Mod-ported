@@ -55,12 +55,6 @@ public class ClientPacketListenerMixin {
         }
     }
 
-    @WrapOperation(method = "lambda$handleBlockEntityData$0(Lnet/minecraft/network/protocol/game/ClientboundBlockEntityDataPacket;Lnet/minecraft/world/level/block/entity/BlockEntity;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/entity/BlockEntity;loadWithComponents(Lnet/minecraft/world/level/storage/ValueInput;)V"))
-    private void onDataPacket(BlockEntity blockEntity, ValueInput input, Operation<Void> original) {
-        if (blockEntity instanceof SyncedBlockEntity syncedBlockEntity) {
-            syncedBlockEntity.onDataPacket(input);
-        } else {
-            original.call(blockEntity, input);
-        }
-    }
+    // Port note: NeoForge patches this call to blockEntity.onDataPacket(connection, input),
+    // which SyncedBlockEntity now overrides. The wrap has no target and is not needed.
 }

@@ -1,5 +1,6 @@
 package com.zurrtum.create.client.mixin;
 
+import net.minecraft.world.level.material.FluidState;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -245,36 +246,38 @@ public class MultiPlayerGameModeMixin {
         return original.call(player, entity, hand, location);
     }
 
-    @WrapOperation(method = "destroyBlock(Lnet/minecraft/core/BlockPos;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z"))
+    /**
+     * Lets a BreakControlBlock veto its own removal on the client, as upstream does.
+     *
+     * <p>NeoForge replaces vanilla's {@code level.setBlock(pos, fluid.createLegacyBlock(), 11)} here
+     * with {@code oldState.onDestroyedByPlayer(...)}, so the wrap moves to that call. It stays a
+     * mixin rather than an IBlockExtension bridge on purpose: the server side keeps its own wrap
+     * (which also drives the symmetry wand), and a bridge on the block would run there as well,
+     * calling BreakControlBlock.onDestroyedByPlayer twice -- and FactoryPanelBlock's has side
+     * effects.
+     */
+    @WrapOperation(method = "destroyBlock(Lnet/minecraft/core/BlockPos;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/world/level/material/FluidState;)Z"))
     private boolean breakBlock(
+        BlockState oldState,
         Level world,
         BlockPos pos,
-        BlockState blockState,
-        int updateFlags,
-        Operation<Boolean> original,
-        @Local BlockState oldState,
-        @Local Block oldBlock
+        Player player,
+        ItemStack tool,
+        boolean willHarvest,
+        FluidState fluid,
+        Operation<Boolean> original
     ) {
-        if (oldBlock instanceof BreakControlBlock controlBlock && !controlBlock.onDestroyedByPlayer(
+        if (oldState.getBlock() instanceof BreakControlBlock controlBlock && !controlBlock.onDestroyedByPlayer(
             oldState,
             world,
             pos,
-            minecraft.player
+            player
         )) {
             return false;
         }
-        return original.call(world, pos, blockState, updateFlags);
+        return original.call(oldState, world, pos, player, tool, willHarvest, fluid);
     }
 
-    @WrapOperation(method = "continueDestroyBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
-    private SoundType getHitSound(
-        BlockState state,
-        Operation<SoundType> original,
-        @Local(argsOnly = true) BlockPos pos
-    ) {
-        if (state.getBlock() instanceof SoundControlBlock block) {
-            return block.getSoundGroup(minecraft.level, pos);
-        }
-        return original.call(state);
-    }
+    // Port note: NeoForge patches this call to the level-sensitive getSoundType, which
+    // SoundControlBlock now overrides. The wrap has no target and is not needed.
 }

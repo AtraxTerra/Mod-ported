@@ -1,5 +1,6 @@
 package com.zurrtum.create.foundation.blockEntity;
 
+import net.minecraft.network.Connection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
@@ -43,6 +44,14 @@ public abstract class SyncedBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(ValueInput view) {
         readClient(view);
+    }
+
+    // NeoForge's IBlockEntityExtension.onDataPacket takes the connection too; it is called when a
+    // block entity data packet arrives. On Fabric a ClientPacketListener mixin dispatched to the
+    // one-argument method below instead.
+    @Override
+    public void onDataPacket(Connection net, ValueInput valueInput) {
+        onDataPacket(valueInput);
     }
 
     public void onDataPacket(ValueInput view) {

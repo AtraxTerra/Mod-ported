@@ -365,6 +365,20 @@ public abstract class CopycatBlock extends Block implements IBE<CopycatBlockEnti
         return material.getFriction();
     }
 
+    /**
+     * A copycat emits the light of the block it imitates.
+     *
+     * <p>On Fabric this reached the renderer through a client mixin on LightCoordsUtil. NeoForge has
+     * a level-sensitive light hook, and upstream Create overrides it on NeoForge exactly like this.
+     * Note the consequence: because the hook also feeds NeoForge's lighting engine, a copycat now
+     * emits real light server-side too, where Create Fly's mixin only brightened its rendering.
+     * That is upstream Create's behaviour, and the more correct one.
+     */
+    @Override
+    public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
+        return getLuminance(level, pos);
+    }
+
     public int getLuminance(BlockGetter world, BlockPos pos) {
         return getMaterial(world, pos).getLightEmission();
     }
