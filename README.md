@@ -4,11 +4,13 @@
 26.2. Upstream is ZurrTum's Fabric port of [Create](https://github.com/Creators-of-Create/Create);
 this repository carries the loader change only, on the same Minecraft version.
 
-> **Status: 18 compile errors.** CI resolves Minecraft and NeoForge and compiles. The first run
-> reported 417 (~139 distinct — the log triples each); successive passes took that to
-> 105 → 73 → 41 → 28 → **18**. The transfer layer is ported onto NeoForge's `ResourceHandler` API;
-> what remains is three small groups, listed in [PORTING.md](PORTING.md) step 4 of First build.
-> Nothing has been *run* yet: a green compile is the first of eight validation gates.
+> **Status: the build is green and produces a jar.** 417 compile errors on the first CI run
+> (~139 distinct), then 105 → 73 → 41 → 28 → 18 → **0**. Download it from the Build workflow's
+> artifacts.
+>
+> **It has never been run.** A green compile is gate 1 of 8 and is blind to mixins by construction,
+> so treat the jar as untested. The `boot-test` job attempts gate 2 — a dedicated-server boot — and
+> is expected to fail at first. See [PORTING.md](PORTING.md).
 
 **Read [PORTING.md](PORTING.md)** for what changed, the order to work through the first build, and
 the 11 known gaps. The two sharp edges, in short: fluid amounts are droplets inside Create and
@@ -28,6 +30,7 @@ silently uncraftable rather than erroring.
 | Workflow | When | What it does |
 |---|---|---|
 | [Build](.github/workflows/build.yml) | every push and PR, manual | compiles, builds the jar, uploads it as an artifact. On failure, writes an error summary grouped by file. A `v*` tag also publishes a release |
+| Build / `boot-test` | after a successful build | boots a dedicated server and fails unless it reaches `Done` with no mixin `APPLY` failures. Non-blocking for now |
 | [Upstream sync](.github/workflows/upstream-sync.yml) | daily, manual | watches upstream `26.2` and opens a PR when it moves |
 
 Neither workflow pushes to `port/neoforge-26.2` directly; every upstream change arrives as a pull

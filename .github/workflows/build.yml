@@ -126,6 +126,48 @@ jobs:
           path: compile.log
           retention-days: 14
 
+  boot-test:
+    # Gate 2 of the validation stack: does the dedicated server actually start?
+    #
+    # A green compile says nothing about mixins -- they are applied by name at class load, so one
+    # targeting a member that moved compiles fine and fails the moment the class is touched. This
+    # is the authoritative check for the 71 COMMON mixins.
+    #
+    # It does NOT block the build yet: the port has never been run, so the first failures here are
+    # expected and should not hide a working jar. Flip continue-on-error off once it passes.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - run: chmod +x ./gradlew tools/boot-test.sh
+
+      - name: Boot the dedicated server
+        run: tools/boot-test.sh 600
+
+      - name: Upload the boot log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-log-${{ github.sha }}
+          path: |
+            boot-test.log
+            run/logs/*.log
+          if-no-files-found: warn
+          retention-days: 14
+
   release:
     # A tag pushed as v<something> publishes the jars as a GitHub release.
     needs: build

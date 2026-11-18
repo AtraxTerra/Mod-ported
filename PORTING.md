@@ -3,11 +3,15 @@
 Port of [ZurrTum/Create-Fly](https://github.com/ZurrTum/Create-Fly) (branch `26.2`, commit
 `3a9fe3e`, Create 6.0.9) from Fabric to NeoForge, same Minecraft version.
 
-> **Status: 18 compile errors.** CI resolves Minecraft and NeoForge and compiles; the first run
-> reported 417 (~139 distinct, since the log triples each). Successive passes took that to
-> 105 → 73 → 41 → 28 → **18**. The transfer layer is ported; what is left is listed in
-> [First build](#first-build) step 4. Nothing has been *run* yet — a green compile is the first of
-> eight validation gates, not the finish line.
+> **Status: the build is green and produces a jar** (~19.7 MiB, uploaded by the Build workflow).
+> The first CI run reported 417 errors (~139 distinct, since the log triples each); successive
+> passes took that to 105 → 73 → 41 → 28 → 18 → **0**.
+>
+> **This does not mean the mod works.** A green compile is gate 1 of 8, and it is specifically
+> blind to mixins: they are applied by name at class load, so one targeting a member that moved
+> compiles perfectly and fails the moment the class is touched. The port has never been run. Gate 2
+> (dedicated-server boot) is wired up as the `boot-test` job and is expected to fail at first; the
+> remaining gates are in [First build](#first-build).
 
 ---
 
@@ -241,14 +245,7 @@ Work in this order. Each stage is blind to what the next one catches.
 2. **`./gradlew clean compileJava`.** Always `clean`: javac short-circuits per file, so unresolved
    imports hide body errors and a shrinking error count is not progress. Measure by a green compile,
    not by the error number going down.
-3. The remaining 18 errors fall into three groups, none of them structural:
-   - **transfer layer, 8** — a misapplied `ResourceView.all`, two stale `@Override`s, and the
-     inner `Iterator` classes of the two wrappers
-   - **client platform seams, 8** — `FlwImplXplatImpl`, `VanillinXplatImpl`, `CopycatModel`,
-     `PonderTagIndexScreen`, and `CreatePackFinders` (whose `addPackFinders` signature was flagged
-     as a guess when it was written)
-   - **`Collection<EnderDragonPart>` variance, 2** — in `WrappedLevel` and `VirtualRenderWorld`
-4. Expect any new wave in the **new code only** — the five `platform` classes, the five transfer
+3. The compile is green. Expect any new wave, after a rebase on upstream, in the **new code only** — the five `platform` classes, the five transfer
    adapters, `AllTransfer`, the three `Cached*InventoryBehaviour`s, the two entry points, the two
    `MixinPlugin`s. Everything else was already loader-neutral. Specific things to check against the
    pinned NeoForge build, because they move between versions:
