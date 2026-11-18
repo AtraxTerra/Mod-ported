@@ -93,6 +93,8 @@ public class Create {
     public Create(IEventBus modEventBus) {
         AllConfigs.register();
         modEventBus.addListener(AllTransfer::registerCapabilities);
+        // A NeoForge fluid type for each of Create's fluids and its addons' (see FlowableFluidTypes).
+        modEventBus.addListener(com.zurrtum.create.platform.FlowableFluidTypes::register);
         // Diving helmet breathing; replaces two LivingEntity.baseTick wraps NeoForge patches away.
         NeoForge.EVENT_BUS.addListener(BreathingHooks::onLivingBreathe);
         // Create's recipe types to clients, for JEI; upstream does it through Fabric API.

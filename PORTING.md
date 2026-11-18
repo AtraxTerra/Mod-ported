@@ -330,6 +330,30 @@ closed!` -- the first JEI page with two deployer recipes did it. The scale now s
 renderers, which belongs to their shared ring of textures. Renderers built on `GuiBlockRenderer`'s own
 per-instance texture (basin, mixer, millstone, saw...) are what the pool expects and are unchanged.
 
+## 1i. Fluid types: every `FlowableFluid` gets one
+
+NeoForge asks a fluid for its `FluidType` wherever the fluid meets the game: every entity touching
+it, each tick (`EntityFluidInteraction`, `Fluid.entityInside`), a bucket being emptied
+(`BucketItem`), a fluid stack's name (`FluidStack.getHoverName`). The default `getFluidType()` knows
+vanilla's fluids only and throws `Mod fluids must override getFluidType` for any other. Fabric has no
+fluid types, so upstream's fluids have none, and on NeoForge:
+
+- an entity, player or item walking into placed honey or chocolate threw from its tick, which stops
+  a server;
+- a honey or chocolate bucket could not be emptied;
+- JEI listed none of the fluids: 27 "broken ingredients" with Diesel Generators installed, whose
+  fluids are `FlowableFluid`s too -- Create's potion, tea, milk, honey and chocolate, its six fuels
+  and oils and sixteen cements.
+
+`platform/FlowableFluidTypes` registers one type per family (still and flowing) when NeoForge
+registers fluid types, which is after `FluidsMixin` has registered Create's and its addons' fluids.
+Each is named after the still fluid's id, takes the lang key the fluid already has
+(`fluid.<namespace>.<path>`), NeoForge's default properties and the water bucket sounds;
+`FlowableFluid.getFluidType()` returns it. A `FlowableFluid` added to the registry later than that
+gets water's type and one warning in the log. NeoForge's defaults let entities swim in these fluids
+and be pushed by their current; viscosity and density, which only inform other mods, keep NeoForge's
+defaults too.
+
 ---
 
 ## 2. What changed
