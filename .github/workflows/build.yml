@@ -21,6 +21,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only used by the release step
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
@@ -112,6 +114,32 @@ jobs:
             deps/create-fly/build/libs/*.jar
           if-no-files-found: warn
           retention-days: 30
+
+      # Every push to this branch replaces the "server-latest" pre-release with the two jars just
+      # built (Create Fly + this port), so its download links always give the current pair.
+      - name: Publish the server-latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/port/cdg-neoforge-26.2' 
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jars=$(ls build/libs/CreateDieselGenerators-*.jar deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources')
+          cat > notes.md <<'NOTES'
+          Les deux mods qui remplacent **Create: Adapted** et **Create: Diesel Generators Adapted** sur NeoForge 26.2 (26.2.0.93 ou plus récent).
+
+          - `create-fly-…-neoforge-….jar` remplace `create-adapted-26.2-1.31-public-external-assets.jar` (et son dossier `config/create-adapted/external-assets` ne sert plus) ;
+          - `CreateDieselGenerators-…+neoforge-mc26.2.jar` remplace `createdieselgenerators-26.2-1.3.15-adapted-0.605.jar`.
+
+          À mettre sur le serveur **et** sur chaque client. Un monde sauvegardé avec les versions Adapted est converti au chargement (blocs, contenus, fluides, contraptions) : faire une sauvegarde du monde avant le premier démarrage.
+
+          Pré-version : vérifié en CI (démarrage serveur et client, migration d'un monde, liste de mods du serveur), pas encore en jeu réel.
+          NOTES
+          sed -i 's/^          //' notes.md
+          echo "" >> notes.md
+          echo "Construit depuis \`${GITHUB_SHA:0:8}\` (Diesel Generators) et \`$(git -C deps/create-fly rev-parse --short=8 HEAD)\` (Create Fly)." >> notes.md
+          gh release delete server-latest --repo "$GITHUB_REPOSITORY" --cleanup-tag -y 2>/dev/null || true
+          gh release create server-latest $jars --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "Create Fly + Diesel Generators, NeoForge 26.2 (dernière version)" --notes-file notes.md
 
       - name: Boot a dedicated server with Create Fly + Diesel Generators
         id: boot
