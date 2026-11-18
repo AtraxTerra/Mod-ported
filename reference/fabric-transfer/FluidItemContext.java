@@ -1,10 +1,8 @@
 package com.zurrtum.create.infrastructure.transfer;
 
-import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
-import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
-import net.fabricmc.fabric.api.transfer.v1.item.base.SingleStackStorage;
-import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
-import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.UnmodifiableView;
 
@@ -43,17 +41,17 @@ public class FluidItemContext extends SingleStackStorage implements ContainerIte
     }
 
     @Override
-    public SingleSlotStorage<ItemVariant> getMainSlot() {
+    public ResourceView<ItemResource> getMainSlot() {
         return this;
     }
 
     @Override
-    public long insertOverflow(ItemVariant itemVariant, long maxAmount, TransactionContext transactionContext) {
+    public long insertOverflow(ItemResource itemVariant, long maxAmount, TransactionContext transactionContext) {
         return 0;
     }
 
     @Override
-    public @UnmodifiableView List<SingleSlotStorage<ItemVariant>> getAdditionalSlots() {
+    public @UnmodifiableView List<ResourceView<ItemResource>> getAdditionalSlots() {
         return Collections.emptyList();
     }
 }

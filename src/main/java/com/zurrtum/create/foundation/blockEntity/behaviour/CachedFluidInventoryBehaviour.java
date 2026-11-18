@@ -4,24 +4,18 @@ import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
 import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
 import com.zurrtum.create.infrastructure.fluids.FluidInventory;
 import com.zurrtum.create.infrastructure.fluids.SidedFluidInventory;
-import com.zurrtum.create.infrastructure.transfer.FluidInventoryHandler;
+import com.zurrtum.create.infrastructure.transfer.FluidInventoryStorage;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.minecraft.core.Direction;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jspecify.annotations.Nullable;
 
 import java.util.function.Function;
 
-/**
- * The fluid counterpart of {@link CachedInventoryBehaviour}: caches the {@link IFluidHandler} view
- * of a block entity's tank, per face when the inventory is a {@link SidedFluidInventory}.
- *
- * <p>Ported from the Fabric original, which cached a {@code Storage<FluidVariant>} built by
- * {@code FluidInventoryStorage.of}. Same caching shape, NeoForge handler type.
- */
 public class CachedFluidInventoryBehaviour<T extends SmartBlockEntity> extends BlockEntityBehaviour<T> {
     public static final BehaviourType<CachedFluidInventoryBehaviour<?>> TYPE = new BehaviourType<>();
     private final Function<T, @Nullable FluidInventory> factory;
-    private Function<@Nullable Direction, @Nullable IFluidHandler> getter;
+    private Function<@Nullable Direction, @Nullable ResourceHandler<FluidResource>> getter;
 
     public CachedFluidInventoryBehaviour(T be, Function<T, @Nullable FluidInventory> factory) {
         super(be);
@@ -29,37 +23,38 @@ public class CachedFluidInventoryBehaviour<T extends SmartBlockEntity> extends B
         reset();
     }
 
-    public static @Nullable <T extends SmartBlockEntity> IFluidHandler get(T be, @Nullable Direction side) {
+    public static @Nullable <T extends SmartBlockEntity> ResourceHandler<FluidResource> get(T be, @Nullable Direction side) {
         return be.getBehaviour(TYPE).get(side);
     }
 
     @Nullable
-    public IFluidHandler get(@Nullable Direction side) {
+    public ResourceHandler<FluidResource> get(@Nullable Direction side) {
         return getter.apply(side);
     }
 
+    @SuppressWarnings("unchecked")
     @Nullable
-    private IFluidHandler firstGet(@Nullable Direction direction) {
+    private ResourceHandler<FluidResource> firstGet(@Nullable Direction direction) {
         FluidInventory inventory = factory.apply(blockEntity);
         if (inventory == null) {
             return null;
         }
-        IFluidHandler handler = FluidInventoryHandler.of(inventory, null);
+        ResourceHandler<FluidResource> storage = FluidInventoryStorage.of(inventory, null);
         if (inventory instanceof SidedFluidInventory) {
-            @Nullable IFluidHandler[] sides = new IFluidHandler[6];
+            @Nullable ResourceHandler<FluidResource>[] sides = new ResourceHandler[6];
             getter = side -> {
                 if (side == null) {
-                    return handler;
+                    return storage;
                 }
                 int i = side.get3DDataValue();
-                IFluidHandler sideHandler = sides[i];
-                if (sideHandler == null) {
-                    sideHandler = sides[i] = FluidInventoryHandler.of(inventory, side);
+                ResourceHandler<FluidResource> sideStorage = sides[i];
+                if (sideStorage == null) {
+                    sideStorage = sides[i] = FluidInventoryStorage.of(inventory, side);
                 }
-                return sideHandler;
+                return sideStorage;
             };
         } else {
-            getter = _ -> handler;
+            getter = _ -> storage;
         }
         return getter.apply(direction);
     }
