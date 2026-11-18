@@ -130,16 +130,9 @@ public abstract class MinecraftMixin {
         FlwImpl.freezeRegistries();
     }
 
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;updateRawMouseInput(Z)V"))
-    private void register(GameConfig gameConfig, CallbackInfo ci) {
-        if (RenderSystem.getDevice().getDeviceInfo().backendName().equals("OpenGL")) {
-            resourceManager.registerReloadListener(FlwProgramsReloader.INSTANCE);
-        }
-        resourceManager.registerReloadListener(ObjLoader.INSTANCE);
-        resourceManager.registerReloadListener(Create.RESOURCE_RELOAD_LISTENER);
-        resourceManager.registerReloadListener(TrainHatInfoReloadListener.LISTENER);
-        resourceManager.registerReloadListener(Ponder.RESOURCE_RELOAD_LISTENER);
-    }
+    // Port note: upstream registers Create's client reload listeners here, straight on the
+    // resource manager. NeoForge wants them on AddClientReloadListenersEvent: see
+    // client/platform/CreateClientReloadListeners.
 
     @Inject(method = "onResourceLoadFinished(Lnet/minecraft/client/GameLoadCookie;)V", at = @At("HEAD"))
     private void endReload(GameLoadCookie cookie, CallbackInfo ci) {

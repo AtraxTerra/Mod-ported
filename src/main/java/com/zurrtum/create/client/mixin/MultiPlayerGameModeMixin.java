@@ -148,7 +148,9 @@ public class MultiPlayerGameModeMixin {
         return original.call(instance, pos);
     }
 
-    @WrapOperation(method = "lambda$startDestroyBlock$1(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;I)Lnet/minecraft/network/protocol/Packet;", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;destroyBlock(Lnet/minecraft/core/BlockPos;)Z"))
+    // Port note: NeoForge's patch makes this lambda capture its LeftClickBlock event, which adds a
+    // parameter to the synthetic method; descriptor taken from the bytecode audit.
+    @WrapOperation(method = "lambda$startDestroyBlock$1(Lnet/minecraft/world/level/block/state/BlockState;Lnet/neoforged/neoforge/event/entity/player/PlayerInteractEvent$LeftClickBlock;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;I)Lnet/minecraft/network/protocol/Packet;", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;destroyBlock(Lnet/minecraft/core/BlockPos;)Z"))
     private boolean onLeftClick2(
         MultiPlayerGameMode instance,
         BlockPos pos,

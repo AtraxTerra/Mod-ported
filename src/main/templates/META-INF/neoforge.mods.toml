@@ -14,7 +14,7 @@ version = "${mod_version_full}"
 displayName = "${mod_name}"
 authors = "ZurrTum"
 credits = "Creators-of-Create, ZurrTum (the Fabric port this is derived from)"
-logoFile = "assets/pack.png"
+iconFile = "assets/pack.png"
 description = '''
 Create, ported forward to Minecraft 26.2. This build targets NeoForge and is
 derived from ZurrTum's Create Fly Fabric source.
