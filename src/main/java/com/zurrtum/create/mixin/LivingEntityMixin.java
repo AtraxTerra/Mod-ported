@@ -63,13 +63,9 @@ public abstract class LivingEntityMixin extends Entity {
         super(type, world);
     }
 
-    @WrapOperation(method = "travelInAir(Lnet/minecraft/world/phys/Vec3;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/Block;getFriction()F"))
-    private float getSlipperiness(Block block, Operation<Float> original, @Local BlockPos posBelow) {
-        if (block instanceof SlipperinessControlBlock controlBlock) {
-            return controlBlock.getSlipperiness(level(), posBelow);
-        }
-        return original.call(block);
-    }
+    // Port note: upstream wraps Block.getFriction() here for SlipperinessControlBlock. NeoForge
+    // patches this call to the level-sensitive IBlockExtension.getFriction, which
+    // SlipperinessControlBlock now overrides, so the wrap has no target and is not needed.
 
     @WrapOperation(method = "baseTick()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
     private boolean breatheInLava(

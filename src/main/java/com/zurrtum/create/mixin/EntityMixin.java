@@ -153,9 +153,10 @@ public abstract class EntityMixin implements SyncedDataHolder {
         return false;
     }
 
-    @WrapOperation(method = "restituteMovementAfterCollisions(Lnet/minecraft/world/level/block/state/BlockState;ZZLnet/minecraft/world/phys/Vec3;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;getBlockBounciness(Lnet/minecraft/world/level/block/Block;)D"))
-    private double getBlockBounciness(
-        Entity instance,
+    // Port note: upstream wraps getBlockBounciness(Block) in restituteMovementAfterCollisions.
+    // NeoForge changes both the method (it gains a BlockPos) and the call (it becomes
+    // getBlockBounciness(BlockPos, BlockState), backed by a per-block hook), so the wrap has no
+    // target. BouncinessControlBlock overrides that hook instead.
         Block onBlock,
         Operation<Double> original,
         @Local(argsOnly = true) BlockState effectState

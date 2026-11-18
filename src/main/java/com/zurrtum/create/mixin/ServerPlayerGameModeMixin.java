@@ -147,24 +147,39 @@ public class ServerPlayerGameModeMixin {
         return result;
     }
 
-    @WrapOperation(method = "destroyBlock(Lnet/minecraft/core/BlockPos;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;removeBlock(Lnet/minecraft/core/BlockPos;Z)Z"))
-    private boolean removeBlock(
-        ServerLevel world,
+    /**
+     * Two jobs, both upstream's: let a BreakControlBlock veto its own removal, and tell the symmetry
+     * wand a block was broken so it can mirror the break.
+     *
+     * <p>Upstream wraps vanilla's {@code level.removeBlock(pos, false)}. NeoForge refactors
+     * destroyBlock so that call no longer exists: removal goes through a new private helper,
+     * {@code removeBlock(pos, state, canHarvest, tool)}, which asks the block via
+     * {@code onDestroyedByPlayer}. NeoForge calls that helper from both branches of destroyBlock
+     * where vanilla called removeBlock once before branching, so wrapping every call to it is the
+     * same coverage as upstream's single wrap.
+     *
+     * <p>The symmetry call is the reason this stays a mixin rather than becoming another
+     * IBlockExtension bridge: it applies to every block a player breaks, not only to
+     * BreakControlBlocks, so it cannot live on the block.
+     */
+    @WrapOperation(method = "destroyBlock(Lnet/minecraft/core/BlockPos;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;ZLnet/minecraft/world/item/ItemStack;)Z"))
+    private boolean wrapRemoveBlock(
+        ServerPlayerGameMode instance,
         BlockPos pos,
-        boolean move,
-        Operation<Boolean> original,
-        @Local(ordinal = 0) BlockState adjustedState,
-        @Local Block block
+        BlockState adjustedState,
+        boolean canHarvest,
+        ItemStack tool,
+        Operation<Boolean> original
     ) {
-        if (block instanceof BreakControlBlock controlBlock && !controlBlock.onDestroyedByPlayer(
+        if (adjustedState.getBlock() instanceof BreakControlBlock controlBlock && !controlBlock.onDestroyedByPlayer(
             adjustedState,
-            world,
+            level,
             pos,
             player
         )) {
             return false;
         }
-        boolean remove = original.call(world, pos, move);
+        boolean remove = original.call(instance, pos, adjustedState, canHarvest, tool);
         if (remove) {
             SymmetryHandler.onBlockDestroyed(player, pos, adjustedState);
         }

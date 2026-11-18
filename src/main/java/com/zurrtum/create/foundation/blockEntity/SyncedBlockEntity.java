@@ -38,6 +38,9 @@ public abstract class SyncedBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
+    // Overrides NeoForge's IBlockEntityExtension.handleUpdateTag, which NeoForge calls when a
+    // chunk's block entity data arrives. On Fabric a LevelChunk mixin dispatched here instead.
+    @Override
     public void handleUpdateTag(ValueInput view) {
         readClient(view);
     }

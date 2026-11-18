@@ -19,11 +19,7 @@ public abstract class AbstractBoatMixin extends Entity {
         super(type, world);
     }
 
-    @WrapOperation(method = "getGroundFriction()F", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/Block;getFriction()F"))
-    private float getSlipperiness(Block block, Operation<Float> original, @Local BlockPos.MutableBlockPos blockPos) {
-        if (block instanceof SlipperinessControlBlock controlBlock) {
-            return controlBlock.getSlipperiness(level(), blockPos);
-        }
-        return original.call(block);
-    }
+    // Port note: upstream wraps Block.getFriction() here for SlipperinessControlBlock. NeoForge
+    // patches this call to the level-sensitive IBlockExtension.getFriction, which
+    // SlipperinessControlBlock now overrides, so the wrap has no target and is not needed.
 }

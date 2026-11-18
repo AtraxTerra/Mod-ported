@@ -57,14 +57,9 @@ public abstract class LevelChunkMixin {
         FluidHelper.invalidateInventoryCache(pos);
     }
 
-    @WrapOperation(method = "lambda$replaceWithPacketData$0(Lnet/minecraft/util/ProblemReporter$ScopedCollector;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/entity/BlockEntityType;Lnet/minecraft/nbt/CompoundTag;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/entity/BlockEntity;loadWithComponents(Lnet/minecraft/world/level/storage/ValueInput;)V"))
-    private void handleUpdateTag(BlockEntity blockEntity, ValueInput view, Operation<Void> original) {
-        if (blockEntity instanceof SyncedBlockEntity syncedBlockEntity) {
-            syncedBlockEntity.handleUpdateTag(view);
-        } else {
-            original.call(blockEntity, view);
-        }
-    }
+    // Port note: NeoForge patches this call to blockEntity.handleUpdateTag(input), and
+    // SyncedBlockEntity.handleUpdateTag(ValueInput) has exactly that signature -- so on NeoForge
+    // Create already overrides the native hook, and this wrap was redundant as well as dead.
 
     @Inject(method = "clearAllBlockEntities()V", at = @At("HEAD"))
     private void clear(CallbackInfo ci) {
