@@ -43,7 +43,16 @@ public final class Platform {
      * degradation. Do not "fix" these by making them return true.
      */
     public static boolean isModLoaded(String modId) {
-        return ModList.get().isLoaded(modId);
+        ModList modList = ModList.get();
+        if (modList == null) {
+            // Too early for ModList: BuiltInRegistries.freeze() -- where Create and its addons
+            // register (see AddonEntrypoint) -- runs before FML builds it. FML's loading mod list
+            // already knows which mods will load, so answer from that rather than throwing. (The
+            // Diesel Generators port asked about JEI from there and the server died in Mods' static
+            // initialiser.)
+            return EarlyModDetection.isPresent(modId);
+        }
+        return modList.isLoaded(modId);
     }
 
     // ModList hands back a wildcard; keeping it in the signature avoids an unchecked cast here
