@@ -3,9 +3,12 @@
 #
 # Two production NeoForge servers, one after the other, on the SAME world:
 #   A. Create: Adapted 26.2-1.31 (+ the official create-1.21.1-6.0.10.jar it reads its content from)
-#      places every Create block on a grid via RCON and records `data get block` for each.
-#   B. this port's jar replaces it; for every position it checks that the block is still there and
-#      that its block entity still carries the keys it had.
+#      places every Create block on a grid via RCON, fills the ones that hold things (hoppers feed
+#      items in, fluids are merged in), builds a few extras (a bearing contraption, a powered shaft
+#      line, a belt with items, a chest of Create items with data components) and records
+#      `data get` for each.
+#   B. this port's jar replaces it; for every position it checks that the block is still there, that
+#      its block entity kept its keys and that the same items and fluids are still inside.
 # Both third-party jars are downloaded for the test only and never leave the runner.
 #
 # Usage: tools/migration-test.sh <create-fly.jar> [neoforge-version]
@@ -62,6 +65,7 @@ for block in ids:
     print(f"{x}\t-60\t{z}\tcreate:{block}")
 EOF
 half=$(( $(awk -F'\t' '{x=$1<0?-$1:$1; z=$3<0?-$3:$3; m=x>z?x:z; if(m>M)M=m} END{print M+2}' grid.tsv) ))
+reach=$(( half + 8 ))  # the extras are built on a row just outside the grid
 
 boot() {  # $1 = phase name; leaves the server running, PID in SERVER_PID
     ./run.sh nogui > "server-$1.log" 2>&1 &
@@ -84,10 +88,14 @@ echo "::group::Phase A: Create: Adapted places every block"
 if ! boot A; then
     echo "::error::Create: Adapted server did not start"; tail -60 server-A.log; exit 1
 fi
-printf 'setworldspawn 0 -60 0\nforceload add %d %d %d %d\n' "-$half" "-$half" "$half" "$half" | rcon > /dev/null
+printf 'setworldspawn 0 -60 0\nforceload add %d %d %d %d\n' "-$reach" "-$reach" "$reach" "$reach" | rcon > /dev/null
 sleep 10
 awk -F'\t' '{print "setblock "$1" "$2" "$3" "$4}' grid.tsv | rcon > placeA.tsv
 sleep 20
+python3 -I "$TOOLS/migration_fill.py" grid.tsv "$half" fill.cmds extra.cmds
+rcon < fill.cmds > fillA.tsv
+sleep 40
+rcon < extra.cmds > extraA.tsv
 awk -F'\t' '{print "execute if block "$1" "$2" "$3" "$4}' grid.tsv | rcon > presentA.tsv
 awk -F'\t' '{print "data get block "$1" "$2" "$3}' grid.tsv | rcon > dataA.tsv
 stop
@@ -102,59 +110,28 @@ else
     sleep 10
     awk -F'\t' '{print "execute if block "$1" "$2" "$3" "$4}' grid.tsv | rcon > presentB.tsv
     awk -F'\t' '{print "data get block "$1" "$2" "$3}' grid.tsv | rcon > dataB.tsv
+    rcon < extra.cmds > extraB.tsv
     stop
 fi
 echo "::endgroup::"
 
-python3 -I - <<'EOF' | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
-import re
-grid = [l.rstrip("\n").split("\t") for l in open("grid.tsv")]
-def load(name):
-    try:
-        return [l.rstrip("\n").split("\t", 1)[1] if "\t" in l else "" for l in open(name)]
-    except FileNotFoundError:
-        return []
-placeA, presentA, dataA, presentB, dataB = (load(n) for n in ("placeA.tsv", "presentA.tsv", "dataA.tsv", "presentB.tsv", "dataB.tsv"))
-placeA, presentA, dataA, presentB, dataB = list(placeA), list(presentA), list(dataA), list(presentB), list(dataB)
-def keys(resp):
-    m = re.search(r"has the following block data: (\{.*\})", resp)
-    return set(re.findall(r"[{,]\s*\"?([A-Za-z_][\w]*)\"?\s*:", m.group(1))) if m else None
-placed = sum("Changed the block" in r for r in placeA)
-print("## World migration: Create: Adapted -> Create Fly\n")
-print(f"Phase A (Create: Adapted): placed **{placed}** of {len(grid)} blocks.")
-if not presentB:
-    print("\n:x: Phase B produced no results (server did not start or RCON failed)."); raise SystemExit
-lost_blocks, lost_be, lost_keys, unstable = [], [], [], []
-for i, (x, y, z, block) in enumerate(grid):
-    if i >= len(placeA) or "Changed the block" not in placeA[i]:
-        continue
-    if i < len(presentA) and "Test passed" not in presentA[i]:
-        unstable.append(block); continue  # removed itself under Create: Adapted already
-    if i < len(presentB) and "Test passed" not in presentB[i]:
-        lost_blocks.append(block); continue
-    a, b = keys(dataA[i]) if i < len(dataA) else None, keys(dataB[i]) if i < len(dataB) else None
-    if a is not None and b is None:
-        lost_be.append(block)
-    elif a and b is not None and (a - b) - {"id", "x", "y", "z"}:
-        lost_keys.append((block, sorted((a - b) - {"id", "x", "y", "z"})))
-print(f"\n- blocks that removed themselves before the switch (no support; not a migration issue): {len(unstable)} -- {', '.join(b.split(':')[1] for b in unstable)}")
-print(f"- blocks gone after the switch: **{len(lost_blocks)}**")
-for b in lost_blocks[:30]: print(f"  - `{b}`")
-print(f"- block entities gone (block kept, no data): **{len(lost_be)}**")
-for b in lost_be[:30]: print(f"  - `{b}`")
-print(f"- block entities that kept their block but lost NBT keys: **{len(lost_keys)}**")
-for b, k in lost_keys[:120]: print(f"  - `{b}`: {', '.join(k)}")
-SAMPLES = ["item_vault", "fluid_tank", "basin", "depot", "black_toolbox", "black_postbox", "brass_tunnel",
-           "fluid_pipe", "copycat_panel", "stock_ticker", "mechanical_crafter", "weighted_ejector",
-           "creative_motor", "mechanical_press", "deployer", "smart_chute", "item_drain", "crushing_wheel_controller"]
-print("\n### NBT before / after, sample block entities\n")
-for i, (x, y, z, block) in enumerate(grid):
-    if block.split(":")[1] in SAMPLES and i < len(dataA):
-        print(f"- `{block}`\n  - Adapted: `{dataA[i][:700]}`\n  - Fly: `{dataB[i][:700] if i < len(dataB) else ''}`")
-EOF
+python3 -I "$TOOLS/migration_report.py" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
-echo "::group::Phase B log: errors and Create warnings"
-grep -E "/(ERROR|FATAL)\]|Skipping BlockEntity|Failed to load|Unknown|Couldn't load" server-B.log 2>/dev/null | grep -v "Missing translations" | head -80
+errors() {  # error lines of a server log, each with the stack trace that follows it
+    awk '/\/(ERROR|FATAL)\]|Skipping BlockEntity|Failed to load|Couldn.t load/ && !/Missing translations/ {print; n=40; next}
+         n > 0 && /^(\t|\s+at |Caused by|\s*\.\.\. [0-9]+ more|[a-z]+\.[A-Za-z.$]+(Exception|Error))/ {print; n--; next} {n=0}' "$1" 2>/dev/null | head -400
+}
+echo "::group::Phase B log: errors with stack traces"
+errors server-B.log
+echo "::endgroup::"
+echo "::group::Phase A log: errors with stack traces"
+errors server-A.log | head -120
+echo "::endgroup::"
+echo "::group::Full NBT, both phases"
+cat dumps.md 2>/dev/null
+echo "::endgroup::"
+echo "::group::Fill commands and their replies (phase A)"
+cat fillA.tsv 2>/dev/null | cut -c1-400
 echo "::endgroup::"
 echo "::group::Phase A log tail"
 tail -40 server-A.log

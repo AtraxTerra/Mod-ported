@@ -65,8 +65,16 @@ def main() -> int:
             command = line.strip()
             if not command or command.startswith("#"):
                 continue
-            sock.sendall(packet(n, 2, command))
-            _, _, body = read_packet(sock)
+            # Minecraft splits replies longer than 4096 bytes into several packets with the same id.
+            # A packet of an unknown type is answered once, after them, so it marks the end.
+            marker = n + 1_000_000
+            sock.sendall(packet(n, 2, command) + packet(marker, 99, ""))
+            body = ""
+            while True:
+                request_id, _, part = read_packet(sock)
+                if request_id == marker:
+                    break
+                body += part
             print(f"{command}\t{' '.join(body.split())}", flush=True)
     return 0
 
