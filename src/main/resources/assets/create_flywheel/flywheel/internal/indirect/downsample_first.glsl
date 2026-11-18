@@ -1,4 +1,4 @@
-#include "flywheel:internal/indirect/downsample.glsl"
+#include "create_flywheel:internal/indirect/downsample.glsl"
 
 layout(binding = 0) uniform sampler2D depth_tex;
 layout(binding = 1, r32f) uniform restrict writeonly image2D mip_0;

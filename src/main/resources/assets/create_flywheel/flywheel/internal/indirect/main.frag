@@ -1,6 +1,6 @@
-#include "flywheel:internal/common.frag"
-#include "flywheel:internal/indirect/buffer_bindings.glsl"
-#include "flywheel:internal/indirect/light.glsl"
+#include "create_flywheel:internal/common.frag"
+#include "create_flywheel:internal/indirect/buffer_bindings.glsl"
+#include "create_flywheel:internal/indirect/light.glsl"
 
 flat in uvec2 _flw_packedMaterial;
 

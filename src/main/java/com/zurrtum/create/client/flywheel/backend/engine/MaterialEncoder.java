@@ -4,7 +4,7 @@ import com.zurrtum.create.client.flywheel.api.material.*;
 import com.zurrtum.create.client.flywheel.backend.MaterialShaderIndices;
 import net.minecraft.util.Mth;
 
-// Materials are unpacked in "flywheel:flywheel/internal/packed_material.glsl"
+// Materials are unpacked in "create_flywheel:flywheel/internal/packed_material.glsl"
 public final class MaterialEncoder {
     // The number of bits each property takes up
     private static final int BLUR_LENGTH = 1;

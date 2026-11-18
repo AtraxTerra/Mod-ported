@@ -1,4 +1,4 @@
-#include "flywheel:internal/fog_distance.glsl"
+#include "create_flywheel:internal/fog_distance.glsl"
 
 #ifdef _FLW_CRUMBLING
 out vec2 _flw_crumblingTexCoord;

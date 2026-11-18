@@ -20,7 +20,7 @@ import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 public class BackendArgument implements ArgumentType<Backend> {
-    private static final List<String> EXAMPLES = List.of("off", "flywheel:off", "instancing");
+    private static final List<String> EXAMPLES = List.of("off", "create_flywheel:off", "instancing");
 
     private static final DynamicCommandExceptionType ERROR_UNKNOWN_BACKEND = new DynamicCommandExceptionType(arg -> {
         return Component.translatable("argument.flywheel_backend.id.unknown", arg);

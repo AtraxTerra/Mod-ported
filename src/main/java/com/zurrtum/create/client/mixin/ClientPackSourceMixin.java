@@ -52,7 +52,7 @@ public abstract class ClientPackSourceMixin {
                         position,
                         id,
                         "minecraft",
-                        "flywheel",
+                        "create_flywheel",
                         "vanillin",
                         "ponder",
                         "fabric"

@@ -6,7 +6,7 @@ import net.minecraft.commands.synchronization.ArgumentTypeInfos;
 import org.jetbrains.annotations.UnknownNullability;
 
 public final class Flywheel {
-    public static final String MOD_ID = "flywheel";
+    public static final String MOD_ID = "create_flywheel";
     @UnknownNullability
     // NeoForge expresses mod versions as maven ArtifactVersion, which is what FML itself
     // uses; the Fabric build used its loader's own StringVersion here.

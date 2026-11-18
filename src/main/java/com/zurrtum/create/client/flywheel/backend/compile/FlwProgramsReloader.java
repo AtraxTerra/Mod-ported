@@ -8,7 +8,7 @@ public final class FlwProgramsReloader extends CreateResourceReloader {
     public static final FlwProgramsReloader INSTANCE = new FlwProgramsReloader();
 
     private FlwProgramsReloader() {
-        super("flywheel");
+        super("create_flywheel");
     }
 
     @Override

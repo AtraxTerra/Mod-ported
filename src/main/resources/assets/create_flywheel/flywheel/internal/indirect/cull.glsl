@@ -1,8 +1,8 @@
-#include "flywheel:internal/indirect/buffer_bindings.glsl"
-#include "flywheel:internal/indirect/model_descriptor.glsl"
-#include "flywheel:internal/uniforms/uniforms.glsl"
-#include "flywheel:util/matrix.glsl"
-#include "flywheel:internal/indirect/matrices.glsl"
+#include "create_flywheel:internal/indirect/buffer_bindings.glsl"
+#include "create_flywheel:internal/indirect/model_descriptor.glsl"
+#include "create_flywheel:internal/uniforms/uniforms.glsl"
+#include "create_flywheel:util/matrix.glsl"
+#include "create_flywheel:internal/indirect/matrices.glsl"
 
 layout(local_size_x = 32) in;
 
@@ -32,7 +32,7 @@ layout(binding = 0) uniform sampler2D _flw_depthPyramid;
 // Disgustingly vectorized sphere frustum intersection taking advantage of ahead of time packing.
 // Only uses 6 fmas and some boolean ops.
 // See also:
-// flywheel:uniform/flywheel.glsl
+// create_flywheel:uniform/flywheel.glsl
 // dev.engine_room.flywheel.lib.math.MatrixMath.writePackedFrustumPlanes
 // org.joml.FrustumIntersection.testSphere
 bool _flw_testSphere(vec3 center, float radius) {

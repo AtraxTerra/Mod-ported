@@ -1,4 +1,4 @@
-#include "flywheel:internal/indirect/downsample.glsl"
+#include "create_flywheel:internal/indirect/downsample.glsl"
 
 uniform uint mip_levels;
 uniform uint base_mip_level;

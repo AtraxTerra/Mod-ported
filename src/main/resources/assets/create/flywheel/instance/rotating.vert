@@ -1,4 +1,4 @@
-#include "flywheel:util/quaternion.glsl"
+#include "create_flywheel:util/quaternion.glsl"
 
 void flw_instanceVertex(in FlwInstance instance) {
     float degrees = instance.offset + flw_renderSeconds * instance.speed;

@@ -1,6 +1,6 @@
-#include "flywheel:internal/uniforms/frame.glsl"
-#include "flywheel:internal/wavelet.glsl"
-#include "flywheel:internal/depth.glsl"
+#include "create_flywheel:internal/uniforms/frame.glsl"
+#include "create_flywheel:internal/wavelet.glsl"
+#include "create_flywheel:internal/depth.glsl"
 
 uniform sampler2D _flw_depthRange;
 
