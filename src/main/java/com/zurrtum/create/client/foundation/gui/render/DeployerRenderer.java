@@ -26,7 +26,9 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 public class DeployerRenderer extends GuiBlockRenderer<DeployerRenderState> {
     private static final Int2ObjectMap<GpuTexture> TEXTURES = new Int2ObjectArrayMap<>();
     private final PoseStack matrices = new PoseStack();
-    private int windowScaleFactor;
+    // Port: static like TEXTURES, see PORTING.md 1h. NeoForge creates a renderer per state drawn
+    // in a frame, and a new one saw scale 0 and closed textures already queued for drawing.
+    private static int texturesScale;
 
     @Override
     public void prepare(
@@ -35,8 +37,8 @@ public class DeployerRenderer extends GuiBlockRenderer<DeployerRenderState> {
         FeatureRenderDispatcher featureRenderDispatcher,
         int windowScaleFactor
     ) {
-        if (this.windowScaleFactor != windowScaleFactor) {
-            this.windowScaleFactor = windowScaleFactor;
+        if (texturesScale != windowScaleFactor) {
+            texturesScale = windowScaleFactor;
             TEXTURES.values().forEach(GpuTexture::close);
             TEXTURES.clear();
         }

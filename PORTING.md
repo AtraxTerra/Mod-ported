@@ -163,7 +163,7 @@ be wrong (the `FuelValues` case below), or erase NeoForge behaviour other mods r
 | `FuelValues.vanillaBurnTimes` | the `neoforge:furnace_fuels` data map (`data/neoforge/data_maps/item/furnace_fuels.json`), kept in step with `AllFuelTimes` by `tools/check_fuels.py` in CI. Retargeting the mixin would have applied and done nothing: on NeoForge that method only feeds datagen |
 | `StructureTemplate.placeEntities` | `StructureProcessor.processEntity`, overridden by `EntityControlStructureProcessor` |
 | `ReloadableServerResources.listeners()`, client `registerReloadListener` | `AddServerReloadListenersEvent` / `AddClientReloadListenersEvent` (`platform/CreateReloadListeners`, `client/platform/CreateClientReloadListeners`). NeoForge rejects listeners added any other way, fatally on the server |
-| `GuiRenderer` PiP renderer map | `RegisterPictureInPictureRenderersEvent` — `client/platform/CreatePictureInPictureRenderers` |
+| `GuiRenderer` PiP renderer map | `RegisterPictureInPictureRenderersEvent` — `client/platform/CreatePictureInPictureRenderers`; renderers sharing a static texture cache keep their scale static too (1h) |
 | `Hud` train overlay | a GUI layer before the contextual bar that cancels the bar while it draws — `client/platform/TrainHudLayer` |
 | `ModelBlockRenderer.tesselateBlock` (`@Overwrite`) | not overwritten: that would erase NeoForge's renderer patches for every block. `VanillinModelLayerMixin` keeps the one Vanillin call; `WrapperBlockStateModel` overrides the level-aware `collectParts`; enhanced AO is NeoForge's `EnhancedBlockModelLighter` |
 | packs (`BuiltInPackSource`, `ClientPackSource`) | `AddPackFindersEvent` — `client/platform/CreatePackFinders` |
@@ -287,6 +287,72 @@ Nothing looked doubled on screen.
 
 The upstream sync undoes the relocation before applying upstream's diff and redoes it after (both
 directions of the script are exact and idempotent), so upstream's shader changes keep applying.
+
+---
+
+## 1g. Recipe viewers: Create's recipe types are sent to clients
+
+Since 1.21.2 a client receives only the recipe types something asks the loader to send. Upstream
+asks through Fabric API's `RecipeSynchronization` (`compat/fabric/RecipeCommonPlugin`, excluded
+here), and nothing asked on NeoForge: in JEI, every Create category built on Create's own recipes
+(crushing, milling, mixing, pressing, deploying, sequenced assembly...) was empty, single player
+included -- 967 recipes of those sixteen types, counted in CI with the server's mod list and JEI
+30.39. Only the categories made from vanilla recipes (automatic packing and shapeless, bulk
+blasting and smoking) and mystery conversion had any. `platform/RecipeSync` asks for the same
+sixteen types on every datapack sync.
+
+With the recipes there, JEI's draining category built its recipes from every item stack JEI knows
+and stopped on the first one that drains into nothing (`ItemStackTemplate.fromNonEmptyStack` on an
+empty container): JEI drops the rest of a plugin's `registerRecipes`, so spout filling and block
+cutting were empty too. `DrainingCategory` now leaves such an item out, as `SpoutFillingCategory`
+already did for an empty result.
+
+With draining through, spout filling stopped the plugin the same way on another mod's item: both
+categories try every item stack JEI knows through its fluid handler, and NTM's chemical thrower
+throws from its handler when emptied. An item whose handler throws is now left out of the category,
+with one line in the log (`JeiPlatform.leftOut`), and what JEI registers after spout filling -- toolbox
+dyeing, block cutting -- is back with it.
+
+## 1h. Picture-in-picture renderers: one texture cache, several renderers
+
+Ten of Create's GUI renderers keep their textures in a static cache (`TEXTURES`, by element id or
+key) and close the whole cache when the GUI scale changes: the deployer, press, spout, drain and
+manual-application ones under `foundation/gui/render`, catnip's item, block, partial and entity-block
+elements, and the ponder scene. Upstream kept the last scale in an instance field, which was the
+same thing there: Fabric builds one renderer per state class.
+
+NeoForge pools them instead (`PictureInPictureRendererPool`): a frame that draws three deployers
+gets three renderers, made by the factory registered in `CreatePictureInPictureRenderers`. Each new
+one started at scale 0, so it closed every cached texture, including the one the previous renderer
+had just queued for drawing, and the frame crashed with `Texture view Sampler0 (...) has been
+closed!` -- the first JEI page with two deployer recipes did it. The scale now sits next to the cache
+(`texturesScale`, static), as does the allocation count of the drain and manual-application
+renderers, which belongs to their shared ring of textures. Renderers built on `GuiBlockRenderer`'s own
+per-instance texture (basin, mixer, millstone, saw...) are what the pool expects and are unchanged.
+
+## 1i. Fluid types: every `FlowableFluid` gets one
+
+NeoForge asks a fluid for its `FluidType` wherever the fluid meets the game: every entity touching
+it, each tick (`EntityFluidInteraction`, `Fluid.entityInside`), a bucket being emptied
+(`BucketItem`), a fluid stack's name (`FluidStack.getHoverName`). The default `getFluidType()` knows
+vanilla's fluids only and throws `Mod fluids must override getFluidType` for any other. Fabric has no
+fluid types, so upstream's fluids have none, and on NeoForge:
+
+- an entity, player or item walking into placed honey or chocolate threw from its tick, which stops
+  a server;
+- a honey or chocolate bucket could not be emptied;
+- JEI listed none of the fluids: 27 "broken ingredients" with Diesel Generators installed, whose
+  fluids are `FlowableFluid`s too -- Create's potion, tea, milk, honey and chocolate, its six fuels
+  and oils and sixteen cements.
+
+`platform/FlowableFluidTypes` registers one type per family (still and flowing) when NeoForge
+registers fluid types, which is after `FluidsMixin` has registered Create's and its addons' fluids.
+Each is named after the still fluid's id, takes the lang key the fluid already has
+(`fluid.<namespace>.<path>`), NeoForge's default properties and the water bucket sounds;
+`FlowableFluid.getFluidType()` returns it. A `FlowableFluid` added to the registry later than that
+gets water's type and one warning in the log. NeoForge's defaults let entities swim in these fluids
+and be pushed by their current; viscosity and density, which only inform other mods, keep NeoForge's
+defaults too.
 
 ---
 

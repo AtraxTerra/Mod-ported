@@ -118,6 +118,9 @@ public class SpoutFillingCategory extends CreateCategory<RecipeHolder<FillingRec
                     }
                     capability.extract(fluid, insert);
                 }
+            } catch (RuntimeException e) {
+                // Port: see JeiPlatform.leftOut.
+                com.zurrtum.create.client.compat.jei.JeiPlatform.leftOut("spout filling", stack, e);
             }
         });
         return recipes;

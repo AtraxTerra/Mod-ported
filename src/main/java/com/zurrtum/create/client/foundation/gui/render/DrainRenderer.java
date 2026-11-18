@@ -22,10 +22,12 @@ import java.util.Deque;
 
 public class DrainRenderer extends GuiBlockRenderer<DrainRenderState> {
     public static int MAX = 6;
-    private int allocate = MAX;
+    private static int allocate = MAX;
     private static final Deque<GpuTexture> TEXTURES = new ArrayDeque<>(MAX);
     private final PoseStack matrices = new PoseStack();
-    private int windowScaleFactor;
+    // Port: static like TEXTURES, see PORTING.md 1h. NeoForge creates a renderer per state drawn
+    // in a frame, and a new one saw scale 0 and closed textures already queued for drawing.
+    private static int texturesScale;
 
     @Override
     public void prepare(
@@ -34,8 +36,8 @@ public class DrainRenderer extends GuiBlockRenderer<DrainRenderState> {
         FeatureRenderDispatcher featureRenderDispatcher,
         int windowScaleFactor
     ) {
-        if (this.windowScaleFactor != windowScaleFactor) {
-            this.windowScaleFactor = windowScaleFactor;
+        if (texturesScale != windowScaleFactor) {
+            texturesScale = windowScaleFactor;
             TEXTURES.forEach(GpuTexture::close);
             TEXTURES.clear();
             allocate = MAX;

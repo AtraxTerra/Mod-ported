@@ -19,7 +19,9 @@ import java.util.Map;
 public class BlockTransformElementRenderer extends PictureInPictureRenderer<BlockTransformRenderState> {
     private static final Map<Object, GpuTexture> TEXTURES = new HashMap<>();
     private final PoseStack matrices = new PoseStack();
-    private int windowScaleFactor;
+    // Port: static like TEXTURES, see PORTING.md 1h. NeoForge creates a renderer per state drawn
+    // in a frame, and a new one saw scale 0 and closed textures already queued for drawing.
+    private static int texturesScale;
 
     public BlockTransformElementRenderer() {
     }
@@ -38,8 +40,8 @@ public class BlockTransformElementRenderer extends PictureInPictureRenderer<Bloc
         FeatureRenderDispatcher featureRenderDispatcher,
         int windowScaleFactor
     ) {
-        if (this.windowScaleFactor != windowScaleFactor) {
-            this.windowScaleFactor = windowScaleFactor;
+        if (texturesScale != windowScaleFactor) {
+            texturesScale = windowScaleFactor;
             TEXTURES.values().forEach(GpuTexture::close);
             TEXTURES.clear();
         }

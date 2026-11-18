@@ -33,6 +33,7 @@ import com.zurrtum.create.infrastructure.worldgen.AllFeatures;
 import com.zurrtum.create.infrastructure.worldgen.AllPlacedFeatures;
 import com.zurrtum.create.infrastructure.worldgen.AllPlacementModifiers;
 import com.zurrtum.create.platform.BreathingHooks;
+import com.zurrtum.create.platform.RecipeSync;
 import com.zurrtum.create.platform.Platform;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -92,8 +93,12 @@ public class Create {
     public Create(IEventBus modEventBus) {
         AllConfigs.register();
         modEventBus.addListener(AllTransfer::registerCapabilities);
+        // A NeoForge fluid type for each of Create's fluids and its addons' (see FlowableFluidTypes).
+        modEventBus.addListener(com.zurrtum.create.platform.FlowableFluidTypes::register);
         // Diving helmet breathing; replaces two LivingEntity.baseTick wraps NeoForge patches away.
         NeoForge.EVENT_BUS.addListener(BreathingHooks::onLivingBreathe);
+        // Create's recipe types to clients, for JEI; upstream does it through Fabric API.
+        NeoForge.EVENT_BUS.addListener(RecipeSync::onDatapackSync);
     }
 
     public static void register() {

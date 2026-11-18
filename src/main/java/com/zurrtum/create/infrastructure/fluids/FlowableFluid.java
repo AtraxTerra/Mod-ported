@@ -15,9 +15,17 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.WaterFluid;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jspecify.annotations.Nullable;
 
 public abstract class FlowableFluid extends WaterFluid {
+    // Port: NeoForge asks every fluid for its type (entities in it, buckets, names); the default
+    // throws for any fluid that is not vanilla's. One type per family, see FlowableFluidTypes.
+    @Override
+    public FluidType getFluidType() {
+        return com.zurrtum.create.platform.FlowableFluidTypes.get(this);
+    }
+
     @Override
     public void animateTick(Level world, BlockPos pos, FluidState state, RandomSource random) {
     }

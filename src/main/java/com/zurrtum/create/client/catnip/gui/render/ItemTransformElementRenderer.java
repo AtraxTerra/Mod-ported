@@ -21,7 +21,9 @@ import java.util.Map;
 public class ItemTransformElementRenderer extends PictureInPictureRenderer<ItemTransformRenderState> {
     private static final Map<ItemTransformRenderKey, GpuTexture> TEXTURES = new IdentityHashMap<>();
     private final PoseStack matrices = new PoseStack();
-    private int windowScaleFactor;
+    // Port: static like TEXTURES, see PORTING.md 1h. NeoForge creates a renderer per state drawn
+    // in a frame, and a new one saw scale 0 and closed textures already queued for drawing.
+    private static int texturesScale;
 
     public static void clear(ItemTransformRenderKey key) {
         GpuTexture texture = TEXTURES.remove(key);
@@ -37,8 +39,8 @@ public class ItemTransformElementRenderer extends PictureInPictureRenderer<ItemT
         FeatureRenderDispatcher featureRenderDispatcher,
         int windowScaleFactor
     ) {
-        if (this.windowScaleFactor != windowScaleFactor) {
-            this.windowScaleFactor = windowScaleFactor;
+        if (texturesScale != windowScaleFactor) {
+            texturesScale = windowScaleFactor;
             TEXTURES.values().forEach(GpuTexture::close);
             TEXTURES.clear();
         }
