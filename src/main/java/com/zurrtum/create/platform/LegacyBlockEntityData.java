@@ -49,6 +49,8 @@ public final class LegacyBlockEntityData {
     /** Keys holding a block position the original Create wrote as {@code BlockPos.asLong()}. */
     private static final Set<String> LONG_POS_KEYS = Set.of("LastKnownPosition");
     private static final Map<String, Consumer<CompoundTag>> BY_TYPE = new HashMap<>();
+    /** Mods whose block entities and entities are converted: Create, and addons that ask. */
+    private static final Set<String> NAMESPACES = new java.util.concurrent.CopyOnWriteArraySet<>(Set.of("create"));
 
     private LegacyBlockEntityData() {
     }
@@ -56,13 +58,14 @@ public final class LegacyBlockEntityData {
     /** Rewrites {@code tag} in place when it is a Create block entity saved in the original layout. */
     public static CompoundTag upgrade(CompoundTag tag) {
         String id = tag.getStringOr("id", "");
-        if (!id.startsWith("create:")) {
+        int colon = id.indexOf(':');
+        if (colon < 0 || !NAMESPACES.contains(id.substring(0, colon))) {
             return tag;
         }
         try {
             values(tag);
             text(tag, "CustomName");
-            Consumer<CompoundTag> fixer = BY_TYPE.get(id.substring("create:".length()));
+            Consumer<CompoundTag> fixer = BY_TYPE.get(id);
             if (fixer != null) {
                 fixer.accept(tag);
             }
@@ -386,8 +389,28 @@ public final class LegacyBlockEntityData {
 
     private static void type(Consumer<CompoundTag> fixer, String... ids) {
         for (String id : ids) {
-            BY_TYPE.merge(id, fixer, Consumer::andThen);
+            BY_TYPE.merge("create:" + id, fixer, Consumer::andThen);
         }
+    }
+
+    // --- addons --------------------------------------------------------------------------------------
+
+    /**
+     * For an addon whose original version ran on Create: Adapted: its block entities and entities
+     * get the same value-encoding and shared-behaviour rewrites as Create's own (call from
+     * {@code AddonEntrypoint.onInitialize}).
+     */
+    public static void registerNamespace(String namespace) {
+        NAMESPACES.add(namespace);
+    }
+
+    /** An extra rewrite for one block entity type ({@code namespace:path}), run after the shared ones. */
+    public static synchronized void registerFixer(String blockEntityId, Consumer<CompoundTag> fixer) {
+        BY_TYPE.merge(blockEntityId, fixer, Consumer::andThen);
+    }
+
+    public static boolean handles(String namespace) {
+        return NAMESPACES.contains(namespace);
     }
 
     // --- helpers --------------------------------------------------------------------------------------

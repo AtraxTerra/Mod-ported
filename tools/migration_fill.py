@@ -18,29 +18,36 @@ grid_file, half, fill_file, unfill_file, extra_file, fresh_file = sys.argv[1], i
 pos = {}
 for line in open(grid_file):
     x, y, z, block = line.rstrip("\n").split("\t")
-    pos[block.split(":", 1)[1]] = (int(x), int(y), int(z))
+    pos[block] = (int(x), int(y), int(z))
 
 ITEMS = '{Items:[{Slot:0b,id:"minecraft:iron_ingot",count:6},{Slot:1b,id:"minecraft:wheat",count:6}]}'
 HOPPER_FED = {
-    "item_vault": ITEMS, "basin": ITEMS, "depot": ITEMS, "weighted_ejector": ITEMS, "millstone": ITEMS,
-    "mechanical_crafter": ITEMS, "schematic_table": '{Items:[{Slot:0b,id:"create:empty_schematic",count:3}]}',
-    "schematicannon": '{Items:[{Slot:0b,id:"minecraft:gunpowder",count:5}]}', "white_postbox": ITEMS,
-    "package_frogport": ITEMS, "deployer": ITEMS, "smart_chute": ITEMS, "chute": ITEMS,
-    "blaze_burner": '{Items:[{Slot:0b,id:"minecraft:coal",count:4}]}', "white_toolbox": ITEMS,
+    "create:item_vault": ITEMS, "create:basin": ITEMS, "create:depot": ITEMS, "create:weighted_ejector": ITEMS, "create:millstone": ITEMS,
+    "create:mechanical_crafter": ITEMS, "create:schematic_table": '{Items:[{Slot:0b,id:"create:empty_schematic",count:3}]}',
+    "create:schematicannon": '{Items:[{Slot:0b,id:"minecraft:gunpowder",count:5}]}', "create:white_postbox": ITEMS,
+    "create:package_frogport": ITEMS, "create:deployer": ITEMS, "create:smart_chute": ITEMS, "create:chute": ITEMS,
+    "create:blaze_burner": '{Items:[{Slot:0b,id:"minecraft:coal",count:4}]}', "create:white_toolbox": ITEMS,
 }
 LEVEL = "Level:{Value:0.5f,Target:0.5f,Speed:0.25f}"
 MERGES = {
-    "fluid_tank": '{TankContent:{id:"minecraft:water",amount:4000}}',
-    "creative_fluid_tank": '{TankContent:{id:"minecraft:lava",amount:1000}}',
-    # two guesses at how Create: Adapted nests a smart tank's fluid; the dump shows which one it read
-    "spout": '{Tanks:[{TankContent:{Fluid:{id:"minecraft:water",amount:500}},%s}]}' % LEVEL,
-    "basin": '{InputTanks:[{TankContent:{id:"minecraft:lava",amount:250},%s},{%s}]}' % (LEVEL, LEVEL),
+    "create:fluid_tank": '{TankContent:{id:"minecraft:water",amount:4000}}',
+    "create:creative_fluid_tank": '{TankContent:{id:"minecraft:lava",amount:1000}}',
+    # Create: Adapted keeps a smart tank's fluid under "Fluid" (seen in a drain it filled itself)
+    "create:spout": '{Tanks:[{Fluid:{id:"minecraft:water",amount:500},%s}]}' % LEVEL,
+    "create:basin": '{InputTanks:[{Fluid:{id:"minecraft:lava",amount:250},%s},{%s}]}' % (LEVEL, LEVEL),
     # a drain empties the bucket it holds into its own tank, so that tank is written by Create: Adapted
-    "item_drain": '{HeldItem:{Stack:{id:"minecraft:water_bucket",count:1},InSegment:0,InDirection:1,'
+    "create:item_drain": '{HeldItem:{Stack:{id:"minecraft:water_bucket",count:1},InSegment:0,InDirection:1,'
                   'Pos:0.5f,PrevPos:0.5f,Offset:0.0f,PrevOffset:0.0f,Angle:0}}',
-    "placard": '{Item:{id:"minecraft:diamond",count:1}}',
-    "copycat_panel": '{Item:{id:"minecraft:oak_planks",count:1},Material:{Name:"minecraft:oak_planks"}}',
+    "create:placard": '{Item:{id:"minecraft:diamond",count:1}}',
+    "create:copycat_panel": '{Item:{id:"minecraft:oak_planks",count:1},Material:{Name:"minecraft:oak_planks"}}',
 }
+
+# Diesel Generators (when its blocks are in the grid): fuel in its engines and tanks. Guesses at
+# the layout Create: Adapted's port reads; the phase A dump shows which ones took.
+CDG_FLUID = '{Tanks:[{Fluid:{id:"createdieselgenerators:diesel",amount:500},%s}],TankContent:{id:"createdieselgenerators:diesel",amount:2000}}' % LEVEL
+for block in ("diesel_engine", "large_diesel_engine", "huge_diesel_engine", "oil_barrel", "canister",
+              "distillation_tank", "bulk_fermenter", "burner", "chemical_turret"):
+    MERGES["createdieselgenerators:" + block] = CDG_FLUID
 
 fill, unfill = [], []
 for block, items in HOPPER_FED.items():

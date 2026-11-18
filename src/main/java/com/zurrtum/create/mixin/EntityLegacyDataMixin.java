@@ -1,5 +1,6 @@
 package com.zurrtum.create.mixin;
 
+import com.zurrtum.create.platform.LegacyBlockEntityData;
 import com.zurrtum.create.platform.LegacyEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -18,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class EntityLegacyDataMixin {
     @Inject(method = "load(Lnet/minecraft/world/level/storage/ValueInput;)V", at = @At("HEAD"))
     private void create$upgradeLegacyData(ValueInput input, CallbackInfo ci) {
-        if (input instanceof TagValueInput tagInput && "create".equals(EntityType.getKey(((Entity) (Object) this).getType())
+        if (input instanceof TagValueInput tagInput && LegacyBlockEntityData.handles(EntityType.getKey(((Entity) (Object) this).getType())
             .getNamespace())) {
             LegacyEntityData.upgrade(((TagValueInputAccessor) tagInput).getCreateLegacyInput());
         }

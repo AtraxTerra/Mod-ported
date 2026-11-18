@@ -11,11 +11,20 @@
 #      its block entity kept its keys and that the same items and fluids are still inside.
 # Both third-party jars are downloaded for the test only and never leave the runner.
 #
-# Usage: tools/migration-test.sh <create-fly.jar> [neoforge-version]
+# Usage: tools/migration-test.sh <create-fly.jar> [neoforge-version] [addon.jar ...]
+#
+# For an addon (Diesel Generators): its jars for phase B go after the NeoForge version; set
+#   MIGRATION_EXTRA_A    space-separated URLs of the jars it replaces, installed for phase A only;
+#   MIGRATION_BLOCKSTATES space-separated assets/<namespace>/blockstates dirs whose blocks join the grid.
 set -uo pipefail
 
 FLY_JAR="$(realpath "$1")"
 NEO="${2:-26.2.0.93}"
+EXTRA_B=()
+for jar in "${@:3}"; do EXTRA_B+=("$(realpath "$jar")"); done
+EXTRA_A="${MIGRATION_EXTRA_A:-}"
+BLOCKSTATE_DIRS="$(cd "$(dirname "$0")/.." && pwd)/src/main/resources/assets/create/blockstates"
+for dir in ${MIGRATION_BLOCKSTATES:-}; do BLOCKSTATE_DIRS="$BLOCKSTATE_DIRS $(realpath "$dir")"; done
 TOOLS="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(pwd)/migration"
 ADAPTED_URL="https://mediafilez.forgecdn.net/files/9075/359/create-adapted-26.2-1.31-public-external-assets.jar"
@@ -47,13 +56,25 @@ echo "::group::Fetching Create: Adapted and its asset source"
 mkdir -p mods config/create-adapted/external-assets
 curl -fsSL -o mods/create-adapted.jar "$ADAPTED_URL" || curl -fsSL -o mods/create-adapted.jar "$ADAPTED_FALLBACK" || { echo "::error::could not download Create: Adapted"; exit 1; }
 curl -fsSL -o config/create-adapted/external-assets/create-1.21.1-6.0.10.jar "$CREATE_ASSETS_URL" || { echo "::error::could not download Create 6.0.10"; exit 1; }
+mkdir -p ../phase-a-only
+for url in $EXTRA_A; do
+    name="adapted-extra-$(basename "${url%%\?*}")"
+    curl -fsSL -o "mods/$name" "$url" || { echo "::error::could not download $url"; exit 1; }
+done
 ls -l mods config/create-adapted/external-assets
 echo "::endgroup::"
 
-# Positions: one per Create blockstate file (same ids in both mods), two apart, around spawn.
-python3 -I - "$TOOLS/../src/main/resources/assets/create/blockstates" > grid.tsv <<'EOF'
+# Positions: one per blockstate file (same ids on both sides), two apart, around spawn.
+# shellcheck disable=SC2086
+python3 -I - $BLOCKSTATE_DIRS > grid.tsv <<'EOF'
 import math, os, sys
-ids = sorted(f[:-5] for f in os.listdir(sys.argv[1]) if f.endswith(".json") and f[:-5] not in ("honey", "chocolate"))
+# fluid source blocks would flow over the grid (Create's two, Diesel Generators' fuels and cements)
+FLUIDS = {"honey", "chocolate", "biodiesel", "crude_oil", "diesel", "ethanol", "gasoline", "plant_oil"}
+ids = []
+for d in sys.argv[1:]:
+    namespace = os.path.basename(os.path.dirname(d.rstrip("/")))
+    names = (f[:-5] for f in os.listdir(d) if f.endswith(".json"))
+    ids += sorted(f"{namespace}:{n}" for n in names if n not in FLUIDS and not n.endswith("_cement"))
 side = math.ceil(math.sqrt(len(ids) + 1))
 i = 0
 for block in ids:
@@ -62,7 +83,7 @@ for block in ids:
         i += 1
         if (x, z) != (0, 0):
             break
-    print(f"{x}\t-60\t{z}\tcreate:{block}")
+    print(f"{x}\t-60\t{z}\t{block}")
 EOF
 half=$(( $(awk -F'\t' '{x=$1<0?-$1:$1; z=$3<0?-$3:$3; m=x>z?x:z; if(m>M)M=m} END{print M+2}' grid.tsv) ))
 reach=$(( half + 8 ))  # the extras are built on a row just outside the grid
@@ -104,8 +125,9 @@ stop
 echo "::endgroup::"
 
 echo "::group::Phase B: Create Fly loads the same world"
-mv mods/create-adapted.jar ../create-adapted.jar.bak
-cp "$FLY_JAR" mods/
+mv mods/create-adapted.jar mods/adapted-extra-* ../phase-a-only/ 2>/dev/null
+cp "$FLY_JAR" "${EXTRA_B[@]}" mods/
+ls mods
 if ! boot B; then
     echo "::error::Create Fly server did not start on the migrated world"; status=1
 else
