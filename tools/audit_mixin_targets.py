@@ -240,6 +240,9 @@ def instruction_matches(line: str, cls: str, kind: str, owner: str | None, name:
         return False
     insn, ref_kind, ref = m.group(1), m.group(2), m.group(3)
     if kind == "NEW":
+        if desc:  # constructor descriptor given: match the <init> call, not the `new`
+            return (insn == "invokespecial" and ref.split(":", 1)[0].replace('"', "") == f"{owner}.<init>"
+                    and ref.split(":", 1)[1] == desc)
         return insn == "new" and ref.strip('"') == owner
     if kind == "FIELD":
         if ref_kind != "Field" or (opcode and insn != opcode):
@@ -259,10 +262,11 @@ def instruction_matches(line: str, cls: str, kind: str, owner: str | None, name:
 
 def parse_target(kind: str, target: str):
     if kind == "NEW":
-        t = target
+        t, ctor = target, None
         if t.startswith("("):
+            ctor = t[:t.rindex(")") + 1] + "V"
             t = t[t.rindex(")") + 1:]
-        return t.strip("L;").replace(".", "/"), None, None
+        return t.strip("L;").replace(".", "/"), None, ctor
     m = re.match(r"L([\w/$]+);([\w<>$]+)(.*)$", target) or re.match(r"([\w/$.]+)\.([\w<>$]+)(.*)$", target)
     if not m:
         return None, None, None
@@ -283,7 +287,12 @@ def select_methods(info: ClassInfo, selector: str):
         return None  # wildcard / regex: not verified here
     name, paren, desc = sel.partition("(")
     desc = paren + desc if paren else None
-    return [m for m in info.methods if m[0] == name and (desc is None or m[1] == desc)]
+    found = [m for m in info.methods if m[0] == name and (desc is None or m[1] == desc)]
+    # Mixin semantics: without a descriptor (and without a `*` quantifier) a selector matches only
+    # the FIRST method of that name, in class-file order -- which javap preserves. NeoForge often
+    # adds an overload and turns vanilla's into a delegate; a name-only selector then lands on the
+    # delegate (ModelManager.discoverModelDependencies).
+    return found[:1] if desc is None else found
 
 
 def candidates(info: ClassInfo, selector: str) -> str:
