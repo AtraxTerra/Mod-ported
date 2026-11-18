@@ -19,6 +19,17 @@ import java.util.Optional;
  * <p>
  * Keeping the seam this narrow is what makes the mod buildable on either loader: swap this one file
  * and the other 3.5k compile unchanged.
+ *
+ * <h2>Never call this from a static initialiser</h2>
+ * {@code ModList} is null until FML has finished building the mod list, which is <i>after</i> it
+ * constructs the mod class. On Fabric the equivalent {@code FabricLoader.getInstance()} is available
+ * at class-load time, so upstream freely computes things like the mod version in a static field.
+ * Carried over directly, that threw {@code ExceptionInInitializerError} and killed the server 40ms
+ * after the classloader was built -- with no message in any log, because nothing had flushed yet.
+ *
+ * <p>So anything that asks a question here must do it lazily; {@link
+ * com.zurrtum.create.Create#getVersion()} is the pattern. For the one place that genuinely must ask
+ * earlier than this class can answer -- a mixin config plugin -- see {@link EarlyModDetection}.
  */
 public final class Platform {
     private Platform() {

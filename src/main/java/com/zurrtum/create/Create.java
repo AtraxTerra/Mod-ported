@@ -45,7 +45,26 @@ public class Create {
     public static final String MOD_ID = "create";
     public static final String NAME = "Create";
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static final String VERSION = Platform.getModVersion(MOD_ID);
+    /**
+     * The mod's version, resolved on first use.
+     *
+     * <p>Upstream computes this in a static initialiser, which works on Fabric because
+     * {@code FabricLoader.getInstance()} is available at class-load time. NeoForge's
+     * {@code ModList} is not: it is still null while FML is creating this very class, so an eager
+     * field here threw ExceptionInInitializerError and killed the server 40ms after the classloader
+     * was built -- with no message, because the logger had not flushed yet.
+     *
+     * <p>Anything in this mod that asks the loader a question must therefore do it lazily. See
+     * {@link com.zurrtum.create.platform.Platform}.
+     */
+    private static @Nullable String version;
+
+    public static String getVersion() {
+        if (version == null) {
+            version = Platform.getModVersion(MOD_ID);
+        }
+        return version;
+    }
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     public static boolean Lazy;
 

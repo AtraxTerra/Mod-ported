@@ -42,7 +42,13 @@ public class AllFluidConfigs {
     public static final FluidModel.Unbaked MILK = model(AllFluids.MILK);
     public static final FluidModel.Unbaked HONEY = model(AllFluids.HONEY);
     public static final FluidModel.Unbaked CHOCOLATE = model(AllFluids.CHOCOLATE);
-    public static final boolean HAS_RENDER = Platform.isModLoaded("fabric-transfer-api-v1");
+    /**
+     * Upstream asks whether fabric-transfer-api-v1 is present, to decide whether Fabric's fluid
+     * render handlers are available. On NeoForge the answer is always no, so this is a constant --
+     * which also removes a loader call from a static initialiser, the thing that killed the first
+     * server boot. See {@link com.zurrtum.create.Create#getVersion()}.
+     */
+    public static final boolean HAS_RENDER = false;
 
     public static FluidModel.Unbaked model(FlowingFluid fluid) {
         Identifier id = BuiltInRegistries.FLUID.getKey(fluid);

@@ -62,7 +62,7 @@ public class DebugInformation {
     }
 
     static {
-        DebugInfoSection.builder(Create.NAME).put("Mod Version", Create.VERSION)
+        DebugInfoSection.builder(Create.NAME).put("Mod Version", Create.getVersion())
             .put("Ponder Version", getVersionOfMod("ponder")).put("NeoForge Version", getVersionOfMod("neoforge"))
             .put("Minecraft Version", SharedConstants.getCurrentVersion().name())
             .buildTo(DebugInformation::registerBothInfo);
