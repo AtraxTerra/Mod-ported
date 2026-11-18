@@ -101,7 +101,7 @@ public class PonderTagIndexScreen extends AbstractPonderScreen {
 
         Map.Entry<String, List<PonderTag>> entry = sortedModTags.get(currentPage);
         String modName = Platform.getModContainer(entry.getKey())
-            .map(mod -> mod.getMetadata().getName()).orElseGet(entry::getKey);
+            .map(mod -> mod.getModInfo().getDisplayName()).orElseGet(entry::getKey);
         //TODO
         //                .orElse(ConfigScreen.toHumanReadable(modId));
         List<PonderTag> tags = entry.getValue();

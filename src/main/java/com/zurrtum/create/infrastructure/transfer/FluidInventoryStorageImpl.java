@@ -92,7 +92,7 @@ public class FluidInventoryStorageImpl implements FluidInventoryStorage {
         }
 
         @Override
-        protected void onFinalCommit() {
+        protected void onRootCommit(Boolean originalState) {
             inventory.markDirty();
         }
     }

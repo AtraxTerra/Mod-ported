@@ -16,9 +16,9 @@ from pathlib import Path
 
 # (fabric fully-qualified name, neoforge replacement, simple-name stays the same?)
 IMPORT_MAP = {
-    # TriState: NeoForge ships its own with the same TRUE/FALSE/DEFAULT shape.
+    # TriState became vanilla in 26.2 (NeoForge patches it); it is not a loader type at all.
     "net.fabricmc.fabric.api.util.TriState":
-        "net.neoforged.neoforge.common.util.TriState",
+        "net.minecraft.util.TriState",
     # FakePlayer: both loaders have one; the NeoForge type also extends ServerPlayer.
     "net.fabricmc.fabric.api.entity.FakePlayer":
         "net.neoforged.neoforge.common.util.FakePlayer",

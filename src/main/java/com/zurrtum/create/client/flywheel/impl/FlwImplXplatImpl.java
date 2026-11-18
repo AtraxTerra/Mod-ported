@@ -21,7 +21,8 @@ public class FlwImplXplatImpl implements FlwImplXplat {
 
     @Override
     public String getVersionStr() {
-        return Flywheel.version().getFriendlyString();
+        // ArtifactVersion has no getFriendlyString; its toString is the version string.
+        return Flywheel.version().toString();
     }
 
     @Override

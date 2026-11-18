@@ -1893,7 +1893,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         private final java.util.Iterator<ResourceView<ItemResource>> iterator;
 
         public Iterator(ResourceHandler<ItemResource> storage) {
-            iterator = storage.iterator();
+            iterator = ResourceView.all(storage).iterator();
         }
 
         @Override

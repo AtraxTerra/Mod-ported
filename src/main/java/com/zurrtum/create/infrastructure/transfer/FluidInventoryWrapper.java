@@ -1159,7 +1159,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         private final java.util.Iterator<ResourceView<FluidResource>> iterator;
 
         public Iterator(ResourceHandler<FluidResource> storage) {
-            iterator = storage.iterator();
+            iterator = ResourceView.all(storage).iterator();
         }
 
         @Override

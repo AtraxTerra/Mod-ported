@@ -41,7 +41,7 @@ import net.neoforged.neoforge.event.AddPackFindersEvent;
  * {@code PathPackResources} built from {@code ModList.get().getModFileById(MOD_ID).getFile()
  * .findResource(directory)}.
  */
-@EventBusSubscriber(modid = Create.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Create.MOD_ID, value = Dist.CLIENT)
 public final class CreatePackFinders {
     private CreatePackFinders() {
     }

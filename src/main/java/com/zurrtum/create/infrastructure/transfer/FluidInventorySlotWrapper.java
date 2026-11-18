@@ -62,8 +62,11 @@ public class FluidInventorySlotWrapper extends SingleFluidStackStorage {
         lastReleasedSnapshot = snapshot;
     }
 
+    // Fabric's onFinalCommit is NeoForge's onRootCommit, which also hands back the original
+    // state. This body uses lastReleasedSnapshot, which releaseSnapshot still records, so the
+    // parameter is unused rather than the field being replaced by it.
     @Override
-    protected void onFinalCommit() {
+    protected void onRootCommit(FluidStack originalState) {
         FluidStack original = lastReleasedSnapshot;
         FluidStack currentStack = getStack();
 

@@ -50,12 +50,12 @@ public class FluidItemInventoryWrapper extends FluidInventoryWrapper<ResourceHan
 
     @Override
     public ItemStack getContainer() {
-        return access.getResource().toStack(access.getAmountAsInt());
+        return access.getResource().toStack(access.getAmount());
     }
 
     @Override
     public boolean isEmpty() {
-        return access.getResource().isEmpty() || access.getAmountAsInt() <= 0;
+        return access.getResource().isEmpty() || access.getAmount() <= 0;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.zurrtum.create.client.vanillin;
 
+import com.zurrtum.create.platform.Platform;
 
 public class VanillinXplatImpl implements VanillinXplat {
     @Override

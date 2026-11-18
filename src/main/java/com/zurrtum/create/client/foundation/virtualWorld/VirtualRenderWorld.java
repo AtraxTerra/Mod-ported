@@ -491,8 +491,12 @@ public class VirtualRenderWorld extends Level implements VisualizationLevel, Blo
         return null;
     }
 
+    /**
+     * NeoForge generalises this from the dragon's own parts to any multi-part entity, so the
+     * return type is a collection of PartEntity rather than EnderDragonPart.
+     */
     @Override
-    public Collection<EnderDragonPart> dragonParts() {
+    public Collection<net.neoforged.neoforge.entity.PartEntity<?>> dragonParts() {
         return level.dragonParts();
     }
 
