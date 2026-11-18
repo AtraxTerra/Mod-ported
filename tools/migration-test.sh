@@ -92,7 +92,7 @@ printf 'setworldspawn 0 -60 0\nforceload add %d %d %d %d\n' "-$reach" "-$reach" 
 sleep 10
 awk -F'\t' '{print "setblock "$1" "$2" "$3" "$4}' grid.tsv | rcon > placeA.tsv
 sleep 20
-python3 -I "$TOOLS/migration_fill.py" grid.tsv "$half" fill.cmds unfill.cmds extra.cmds
+python3 -I "$TOOLS/migration_fill.py" grid.tsv "$half" fill.cmds unfill.cmds extra.cmds fresh.cmds
 rcon < fill.cmds > fillA.tsv
 sleep 40
 rcon < unfill.cmds > /dev/null
@@ -113,6 +113,7 @@ else
     awk -F'\t' '{print "execute if block "$1" "$2" "$3" "$4}' grid.tsv | rcon > presentB.tsv
     awk -F'\t' '{print "data get block "$1" "$2" "$3}' grid.tsv | rcon > dataB.tsv
     rcon < extra.cmds > extraB.tsv
+    rcon < fresh.cmds > /dev/null && sleep 8 && rcon < fresh.cmds.get > freshB.tsv
     stop
 fi
 echo "::endgroup::"
@@ -131,6 +132,9 @@ errors server-A.log | head -120
 echo "::endgroup::"
 echo "::group::Full NBT, both phases"
 cat dumps.md 2>/dev/null
+echo "::endgroup::"
+echo "::group::A contraption built by Create Fly itself (phase B)"
+cut -f2 freshB.tsv 2>/dev/null
 echo "::endgroup::"
 echo "::group::Fill commands and their replies (phase A)"
 cat fillA.tsv 2>/dev/null | cut -c1-400

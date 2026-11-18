@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Commands that give the migration test's Create blocks something to carry across the switch.
 
-Usage: migration_fill.py grid.tsv <half> fill.cmds unfill.cmds extra.cmds
+Usage: migration_fill.py grid.tsv <half> fill.cmds unfill.cmds extra.cmds fresh.cmds
 
 fill.cmds puts a hopper of items on top of the blocks that hold items (the hopper feeds them through
 their item capability, the way a player's machines get filled), merges fluids into the tanks, and
@@ -14,7 +14,7 @@ would keep feeding in. extra.cmds holds the `data get` / `execute if` commands t
 """
 import sys
 
-grid_file, half, fill_file, unfill_file, extra_file = sys.argv[1], int(sys.argv[2]), *sys.argv[3:6]
+grid_file, half, fill_file, unfill_file, extra_file, fresh_file = sys.argv[1], int(sys.argv[2]), *sys.argv[3:7]
 pos = {}
 for line in open(grid_file):
     x, y, z, block = line.rstrip("\n").split("\t")
@@ -94,4 +94,12 @@ extra = [
 ]
 open(fill_file, "w").write("\n".join(fill) + "\n")
 open(unfill_file, "w").write("\n".join(unfill) + "\n")
+# phase B only: the same bearing built fresh under Create Fly, for its own contraption layout
+zf = zr + 4
+open(fresh_file, "w").write("\n".join([
+    f"setblock 0 {y} {zf} create:creative_motor[facing=up]",
+    f"setblock 0 {y + 1} {zf} create:mechanical_bearing[facing=up]",
+    f"setblock 0 {y + 2} {zf} minecraft:oak_planks",
+]) + "\n")
+open(fresh_file + ".get", "w").write(f"data get entity @e[type=!minecraft:item,x=0,y={y + 2},z={zf},distance=..3,limit=1]\n")
 open(extra_file, "w").write("\n".join(extra) + "\n")
