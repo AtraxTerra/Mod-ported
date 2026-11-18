@@ -43,8 +43,9 @@ MERGES = {
 }
 
 # Diesel Generators (when its blocks are in the grid): fuel in its engines and tanks. Guesses at
-# the layout Create: Adapted's port reads; the phase A dump shows which ones took.
-CDG_FLUID = '{Tanks:[{Fluid:{id:"createdieselgenerators:diesel",amount:500},%s}],TankContent:{id:"createdieselgenerators:diesel",amount:2000}}' % LEVEL
+# the layout Create: Adapted's port reads; the phase A dump shows which ones took. 500 mB stays
+# under every tank's capacity (a merge is not capped, a load is).
+CDG_FLUID = '{Tanks:[{Fluid:{id:"createdieselgenerators:diesel",amount:500},%s}],TankContent:{id:"createdieselgenerators:diesel",amount:500}}' % LEVEL
 for block in ("diesel_engine", "large_diesel_engine", "huge_diesel_engine", "oil_barrel", "canister",
               "distillation_tank", "bulk_fermenter", "burner", "chemical_turret"):
     MERGES["createdieselgenerators:" + block] = CDG_FLUID
