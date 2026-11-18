@@ -37,6 +37,12 @@ sync-chunk-writes=false
 PROPS
 echo "::endgroup::"
 
+echo "::group::Available run tasks"
+# If the run task is not called runServer in this ModDevGradle version, say so plainly rather
+# than failing with an empty log.
+./gradlew tasks --all --console=plain 2>&1 | grep -iE "^run[A-Za-z]*" || echo "(no run* tasks listed)"
+echo "::endgroup::"
+
 echo "::group::Booting the server (timeout ${TIMEOUT}s)"
 ./gradlew runServer --console=plain --stacktrace > "$LOG" 2>&1 &
 GRADLE_PID=$!
@@ -107,6 +113,12 @@ mixin_failures=$(grep -cE 'FAILED during APPLY|was not applied|Found a remappabl
         echo "A clean server boot still says nothing about the 66 client mixins -- a dedicated"
         echo "server never loads a mixin config's \`client\` array. That needs a real client."
     fi
-} >> "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+} | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+# The verdict above goes to the run summary; the log tail goes to stdout unconditionally, because
+# the summary is not readable from the job log and a failing gate is useless if its reason is not.
+echo "::group::Last 80 lines of the Gradle/server log"
+tail -80 "$LOG" 2>/dev/null || echo "(no log produced -- Gradle never started)"
+echo "::endgroup::"
 
 exit "$status"
