@@ -409,7 +409,7 @@ Ordered by how likely they are to bite.
 7. **JEI** is on. Its fluid ingredient is NeoForge's `FluidStack` in millibuckets, so fluid amounts
    cross through `JeiPlatform.toJei` / `fromJei`; Fabric's custom-ingredient calls are NeoForge's
    `Ingredient.getCustomIngredient()` / `DataComponentIngredient`. Checked by compiling and by the
-   client boot test loading JEI; the recipe screens themselves want a look in game.
+   full-mod-list client boot (Diesel Generators CI); the recipe screens want a look in game.
 8. **CC: Tweaked is off** (`enable_cct = false`).
 9. **Shader mods.** `QuadRenderHelperMixin` / `IrisPipelinesMixin` target Fabric Sodium and Iris
    internals and are excluded. Supporting a NeoForge shader mod means rewriting them.

@@ -179,11 +179,11 @@ dependencies {
     // jspecify annotations are used throughout the upstream source for @Nullable.
     compileOnly 'org.jspecify:jspecify:1.0.0'
 
-    // Optional integrations. JEI also runs in the dev client, so the client boot test loads the
-    // integration (its plugin registers when the test joins a world).
+    // Optional integrations. JEI is compile-only: at runtime it needs mezz_config, which is not on
+    // JEI's Maven. The Diesel Generators CI boots the client with the survival server's mod list,
+    // JEI and mezz_config included, and that is where the integration loads.
     if (project.enable_jei.toBoolean()) {
         compileOnly "mezz.jei:jei-${project.jei_version}"
-        runtimeOnly "mezz.jei:jei-${project.jei_version}"
     }
     if (project.enable_cct.toBoolean()) {
         compileOnly "cc.tweaked:cc-tweaked-${project.cct_version}"
