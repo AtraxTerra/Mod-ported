@@ -413,6 +413,24 @@ public final class LegacyBlockEntityData {
         return NAMESPACES.contains(namespace);
     }
 
+    /**
+     * For addon fixers: the fluid in an original-layout tank NBT ({@code {id, amount}} or
+     * {@code {Fluid:{id, amount}}}, millibuckets) as a Create Fly fluid stack NBT in droplets;
+     * {@code null} when it holds nothing.
+     */
+    public static CompoundTag fluidInDroplets(Tag tank) {
+        CompoundTag fluid = fluidOf(tank);
+        if (fluid != null) {
+            millibucketsToDroplets(fluid);
+        }
+        return fluid;
+    }
+
+    /** For addon fixers: an original-layout inventory (ItemStackHandler or ItemSlots) as Fly's plain stack list. */
+    public static ListTag compactStacks(Tag inventory) {
+        return compact(slots(inventory));
+    }
+
     // --- helpers --------------------------------------------------------------------------------------
 
     /** RecipeGridHandler.GroupedItems: {Grid:[{x,y,item}]} -> {Grid:{Keys:[{first,second}], Values:[item]}}. */
