@@ -49,6 +49,23 @@ public class Create {
      * {@code modEventBus} -- see PORTING.md, "client registration".
      */
     public Create(IEventBus modEventBus) {
+        // Port: the body that used to be here is onInitializeClient() below. NeoForge constructs
+        // mods BEFORE Minecraft exists; Fabric runs client entrypoints from inside Minecraft's
+        // constructor. See onInitializeClient().
+    }
+
+    /**
+     * Upstream's client entrypoint body, unchanged.
+     *
+     * <p>Port: called from {@code MinecraftMixin} right after {@code Minecraft.gameDirectory} is
+     * set -- the point where Fabric Loader starts client mods. {@code Minecraft.getInstance()}
+     * is non-null there, while options, resources and the font are not created yet. Upstream
+     * code relies on both halves of that: {@code SchematicHandler} builds a screen from
+     * {@code Minecraft.getInstance()} (the first client launch died on it, from the @Mod
+     * constructor, where the instance is still null), and {@code OptionsMixin} needs
+     * {@code AllKeys} registered before {@code Options} reads its key list.
+     */
+    public static void onInitializeClient() {
         new Flywheel().onInitializeClient();
         new Ponder().onInitializeClient();
         new Vanillin().onInitializeClient();

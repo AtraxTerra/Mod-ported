@@ -91,6 +91,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -123,6 +124,13 @@ public abstract class MinecraftMixin {
         Minecraft mc = (Minecraft) (Object) this;
         BigOutlines.pick(mc);
         TrackBlockOutline.pickCurves(mc);
+    }
+
+    // Port: start Create's client side where Fabric Loader would -- just after gameDirectory is set,
+    // before Options and resources exist. See com.zurrtum.create.client.Create#onInitializeClient.
+    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;gameDirectory:Ljava/io/File;", opcode = Opcodes.PUTFIELD, shift = At.Shift.AFTER))
+    private void create$initializeClient(GameConfig gameConfig, CallbackInfo ci) {
+        Create.onInitializeClient();
     }
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/packs/resources/ReloadableResourceManager;createReload(Ljava/util/concurrent/Executor;Ljava/util/concurrent/Executor;Ljava/util/concurrent/CompletableFuture;Ljava/util/List;)Lnet/minecraft/server/packs/resources/ReloadInstance;"))

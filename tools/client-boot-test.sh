@@ -50,6 +50,9 @@ for _ in $(seq 1 "$TIMEOUT"); do
         break
     fi
     kill -0 "$GRADLE_PID" 2>/dev/null || break
+    # A loading error does not exit: NeoForge opens its error screen and waits for a click. A crash
+    # report on disk means the verdict is in, so stop instead of waiting out the timeout.
+    compgen -G "$RUN_DIR/crash-reports/*.txt" > /dev/null && break
     sleep 1
 done
 
@@ -116,7 +119,8 @@ status=0
     fi
 } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
-strip_frames() { grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$1"; }
+# Keep Create's own frames: they are where a crash explains itself.
+strip_frames() { grep -vE "^[[:space:]]+at (java\.|jdk\.|net\.neoforged\.|cpw\.|org\.spongepowered\.|com\.mojang\.|org\.gradle\.)|^[[:space:]]*\.\.\. [0-9]+ more" "$1"; }
 echo "::group::Why Gradle failed (if it did)"
 sed -n '/^FAILURE:/,/^\* Get more help/p' "$LOG" | head -40
 echo "::endgroup::"
@@ -128,7 +132,9 @@ strip_frames "$GAME_LOG" | tail -120
 echo "::endgroup::"
 for report in "${reports[@]}"; do
     echo "::group::Crash report $(basename "$report")"
-    head -100 "$report"
+    head -60 "$report"
+    echo "--- Create frames and causes in this report ---"
+    grep -E "Caused by|^[[:space:]]+at com\.zurrtum" "$report" | head -40
     echo "::endgroup::"
 done
 
