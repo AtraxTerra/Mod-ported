@@ -130,8 +130,11 @@ if [ -s "$LOG" ]; then
     grep -E '^\[[0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$LOG" | tail -60 || echo "(the game never logged a line)"
     echo "::endgroup::"
 
-    echo "::group::First 40 lines"
-    head -40 "$LOG"
+    # The useful content is whatever is NOT a stack frame. Gradle and the JVM both bury the one
+    # line that matters under hundreds of "at ..." lines, and the first run of this gate showed
+    # nothing but those.
+    echo "::group::Log without stack frames (last 120 lines)"
+    grep -vE "^[[:space:]]+at |^[[:space:]]*\.\.\. [0-9]+ more" "$LOG" | tail -120
     echo "::endgroup::"
 else
     echo "(no log produced -- Gradle never started)"
