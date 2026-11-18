@@ -29,7 +29,6 @@
     "GameRendererMixin",
     "GlStateManagerMixin",
     "GuiGraphicsExtractorMixin",
-    "GuiRendererMixin",
     "HudMixin",
     "HumanoidArmorLayerMixin",
     "IntegratedServerMixin",

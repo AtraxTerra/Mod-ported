@@ -196,10 +196,9 @@ public abstract class LivingEntityMixin extends Entity {
         }
     }
 
-    @WrapOperation(method = "handleOnClimbable(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;is(Ljava/lang/Object;)Z"))
-    private boolean isScaffolding(BlockState state, Object block, Operation<Boolean> original) {
-        return original.call(state, block) || state.getBlock() instanceof ScaffoldingControlBlock;
-    }
+    // Port note: upstream wraps BlockState.is(SCAFFOLDING) in handleOnClimbable for
+    // ScaffoldingControlBlock. NeoForge patches the test to IBlockExtension.isScaffolding, which
+    // ScaffoldingControlBlock now overrides, so the wrap has no target and is not needed.
 
     // Port note: upstream wraps BlockState.getSoundType() here so a SoundControlBlock can
     // supply a position-aware sound. NeoForge patches that call away and routes the sound

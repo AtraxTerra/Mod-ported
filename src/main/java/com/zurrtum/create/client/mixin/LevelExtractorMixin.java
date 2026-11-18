@@ -111,7 +111,9 @@ public class LevelExtractorMixin {
         return VisualizationHelper.skipEntityVanillaRender(level, original.call(instance));
     }
 
-    @WrapOperation(method = "extractVisibleBlockEntities(Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/state/level/LevelRenderState;)V", at = @At(value = "INVOKE", target = "Ljava/util/Set;iterator()Ljava/util/Iterator;"))
+    @WrapOperation(method = "extractVisibleBlockEntities(Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/culling/Frustum;)V", at = @At(value = "INVOKE", target = "Ljava/util/Set;iterator()Ljava/util/Iterator;"))
+    // Port note: NeoForge adds a Frustum parameter and leaves the old signature as a delegate;
+    // the block-entity loop is in the new overload.
     private Iterator<BlockEntity> flywheel$decideNotToRenderBlockEntity(
         Set<BlockEntity> instance,
         Operation<Iterator<BlockEntity>> original

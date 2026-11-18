@@ -45,6 +45,7 @@ INJECTORS = ("Inject", "Redirect", "ModifyArg", "ModifyArgs", "ModifyVariable", 
              "ModifyExpressionValue", "ModifyReturnValue", "WrapOperation", "WrapWithCondition",
              "WrapMethod", "ModifyReceiver")
 IMPORT = re.compile(r"^import\s+([\w.]+);", re.M)
+WILDCARD = re.compile(r"^import\s+([\w.]+)\.\*;", re.M)
 STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
 CHECKED_AT = {"INVOKE", "INVOKE_ASSIGN", "INVOKE_STRING", "FIELD", "NEW"}
 
@@ -139,18 +140,19 @@ def next_member_name(text: str, pos: int) -> str:
         if rest.lstrip().startswith("("):
             k = len(rest) - len(rest.lstrip())
             rest = rest[balanced(rest, k):]
-    m = re.match(r"[^;{=(]*?(\w+)\s*([;(=])", rest, re.S)
+    m = re.match(r"[^;{=(]*?([\w$]+)\s*([;(=])", rest, re.S)
     return m.group(1) if m else "?"
 
 
-def resolve_class(ref: str, imports: dict[str, str], package: str, index: set[str]) -> str | None:
+def resolve_class(ref: str, imports: dict[str, str], wildcards: list[str], package: str,
+                  index: set[str]) -> str | None:
     """Turn `Foo`, `Foo.Bar` or `net.x.Foo.Bar` into an internal name present in the jar."""
     ref = ref.strip()
     head, _, tail = ref.partition(".")
     candidates = []
     if head in imports:
         candidates.append(imports[head] + ("." + tail if tail else ""))
-    candidates += [ref, package + "." + ref]
+    candidates += [ref, package + "." + ref] + [w + "." + ref for w in wildcards]
     for cand in candidates:
         parts = cand.split(".")
         # try every split point between package and nested classes
@@ -161,7 +163,7 @@ def resolve_class(ref: str, imports: dict[str, str], package: str, index: set[st
     return None
 
 
-def mixin_targets(text: str, imports, package, index) -> tuple[list[str], list[str]]:
+def mixin_targets(text: str, imports, wildcards, package, index) -> tuple[list[str], list[str]]:
     found, missing = [], []
     for _, args, _ in annotations(text, ["Mixin"])[:1]:
         targets_attr = attr(args, "targets")
@@ -173,7 +175,7 @@ def mixin_targets(text: str, imports, package, index) -> tuple[list[str], list[s
         if value is None and targets_attr is None:
             value = args
         for ref in re.findall(r"([\w.]+)\.class", value or ""):
-            name = resolve_class(ref, imports, package, index)
+            name = resolve_class(ref, imports, wildcards, package, index)
             (found.append(name) if name else missing.append(ref))
     return found, missing
 
@@ -283,6 +285,19 @@ def select_methods(info: ClassInfo, selector: str):
     return [m for m in info.methods if m[0] == name and (desc is None or m[1] == desc)]
 
 
+def candidates(info: ClassInfo, selector: str) -> str:
+    """What IS there, so a missing method can be retargeted without another round trip."""
+    name = re.sub(r"^L[\w/$]+;", "", selector).partition("(")[0]
+    m = re.fullmatch(r"(lambda\$[\w$]+?\$)\d+", name)
+    if m:  # renumbered or re-captured lambdas: show the whole family
+        found = [f"{n}{d}" for n, d, _ in info.methods if n.startswith(m.group(1))]
+    else:
+        found = [f"{n}{d}" for n, d, _ in info.methods if n == name]
+    if not found:
+        return " (no method of that name)"
+    return "".join("\n          candidate: " + f for f in found[:8])
+
+
 # --------------------------------------------------------------------------- driver
 
 def active_mixins(src: Path, resources: Path) -> dict[str, Path]:
@@ -330,7 +345,8 @@ def main() -> int:
         text = path.read_text(encoding="utf-8")
         package = re.search(r"^package\s+([\w.]+);", text, re.M).group(1)
         imports = {f.rsplit(".", 1)[1]: f for f in IMPORT.findall(text)}
-        targets, missing = mixin_targets(text, imports, package, index)
+        wildcards = WILDCARD.findall(text)
+        targets, missing = mixin_targets(text, imports, wildcards, package, index)
         for m in missing:
             (notes if "@Pseudo" in text else problems).append(
                 (fq, "@Mixin", f"target class {m} is not in the patched jar"))
@@ -357,7 +373,8 @@ def main() -> int:
                         notes.append((fq, handler, f"selector {selector!r} not verified (wildcard/regex)"))
                         continue
                     if not methods:
-                        sink.append((fq, handler, f"@{kind}: no method {selector} in {target}"))
+                        sink.append((fq, handler, f"@{kind}: no method {selector} in {target}"
+                                     + candidates(info, selector)))
                         continue
                     for at in at_annotations(args):
                         value = at_value(at)

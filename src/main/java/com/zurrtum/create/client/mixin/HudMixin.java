@@ -36,18 +36,9 @@ public class HudMixin {
     @Final
     private Minecraft minecraft;
 
-    @WrapOperation(method = "extractHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Hud;nextContextualInfoState()Lnet/minecraft/client/gui/Hud$ContextualInfo;"))
-    private ContextualInfo renderMainHud(
-        Hud instance,
-        Operation<ContextualInfo> original,
-        @Local(argsOnly = true) GuiGraphicsExtractor graphics,
-        @Local(argsOnly = true) DeltaTracker deltaTracker
-    ) {
-        if (TrainHUD.renderOverlay(minecraft, graphics, deltaTracker)) {
-            return ContextualInfo.EMPTY;
-        }
-        return original.call(instance);
-    }
+    // Port note: upstream wraps nextContextualInfoState() in extractHotbarAndDecorations to draw the
+    // train HUD and blank the contextual bar. NeoForge splits that method into GUI layers, so the
+    // train HUD is a layer of its own now: see client/platform/TrainHudLayer.
 
     @Inject(method = "extractCrosshair(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V", at = @At("TAIL"))
     private void extractCrosshair(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {

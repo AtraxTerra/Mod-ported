@@ -59,7 +59,9 @@ public class MixinPlugin implements IMixinConfigPlugin {
             "UnbakedCuboidGeometryMixin",
             "BakedQuadMixin",
             "VertexConsumerMixin",
-            "ModelBlockRendererMixin",
+            // Upstream's ModelBlockRendererMixin @Overwrites tesselateBlock, which would erase
+            // NeoForge's renderer patches; this port-only mixin keeps only the Vanillin call it needs.
+            "VanillinModelLayerMixin",
             "TerrainParticleMixin",
             // No fabric-creative-tab-api-v1 / fabric-model-loading-api-v1 on this loader.
             "CreativeModeInventoryScreenMixin",

@@ -124,6 +124,14 @@ public abstract class WrapperBlockStateModel implements BlockStateModel, BlockSt
         model.collectParts(random, parts);
     }
 
+    // Port: NeoForge's ModelBlockRenderer asks for parts through this level-aware overload. Upstream's
+    // no-FRAPI ModelBlockRendererMixin overwrote tesselateBlock to call addPartsWithInfo instead;
+    // answering the hook keeps NeoForge's renderer (and everything other mods hang off it) intact.
+    @Override
+    public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random, List<BlockStateModelPart> parts) {
+        addPartsWithInfo(level, pos, state, random, parts);
+    }
+
     public boolean needUpdateTerrainParticle() {
         return false;
     }

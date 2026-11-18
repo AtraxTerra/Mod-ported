@@ -42,6 +42,11 @@ jobs:
 
       - run: chmod +x ./gradlew
 
+      # Data the port keeps in step with upstream code by hand. Cheap, no Gradle, and a mismatch is
+      # silent at runtime (an item just stops burning), so it fails the build.
+      - name: Port consistency checks
+        run: python3 -I tools/check_fuels.py src/main/java src/main/resources
+
       # Compile on its own first. A green compile proves nothing about mixins or runtime, but a
       # failing one makes everything after it noise, and this keeps the failure easy to find.
       - name: Compile

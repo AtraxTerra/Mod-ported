@@ -1,8 +1,7 @@
 package com.zurrtum.create.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.Share;
-import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.zurrtum.create.content.contraptions.glue.SuperGlueHandler;
 import com.zurrtum.create.content.equipment.symmetryWand.SymmetryHandler;
 import net.minecraft.core.BlockPos;
@@ -11,42 +10,28 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ItemStack.class)
 public class ItemStackMixin {
-    @Inject(method = "useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/Item;useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;"))
-    private void cacheState(
-        UseOnContext context,
-        CallbackInfoReturnable<InteractionResult> cir,
-        @Local Item usedItem,
-        @Share("place") LocalRef<BlockPlaceContext> place
-    ) {
-        if (usedItem instanceof BlockItem) {
-            Level world = context.getLevel();
-            if (!world.isClientSide()) {
-                place.set(new BlockPlaceContext(context));
-            }
-        }
-    }
-
-    @Inject(method = "useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/InteractionResult$Success;wasItemInteraction()Z"))
-    private void useOnBlock(
-        UseOnContext context,
-        CallbackInfoReturnable<InteractionResult> cir,
-        @Local Player player,
-        @Share("place") LocalRef<BlockPlaceContext> place
-    ) {
-        BlockPlaceContext placementContext = place.get();
-        if (placementContext != null) {
+    // Port note: upstream injects twice into vanilla's useOn -- before Item.useOn (to snapshot a
+    // BlockPlaceContext while the target is still unchanged) and at wasItemInteraction() (to run
+    // glue and symmetry after a successful placement). NeoForge rewrites useOn: on the server it
+    // returns CommonHooks.onPlaceItemIntoWorld(context), which calls Item.useOn itself and fires the
+    // block-place events. Neither upstream target is left in ItemStack. Wrapping that one call is the
+    // same thing in one place: it only runs server-side, after NeoForge's adventure-mode check, and a
+    // placement cancelled by an event comes back as FAIL -- not a Success, so nothing runs, as
+    // upstream would not have run either.
+    @WrapOperation(method = "useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;", at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/common/CommonHooks;onPlaceItemIntoWorld(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;"))
+    private InteractionResult placeItemIntoWorld(UseOnContext context, Operation<InteractionResult> original) {
+        BlockPlaceContext placementContext = ((ItemStack) (Object) this).getItem() instanceof BlockItem ? new BlockPlaceContext(context) : null;
+        InteractionResult result = original.call(context);
+        Player player = context.getPlayer();
+        if (placementContext != null && player != null && result instanceof InteractionResult.Success) {
             ServerLevel world = (ServerLevel) context.getLevel();
             BlockPos pos = placementContext.getClickedPos();
             SuperGlueHandler.glueListensForBlockPlacement(world, player, pos);
@@ -54,5 +39,6 @@ public class ItemStackMixin {
                 SymmetryHandler.onBlockPlaced(world, player, pos, placementContext);
             }
         }
+        return result;
     }
 }

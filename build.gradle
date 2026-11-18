@@ -112,6 +112,22 @@ sourceSets {
             // Replaced by client/platform/CreatePackFinders, which uses AddPackFindersEvent.
             exclude 'com/zurrtum/create/client/mixin/ClientPackSourceMixin.java'
 
+            // Each of these targets vanilla code NeoForge rewrote; the behaviour moved to a native
+            // hook. They stay in the tree so upstream-sync PRs still show upstream's changes to them.
+            // Friction: SlipperinessControlBlock overrides IBlockExtension.getFriction.
+            exclude 'com/zurrtum/create/mixin/LeashableMixin.java'
+            // Fuels: NeoForge builds FuelValues from the furnace_fuels data map; see
+            // data/neoforge/data_maps/item/furnace_fuels.json and tools/check_fuels.py.
+            exclude 'com/zurrtum/create/mixin/FuelValuesMixin.java'
+            // Structure entities: EntityControlStructureProcessor overrides processEntity.
+            exclude 'com/zurrtum/create/mixin/StructureTemplateMixin.java'
+            exclude 'com/zurrtum/create/foundation/blockEntity/StructureEntityInfoIterator.java'
+            // PiP GUI renderers: client/platform/CreatePictureInPictureRenderers.
+            exclude 'com/zurrtum/create/client/mixin/GuiRendererMixin.java'
+            // @Overwrites NeoForge-patched tesselateBlock; replaced by VanillinModelLayerMixin plus
+            // WrapperBlockStateModel.collectParts(level, ...). ModelLighter is NeoForge's AO's job.
+            exclude 'com/zurrtum/create/client/mixin/ModelBlockRendererMixin.java'
+
             // Trinkets is a Fabric accessory mod; the NeoForge equivalent is Curios, which needs a
             // new renderer rather than a port of this one. Only client/compat/CompatMod referenced
             // it, and that no longer does.
