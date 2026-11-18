@@ -238,6 +238,24 @@ Known losses, all small:
 
 ---
 
+## 1e. Alongside the survival server's other mods
+
+`tools/server-mods.txt` lists the server's mods; the Diesel Generators CI downloads them
+(`fetch_server_mods.py`: Modrinth by exact file name, or a direct URL), sets aside those whose
+dependencies are missing (`prune_mods.py`), and boots them with Create Fly and the Diesel
+Generators port in place of the two Adapted mods: a production server (`modlist-boot-test.sh`,
+which also places and ticks a few machines) and the headless client to the title screen.
+
+Last result, 35 of the 52 mods: both reach the end with no mixin failure, no missing dependency, no
+model or texture error. Among them Lithium, FerriteCore, EntityCulling, Particle Core, CrankShaft
+(standalone Flywheel), AE2 with its wireless terminals, JEI and Jade. The other 17 are not on
+Modrinth under the file name the server uses (several look private): arc, berskar, capturenet,
+cupboard, day-counter, elytraslot, enchantmenttransfer, eplus, farsight, foxified-classtweaker,
+hbm, hbmspace, itemrestrictions, netschematic, tabbylib, uilib, yamlconfig. A URL after a tab in
+`server-mods.txt` brings one into the test.
+
+---
+
 ## 2. What changed
 
 ### Build and metadata
