@@ -259,6 +259,24 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: xvfb-run -a -s "-screen 0 1280x720x24" tools/client-boot-test.sh 1200 45
 
+      # Gate 7 and an in-world smoke test: place every Create block on a server, then have the
+      # client join that world and render it. Runs even if the title-screen boot failed, so one CI
+      # run reports both.
+      - name: Place every Create block (server, RCON)
+        if: always()
+        run: |
+          chmod +x tools/world-smoke.sh
+          rm -rf run/crash-reports
+          tools/world-smoke.sh ci 600
+
+      - name: Join that world (client)
+        if: always()
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          mv client-boot-test.log client-boot-title.log 2>/dev/null || true
+          xvfb-run -a -s "-screen 0 1280x720x24" tools/client-boot-test.sh 1200 60 ci
+
       - name: Upload the client log
         if: always()
         uses: actions/upload-artifact@v4
@@ -266,6 +284,9 @@ jobs:
           name: client-boot-log-${{ github.sha }}
           path: |
             client-boot-test.log
+            client-boot-title.log
+            world-smoke.log
+            world-smoke-results.tsv
             run/logs/*.log
             run/crash-reports/*.txt
           if-no-files-found: warn

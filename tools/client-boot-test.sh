@@ -16,14 +16,19 @@
 # every client mixin that loads at startup applied. World rendering and in-game behaviour stay
 # gate 8: a person playing.
 #
-# Usage: tools/client-boot-test.sh [timeout-seconds] [settle-seconds]   (run under xvfb-run)
+# With a third argument, the client quick-plays into run/saves/<world> (see world-smoke.sh) and
+# success means the player joined and the client kept rendering that world for SETTLE seconds.
+#
+# Usage: tools/client-boot-test.sh [timeout-seconds] [settle-seconds] [world]   (under xvfb-run)
 set -uo pipefail
 
 TIMEOUT="${1:-900}"
 SETTLE="${2:-45}"
+WORLD="${3:-}"
 LOG="client-boot-test.log"
 RUN_DIR="run"
 LOADED='Created: [0-9]+x[0-9]+x[0-9]+ minecraft:(textures/atlas/)?blocks'
+[ -n "$WORLD" ] && LOADED='joined the game'
 MIXIN='FAILED during APPLY|was not applied|Found a remappable @Shadow|Critical injection failure|InvalidInjectionException|InjectionError|Mixin apply for mod .* failed'
 BAKE='Missing textures in model|Unable to resolve texture|Exception loading blockstate|Failed to load (block )?model|Unable to load model|Failed to (load|parse) .*(model|blockstate)|missing model for variant|No model (loaded )?for|Couldn.t (load|parse) .*model|Missing model'
 
@@ -34,13 +39,15 @@ cat > "$RUN_DIR/options.txt" <<'OPTS'
 onboardAccessibility:false
 narrator:0
 soundCategory_master:0.0
-renderDistance:2
+renderDistance:3
 simulationDistance:5
 maxFps:30
 OPTS
 
 echo "::group::Launching the client (timeout ${TIMEOUT}s)"
-./gradlew runClient --console=plain --stacktrace > "$LOG" 2>&1 &
+QUICKPLAY=()
+[ -n "$WORLD" ] && QUICKPLAY=("-PquickPlayWorld=$WORLD")
+./gradlew runClient "${QUICKPLAY[@]}" --console=plain --stacktrace > "$LOG" 2>&1 &
 GRADLE_PID=$!
 
 loaded=0
@@ -84,15 +91,15 @@ bake_errors=$(count "$BAKE" "$GAME_LOG"); : "${bake_errors:=0}"
 
 status=0
 {
-    echo "## Client boot (headless, software GL)"
+    if [ -n "$WORLD" ]; then echo "## Client in world \`$WORLD\` (headless, software GL)"; else echo "## Client boot (headless, software GL)"; fi
     echo
     if [ "$loaded" -eq 1 ] && [ "$survived" -eq 1 ]; then
-        echo ":white_check_mark: First resource reload completed and the client stayed up ${SETTLE}s after it."
+        if [ -n "$WORLD" ]; then echo ":white_check_mark: Joined the world and kept rendering it for ${SETTLE}s."; else echo ":white_check_mark: First resource reload completed and the client stayed up ${SETTLE}s after it."; fi
     elif [ "$loaded" -eq 1 ]; then
         echo ":x: Resources loaded, then the client died within ${SETTLE}s."
         status=1
     else
-        echo ":x: The first resource reload never completed within ${TIMEOUT}s."
+        echo ":x: Never reached \`$LOADED\` within ${TIMEOUT}s."
         status=1
     fi
     if [ ${#reports[@]} -gt 0 ]; then

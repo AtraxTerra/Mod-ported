@@ -46,6 +46,10 @@ neoForge {
     runs {
         client {
             client()
+            // CI's in-world smoke test: -PquickPlayWorld=<save> joins that world at startup.
+            if (project.hasProperty('quickPlayWorld')) {
+                programArguments.addAll('--quickPlaySingleplayer', project.property('quickPlayWorld').toString())
+            }
         }
         server {
             server()
