@@ -5,7 +5,9 @@ import com.zurrtum.create.AllDataComponents;
 import com.zurrtum.create.infrastructure.fluids.FluidInventory;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
+import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
@@ -41,7 +43,7 @@ public interface FluidInventoryStorage extends ResourceHandler<FluidResource> {
     }
 
     static boolean matches(FluidResource variant, FluidStack stack) {
-        if (!variant.isOf(stack.getFluid())) {
+        if (variant.getFluid() != stack.getFluid()) {
             return false;
         }
         PatchedDataComponentMap stackComponents = stack.directComponents();
@@ -63,18 +65,52 @@ public interface FluidInventoryStorage extends ResourceHandler<FluidResource> {
         );
     }
 
-    @Override
+    /**
+     * The one-slot handlers this storage is built from, one per inventory slot.
+     *
+     * <p>Upstream models this as Fabric's {@code SlottedStorage}: a storage that hands out a view
+     * per slot, through {@code getSlots}/{@code getSlotCount}/{@code getSlot}. NeoForge has no such
+     * contract -- a {@link ResourceHandler} is simply indexed, with {@code size()} and index-taking
+     * operations -- so the list stays, as Create's own concept, and the handler methods below
+     * delegate to it. Each part has exactly one index, so the mapping is one-to-one and index 0 is
+     * always the right one to forward.
+     */
     @UnmodifiableView
-    List<ResourceView<FluidResource>> getSlots();
+    List<? extends ResourceHandler<FluidResource>> getParts();
 
     @Override
-    default int getSlotCount() {
-        return getSlots().size();
+    default int size() {
+        return getParts().size();
     }
 
     @Override
-    default ResourceView<FluidResource> getSlot(int slot) {
-        return getSlots().get(slot);
+    default FluidResource getResource(int index) {
+        return getParts().get(index).getResource(0);
+    }
+
+    @Override
+    default long getAmountAsLong(int index) {
+        return getParts().get(index).getAmountAsLong(0);
+    }
+
+    @Override
+    default long getCapacityAsLong(int index, FluidResource resource) {
+        return getParts().get(index).getCapacityAsLong(0, resource);
+    }
+
+    @Override
+    default boolean isValid(int index, FluidResource resource) {
+        return getParts().get(index).isValid(0, resource);
+    }
+
+    @Override
+    default int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
+        return getParts().get(index).insert(0, resource, amount, transaction);
+    }
+
+    @Override
+    default int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
+        return getParts().get(index).extract(0, resource, amount, transaction);
     }
 
     @SuppressWarnings("UnstableApiUsage")

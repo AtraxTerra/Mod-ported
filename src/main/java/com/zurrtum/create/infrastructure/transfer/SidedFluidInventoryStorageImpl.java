@@ -2,27 +2,32 @@ package com.zurrtum.create.infrastructure.transfer;
 
 import com.zurrtum.create.infrastructure.fluids.SidedFluidInventory;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.CombinedResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.minecraft.core.Direction;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class SidedFluidInventoryStorageImpl extends CombinedResourceHandler<FluidResource> implements FluidInventoryStorage {
+/**
+ * One face of a {@link SidedFluidInventory}, exposed as a {@link FluidInventoryStorage}.
+ * Holds its own part list for the same reason as {@link FluidInventoryStorageImpl}.
+ */
+public class SidedFluidInventoryStorageImpl implements FluidInventoryStorage {
     private final FluidInventoryStorageImpl backingStorage;
+    private final List<SidedFluidInventorySlotWrapper> parts;
 
     SidedFluidInventoryStorageImpl(FluidInventoryStorageImpl storage, Direction direction) {
-        super(Collections.unmodifiableList(createWrapperList(storage, direction)));
+        parts = Collections.unmodifiableList(createWrapperList(storage, direction));
         backingStorage = storage;
     }
 
     @Override
-    public List<ResourceView<FluidResource>> getSlots() {
+    public List<? extends ResourceHandler<FluidResource>> getParts() {
         return parts;
     }
 
-    private static List<ResourceView<FluidResource>> createWrapperList(
+    private static List<SidedFluidInventorySlotWrapper> createWrapperList(
         FluidInventoryStorageImpl storage,
         Direction direction
     ) {
