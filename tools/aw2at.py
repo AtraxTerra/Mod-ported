@@ -6,12 +6,24 @@ Usage: python3 -I aw2at.py <input.classtweaker> <output.cfg>
 Mapping rules
 -------------
   accessible class  O              -> public <O>
-  accessible field  O name DESC    -> public <O> name
-  accessible method O name DESC    -> public <O> name(DESC-args)DESC-ret
-  mutable field     O name DESC    -> public-f <O> name
-  extendable class  O              -> public <O>
-  extendable method O name DESC    -> public <O> name(...)...
+  accessible field  O name DESC    -> public <O> name   (+ public <O> for the owner)
+  accessible method O name DESC    -> public <O> name(DESC)  (+ public <O> for the owner)
+  mutable field     O name DESC    -> public-f <O> name  (strips final)
+  extendable class  O              -> public-f <O>       (strips final)
+  extendable method O name DESC    -> public-f <O> name(DESC)
   transitive-inject-interface      -> NOT representable in an AT; reported separately.
+
+Two things here are easy to get wrong, and both were, at first:
+
+1. `extendable` must STRIP FINAL, not merely widen visibility. In an access widener it means "I
+   intend to subclass this or override this method", which for a final member requires removing
+   final -- NeoForge spells that `public-f`. Translating it as plain `public` compiles the access
+   widener fine and then fails much later with "cannot override" or "cannot inherit from final",
+   far from the cause.
+
+2. An access widener IMPLICITLY makes the owning class accessible when a member is widened.
+   A NeoForge access transformer does not, so widening a member of a package-private or nested
+   class needs its own line for the owner, or the member is unreachable because its class is.
 
 NeoForge ATs use dot-separated class names, '$' for nested classes, and raw JVM
 descriptors for methods. Access widener files are already in internal form
@@ -63,23 +75,29 @@ def main() -> int:
 
         if kind == "class":
             owner = parts[2]
-            entries[f"public {owner_to_at(owner)}"] = lineno
+            # extendable means "I will subclass this", which needs final gone.
+            prefix = "public-f" if access == "extendable" else "public"
+            entries[f"{prefix} {owner_to_at(owner)}"] = lineno
 
         elif kind == "field":
             if len(parts) < 5:
                 skipped.append((lineno, line, "field needs owner/name/desc"))
                 continue
             owner, name = parts[2], parts[3]
-            # 'mutable' must also strip final; 'accessible' only widens visibility.
-            prefix = "public-f" if access == "mutable" else "public"
+            # 'mutable' and 'extendable' must also strip final; 'accessible' only widens visibility.
+            prefix = "public-f" if access in ("mutable", "extendable") else "public"
             entries[f"{prefix} {owner_to_at(owner)} {name}"] = lineno
+            # The owner itself, which the access widener would have opened implicitly.
+            entries.setdefault(f"public {owner_to_at(owner)}", lineno)
 
         elif kind == "method":
             if len(parts) < 5:
                 skipped.append((lineno, line, "method needs owner/name/desc"))
                 continue
             owner, name, desc = parts[2], parts[3], parts[4]
-            entries[f"public {owner_to_at(owner)} {name}{desc}"] = lineno
+            prefix = "public-f" if access == "extendable" else "public"
+            entries[f"{prefix} {owner_to_at(owner)} {name}{desc}"] = lineno
+            entries.setdefault(f"public {owner_to_at(owner)}", lineno)
 
         else:
             skipped.append((lineno, line, f"unknown target kind {kind!r}"))
