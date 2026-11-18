@@ -1136,7 +1136,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                         remaining -= insert;
                     }
                 }
-                for (ResourceView<FluidResource> target : ResourceView.all(emptys)) {
+                for (ResourceView<FluidResource> target : emptys) {
                     int insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         transaction.commit();

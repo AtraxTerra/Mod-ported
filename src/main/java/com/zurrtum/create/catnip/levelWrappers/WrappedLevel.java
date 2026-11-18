@@ -96,7 +96,7 @@ public class WrappedLevel extends Level {
      * return type is a collection of PartEntity rather than EnderDragonPart.
      */
     @Override
-    public Collection<net.neoforged.neoforge.entity.PartEntity<?>> dragonParts() {
+    public Collection<? extends net.neoforged.neoforge.entity.PartEntity<?>> dragonParts() {
         return level.dragonParts();
     }
 

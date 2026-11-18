@@ -1562,7 +1562,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                         remaining -= insert;
                     }
                 }
-                for (ResourceView<ItemResource> target : ResourceView.all(emptys)) {
+                for (ResourceView<ItemResource> target : emptys) {
                     int insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         transaction.commit();
