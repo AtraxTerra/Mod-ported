@@ -4,10 +4,13 @@
 26.2. Upstream is ZurrTum's Fabric port of [Create](https://github.com/Creators-of-Create/Create);
 this repository carries the loader change only, on the same Minecraft version.
 
-> **Status: not yet known to compile.** The port was written without access to the NeoForged and
-> Mojang Maven repositories, so no dependency ever resolved and `javac` never ran over it. The
-> **Build** workflow is where it is compiled for the first time — check its run summary, which
-> lists the compile errors grouped by file.
+> **Status: compiling, not yet compiled.** CI resolves Minecraft and NeoForge and reaches `javac`.
+> The first run reported 417 errors; a triage pass cut that to **99 across 18 files** (the log
+> triples each error, so roughly 33 distinct). The **Build** workflow run summary lists them grouped
+> by file. The largest remaining piece is the transfer layer — see
+> [PORTING.md section 1b](PORTING.md), which is the first thing to read: 26.2 replaced
+> `IItemHandler`/`IFluidHandler` with a `ResourceHandler` API, and the upstream Fabric adapters kept
+> in `reference/` are the right starting point for it.
 
 **Read [PORTING.md](PORTING.md)** for what changed, the order to work through the first build, and
 the 11 known gaps. The two sharp edges, in short: fluid amounts are droplets inside Create and
@@ -31,6 +34,12 @@ silently uncraftable rather than erroring.
 
 Neither workflow pushes to `port/neoforge-26.2` directly; every upstream change arrives as a pull
 request, and the Build workflow runs on it.
+
+`upstream-sync.yml` is also committed on `main`, and has to be: GitHub only honours `schedule` and
+`workflow_dispatch` for workflow files on the default branch, so a copy living only on the port
+branch would never fire. It checks out the port branch itself. `build.yml` needs no copy, because
+`push` and `pull_request` use the workflow file from the ref being pushed. Keep the two copies of
+`upstream-sync.yml` in step.
 
 The sync applies upstream's diff as a **path-rewritten patch** rather than merging. That is not
 laziness: the port merged upstream's two source sets (`src/main/java` and `src/client/java`) into
