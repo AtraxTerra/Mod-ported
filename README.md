@@ -7,30 +7,39 @@ Oil prospecting and pumpjacks, distillation, diesel engines, chemical sprayers, 
 > George VI. 
 > Please report problems here.
 
-## Compatibility
+## This branch: NeoForge 26.2
+
+`port/cdg-neoforge-26.2` ports chaevsfe's Fabric version to **NeoForge 26.2**, on top of the
+Create Fly NeoForge port (`port/neoforge-26.2` of this repository). The CI builds Create Fly, then
+this mod, and on every push:
+
+- boots a dedicated server with both;
+- runs the **world migration test**: a world saved with Create: Adapted and "Create: Diesel
+  Generators Adapted" is loaded with Create Fly and this port, and every block, item and fluid is
+  compared (engines, barrels, distillation tanks, fermenters, canisters and turrets keep their fuel;
+  `CDGLegacyData` holds this mod's conversions);
+- boots a server and a headless client with the survival server's mod list (see Create Fly's
+  `PORTING.md`, section 1e).
 
 | Component | Version |
 | --- | --- |
 | Minecraft | `26.2` |
-| Mod loader | Fabric Loader `0.19.3` or newer |
-| Create Fly | `6.0.9-1` or newer |
-| Fabric API | required |
+| Mod loader | NeoForge `26.2.0.93` or newer |
+| Create Fly (NeoForge port) | `6.0.9` or newer |
 | Java | `25` or newer |
 | Environments | Client and server |
 
-## Download
+The jars are the Build workflow's artifacts (`createdieselgenerators-neoforge-<commit>`, which also
+holds the Create Fly jar it was built against).
 
-- [Modrinth](https://modrinth.com/project/AfUI0xBG)
-- [CurseForge](https://www.curseforge.com/minecraft/mc-mods/create-fly-diesel-generators)
-- [GitHub releases](https://github.com/chaevsfe/Create-Diesel-Generators/releases)
-
+Not ported yet: the Strut Your Stuff and recipe-viewer integrations (`deferred/excludes.txt`).
 
 ## Building
 
 ```
-git clone https://github.com/chaevsfe/Create-Diesel-Generators
-cd Create-Diesel-Generators
-./gradlew build
+git clone -b port/neoforge-26.2 https://github.com/AtraxTerra/Mod-ported deps/create-fly
+(cd deps/create-fly && ./gradlew jar)
+./gradlew build -Pcreate_fly_libs=deps/create-fly/build/libs
 ```
 
 Requires JDK 25.
