@@ -133,6 +133,8 @@ sourceSets {
             exclude 'com/zurrtum/create/client/mixin/ModelBlockRendererMixin.java'
             // keyPress RETURN ordinal moved; client/platform/CreateKeyInput uses InputEvent.Key.
             exclude 'com/zurrtum/create/client/mixin/KeyboardHandlerMixin.java'
+            // Implicit @Local long became ambiguous; platform/CarriageSectionHooks uses EntityEvent.EnteringSection.
+            exclude 'com/zurrtum/create/mixin/PersistentEntitySectionManagerCallbackMixin.java'
 
             // Trinkets is a Fabric accessory mod; the NeoForge equivalent is Curios, which needs a
             // new renderer rather than a port of this one. Only client/compat/CompatMod referenced

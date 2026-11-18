@@ -49,6 +49,11 @@ WILDCARD = re.compile(r"^import\s+([\w.]+)\.\*;", re.M)
 STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
 CHECKED_AT = {"INVOKE", "INVOKE_ASSIGN", "INVOKE_STRING", "FIELD", "NEW"}
 RETURN_INSN = re.compile(r"\s+\d+: [ilfda]?return\b")
+LVT_ROW = re.compile(r"\s+(\d+)\s+(\d+)\s+\d+\s+(\S+)\s+(\S+)\s*$")
+PRIMITIVES = {"long": "J", "int": "I", "boolean": "Z", "float": "F", "double": "D", "byte": "B",
+              "char": "C", "short": "S"}
+REF_TYPES = {"LocalIntRef": "I", "LocalLongRef": "J", "LocalBooleanRef": "Z", "LocalFloatRef": "F",
+             "LocalDoubleRef": "D", "LocalByteRef": "B", "LocalCharRef": "C", "LocalShortRef": "S"}
 
 
 # --------------------------------------------------------------------------- source parsing
@@ -185,7 +190,8 @@ def mixin_targets(text: str, imports, wildcards, package, index) -> tuple[list[s
 
 class ClassInfo:
     def __init__(self):
-        self.methods: list[tuple[str, str, list[str]]] = []  # name, descriptor, code lines
+        # name, descriptor, code lines, local variables (start, length, name, descriptor)
+        self.methods: list[tuple[str, str, list[str], list[tuple[int, int, str, str]]]] = []
         self.fields: set[str] = set()
 
 
@@ -193,7 +199,7 @@ def javap(classpath: str, names: list[str]) -> dict[str, ClassInfo]:
     out: dict[str, ClassInfo] = {}
     for chunk in range(0, len(names), 40):
         batch = [n.replace("/", ".") for n in names[chunk:chunk + 40]]
-        proc = subprocess.run(["javap", "-c", "-p", "-s", "-cp", classpath, *batch],
+        proc = subprocess.run(["javap", "-c", "-l", "-p", "-s", "-cp", classpath, *batch],
                               capture_output=True, text=True)
         current, cls_name, member, pending = None, None, None, None
         for line in proc.stdout.splitlines():
@@ -222,14 +228,18 @@ def javap(classpath: str, names: list[str]) -> dict[str, ClassInfo]:
             if stripped.startswith("descriptor:") and pending:
                 name, is_method = pending
                 if is_method:
-                    member = (name, stripped.split(":", 1)[1].strip(), [])
+                    member = (name, stripped.split(":", 1)[1].strip(), [], [])
                     current.methods.append(member)
                 else:
                     current.fields.add(name)
                 pending = None
                 continue
-            if member is not None and re.match(r"\s+\d+: ", line):
-                member[2].append(line)
+            if member is not None:
+                lvt = LVT_ROW.match(line)
+                if lvt and not line.lstrip().startswith(("Start", "line")):
+                    member[3].append((int(lvt.group(1)), int(lvt.group(2)), lvt.group(3), lvt.group(4)))
+                elif re.match(r"\s+\d+: ", line):
+                    member[2].append(line)
     return out
 
 
@@ -300,12 +310,85 @@ def candidates(info: ClassInfo, selector: str) -> str:
     name = re.sub(r"^L[\w/$]+;", "", selector).partition("(")[0]
     m = re.fullmatch(r"(lambda\$[\w$]+?\$)\d+", name)
     if m:  # renumbered or re-captured lambdas: show the whole family
-        found = [f"{n}{d}" for n, d, _ in info.methods if n.startswith(m.group(1))]
+        found = [f"{n}{d}" for n, d, *_ in info.methods if n.startswith(m.group(1))]
     else:
-        found = [f"{n}{d}" for n, d, _ in info.methods if n == name]
+        found = [f"{n}{d}" for n, d, *_ in info.methods if n == name]
     if not found:
         return " (no method of that name)"
     return "".join("\n          candidate: " + f for f in found[:8])
+
+
+def handler_params(text: str, pos: int) -> list[str]:
+    """Raw parameter declarations of the method whose annotations start at pos."""
+    open_paren = text.find("(", text.find(next_member_name(text, pos), pos))
+    if open_paren < 0:
+        return []
+    inner = text[open_paren + 1:balanced(text, open_paren) - 1]
+    params, depth, cur = [], 0, ""
+    for ch in inner:
+        if ch in "<(":
+            depth += 1
+        elif ch in ">)":
+            depth -= 1
+        if ch == "," and depth == 0:
+            params.append(cur.strip()); cur = ""
+        else:
+            cur += ch
+    if cur.strip():
+        params.append(cur.strip())
+    return params
+
+
+def type_descriptor(java_type: str, imports, wildcards, package, index) -> str | None:
+    java_type = java_type.replace("final ", "").strip()
+    generic = re.match(r"(\w+)\s*<\s*([\w.]+)", java_type)
+    base = re.sub(r"<.*>", "", java_type).strip()
+    if base in REF_TYPES:
+        return REF_TYPES[base]
+    if base == "LocalRef" and generic:
+        return type_descriptor(generic.group(2), imports, wildcards, package, index)
+    dims = base.count("[]")
+    base = base.replace("[]", "").strip()
+    if base in PRIMITIVES:
+        return "[" * dims + PRIMITIVES[base]
+    name = resolve_class(base, imports, wildcards, package, index)
+    if name is None and base in ("String", "Object", "Integer", "Long", "Boolean"):
+        name = "java/lang/" + base
+    return "[" * dims + f"L{name};" if name else None
+
+
+def offsets(lines: list[str], predicate) -> list[int]:
+    return [int(re.match(r"\s+(\d+):", l).group(1)) for l in lines if predicate(l)]
+
+
+def check_implicit_locals(fq, handler, kind, at_offsets, method, params, ctx, sink):
+    """MixinExtras needs exactly one candidate for an implicit @Local; count live locals by type."""
+    _, desc, _, lvt = method
+    if not lvt:
+        return  # no debug info for this method: nothing to compare against
+    for param in params:
+        m = re.match(r"@Local\b(\s*\(([^)]*)\))?\s+(.*?)\s+\w+$", param, re.S)
+        if not m:
+            continue
+        args = m.group(2) or ""
+        if re.search(r"\b(ordinal|index|name)\s*=", args):
+            continue
+        local_type = re.sub(r"@\w+(\([^)]*\))?\s*", "", m.group(3))
+        wanted = type_descriptor(local_type, *ctx)
+        if wanted is None:
+            continue
+        if re.search(r"argsOnly\s*=\s*true", args):
+            arg_types = re.findall(r"\[*(?:L[^;]+;|[JIZFDBCS])", desc[1:desc.index(")")])
+            count = sum(1 for a in arg_types if a == wanted)
+            if count > 1:
+                sink.append((fq, handler, f"@{kind}: implicit @Local(argsOnly) {local_type} has {count} candidate parameters"))
+            continue
+        for off in at_offsets:
+            live = [n for s, ln, n, sig in lvt if sig == wanted and s <= off < s + ln]
+            if len(live) > 1:
+                sink.append((fq, handler, f"@{kind}: implicit @Local {local_type} has {len(live)} candidates "
+                             f"({', '.join(live)}) at offset {off}; MixinExtras needs exactly one"))
+                break
 
 
 # --------------------------------------------------------------------------- driver
@@ -357,15 +440,16 @@ def main() -> int:
         imports = {f.rsplit(".", 1)[1]: f for f in IMPORT.findall(text)}
         wildcards = WILDCARD.findall(text)
         targets, missing = mixin_targets(text, imports, wildcards, package, index)
+        ctx = (imports, wildcards, package, index)
         for m in missing:
             (notes if "@Pseudo" in text else problems).append(
                 (fq, "@Mixin", f"target class {m} is not in the patched jar"))
         if targets:
-            todo.append((fq, text, targets))
+            todo.append((fq, text, targets, ctx))
 
-    infos = javap(classpath, sorted({t for _, _, ts in todo for t in ts}))
+    infos = javap(classpath, sorted({t for _, _, ts, _ in todo for t in ts}))
     checked = 0
-    for fq, text, targets in todo:
+    for fq, text, targets, ctx in todo:
         short = fq.rsplit(".", 1)[1]
         for kind, args, end in annotations(text, INJECTORS):
             handler = next_member_name(text, end)
@@ -414,9 +498,12 @@ def main() -> int:
                         opcode = op.rsplit(".", 1)[-1].lower() if op else None
                         ordinal = attr(at, "ordinal")
                         need = int(ordinal) + 1 if ordinal and ordinal.isdigit() else 1
-                        count = sum(instruction_matches(line, target, value if value in ("NEW", "FIELD") else "INVOKE",
-                                                        owner, name, desc, opcode)
+                        kind_ = value if value in ("NEW", "FIELD") else "INVOKE"
+                        count = sum(instruction_matches(line, target, kind_, owner, name, desc, opcode)
                                     for m in methods for line in m[2])
+                        for m in methods:
+                            hits = offsets(m[2], lambda l: instruction_matches(l, target, kind_, owner, name, desc, opcode))
+                            check_implicit_locals(fq, handler, kind, hits, m, handler_params(text, end), ctx, sink)
                         if count < need:
                             what = f"{owner.rsplit('/', 1)[-1]}.{name or '<new>'}{desc or ''}"
                             where = f"{target.rsplit('/', 1)[-1]}.{selector}"
