@@ -2,38 +2,45 @@ package com.zurrtum.create.platform;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Client-side fluid appearance, behind one call so the loader-specific part stays in one file.
+ * Client-side fluid tint colour.
  *
- * <p>Upstream asks Fabric's {@code FluidVariantRendering.getColor(FluidVariant.of(fluid,
- * components), level, pos)} in three places. NeoForge's equivalent is the fluid type's client
- * extension.
+ * <h2>Unresolved: 26.2 moved this, and the replacement has not been located</h2>
+ * Upstream asks Fabric's {@code FluidVariantRendering.getColor(FluidVariant.of(fluid, components),
+ * level, pos)} in three places in {@code AllFluidConfigs}.
  *
- * <p><b>Behavioural difference worth knowing:</b> a Fabric {@code FluidVariant} carries the
- * fluid's data components, so a Fabric fluid-colour provider can tint per-component -- a potion
- * fluid coloured by its effects, for instance. NeoForge's {@code getTintColor} takes a
- * {@code FluidState} and no components, so the tint is per-fluid only. Create's own fluids do not
- * tint by component, so this is lossless for Create itself; a <i>foreign</i> component-tinted fluid
- * flowing through a Create pipe will render in its base colour rather than its component colour.
- * The {@code components} parameter is kept in the signature so the call sites do not change and so
- * the information is still here if a future NeoForge API can use it.
+ * <p>The obvious NeoForge counterpart would be the fluid type's client extension, but
+ * {@code IClientFluidTypeExtensions} in NeoForge 26.2 has <b>no tint or colour method at all</b> --
+ * it covers the overlay texture, fog colour and fog rendering, and nothing else. Fluid colour moved
+ * somewhere in the 26.x render rework and the new home has not been found.
+ *
+ * <p>So this returns opaque white, which is the identity for a multiplicative tint: fluids render
+ * in their texture's own colours rather than crashing or rendering black. For Create's own fluids
+ * that is close to correct, since their textures carry their colour. For a fluid that relies on a
+ * tint -- water per biome, a modded fluid coloured by code -- it is visibly wrong.
+ *
+ * <p>TODO(port): find where 26.2 exposes a fluid's render colour and implement this. Three places
+ * in {@code AllFluidConfigs} consume it; nothing else does. Starting points: how vanilla tints
+ * water per biome in 26.2, and whether {@code FluidResource} or the fluid's client config carries
+ * a colour now that the transfer API deals in resources rather than stacks.
  */
 public final class FluidRendering {
+    /** Opaque white: the identity value for a multiplicative tint. */
+    private static final int NO_TINT = 0xFFFFFFFF;
+
     private FluidRendering() {
     }
 
     public static int getColor(
         Fluid fluid,
         @Nullable DataComponentPatch components,
-        @Nullable BlockAndTintGetter level,
+        @Nullable BlockGetter level,
         @Nullable BlockPos pos
     ) {
-        IClientFluidTypeExtensions extensions = IClientFluidTypeExtensions.of(fluid);
-        return extensions.getTintColor(fluid.defaultFluidState(), level, pos);
+        return NO_TINT;
     }
 }

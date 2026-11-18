@@ -41,6 +41,71 @@ files still reference `net.fabricmc`.**
 
 ---
 
+## 1b. ⚠ Correction: the transfer layer targets the wrong API
+
+**Read this before touching `infrastructure/transfer/`.** The adapters in that package were written
+against NeoForge's `IItemHandler` / `IFluidHandler`. That is the right API for NeoForge 1.21.x. It is
+**not** the API in NeoForge 26.2, and CI proved it: `Capabilities.ItemHandler` does not exist.
+
+26.2 replaced both with a unified resource-transfer API under
+`net.neoforged.neoforge.transfer`:
+
+```java
+Capabilities.Item.BLOCK   // BlockCapability<ResourceHandler<ItemResource>,  @Nullable Direction>
+Capabilities.Fluid.BLOCK  // BlockCapability<ResourceHandler<FluidResource>, @Nullable Direction>
+Capabilities.Fluid.ITEM   // ItemCapability<ResourceHandler<FluidResource>, ItemAccess>
+
+public interface ResourceHandler<T extends Resource> {
+    int  size();
+    T    getResource(int index);
+    long getAmountAsLong(int index);
+    long getCapacityAsLong(int index, T resource);
+    boolean isValid(int index, T resource);
+    int  insert(int index, T resource, int amount, TransactionContext transaction);
+    int  extract(int index, T resource, int amount, TransactionContext transaction);
+}
+```
+
+**This is good news, and it inverts the plan.** Note the `TransactionContext`: 26.2 adopted a
+transaction model, and immutable resource values (`ItemResource`, `FluidResource`) instead of
+mutable stacks. That is essentially Fabric's Transfer API design. So the claim made in section 2
+below -- that Fabric's transaction bookkeeping has no counterpart and collapses away -- **is wrong
+for this version**, and the 4,025 lines of upstream Fabric adapters are not dead weight: they are
+the right starting point, needing a largely mechanical type-rename rather than a rewrite.
+
+They are preserved, uncompiled, in `reference/fabric-transfer/`. The mapping:
+
+| Fabric Transfer API | NeoForge 26.2 |
+|---|---|
+| `Storage<ItemVariant>` | `ResourceHandler<ItemResource>` |
+| `Storage<FluidVariant>` | `ResourceHandler<FluidResource>` |
+| `SlottedStorage` / `SingleSlotStorage` | the indexed `ResourceHandler` itself |
+| `ItemVariant` | `ItemResource` (`of(stack)`, `toStack(count)`) |
+| `FluidVariant` | `FluidResource` |
+| `Transaction` / `TransactionContext` | `net.neoforged.neoforge.transfer.transaction.TransactionContext` |
+| `SnapshotParticipant` | `SnapshotJournal` |
+| `CombinedStorage` | `CombinedResourceHandler` |
+| `ContainerStorage.of(container, side)` | **`VanillaContainerWrapper`** — NeoForge ships it |
+| `StoragePreconditions` | `TransferPreconditions` |
+| `ContainerItemContext` | `ItemAccess` / `ItemAccessResourceHandler` |
+| `ItemStorage.SIDED.registerForBlockEntity` | `RegisterCapabilitiesEvent.registerBlockEntity` |
+
+`VanillaContainerWrapper` is worth singling out: it is NeoForge's own vanilla-`Container`-to-handler
+adapter, so it replaces upstream's `ContainerStorage.of(...)` directly, and `ContainerItemHandler`
+in this port exists only because the old API had no such thing.
+
+**Fluid units still need converting.** `FluidType.BUCKET_VOLUME` is 1000 and Create counts 81000
+per bucket, so `FluidUnits` and its rounding rules stand unchanged — that part of section 2 is
+still correct, and still the sharpest edge in the port.
+
+**What to do.** Delete the five adapters in `infrastructure/transfer/` (keeping `SlotRangeCache`),
+restore the files from `reference/fabric-transfer/`, and run the rename table above over them. Then
+point `AllTransfer` and the three `Cached*InventoryBehaviour`s at `ResourceHandler`. Expect this to
+remove most of the 417 errors CI currently reports, since `AllTransfer` alone accounts for 39 of
+them.
+
+---
+
 ## 2. What changed
 
 ### Build and metadata
@@ -82,6 +147,11 @@ Everything loader-specific is now in five small classes, and nothing else in the
 - `client/platform/CreatePackFinders` — the optional built-in resource packs.
 
 ### Item and fluid transfer — the actual engineering
+
+> The table and the reasoning in this subsection describe what was built against `IItemHandler`.
+> **Section 1b supersedes it**: 26.2 uses `ResourceHandler`, and the conclusion about transactions
+> disappearing is wrong for this version. The line counts are kept because they still show where
+> the work is concentrated.
 
 Create's core never spoke Fabric; a 13-file adapter layer in `infrastructure/transfer/` did. That
 layer is replaced:

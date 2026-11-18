@@ -1,22 +1,29 @@
 package com.zurrtum.create.client.flywheel.impl.compat;
 
 import com.zurrtum.create.client.flywheel.api.visualization.BlockEntityVisualizer;
-import com.zurrtum.create.client.flywheel.impl.FlwImpl;
-import com.zurrtum.create.client.flywheel.lib.visualization.VisualizationHelper;
-import net.caffeinemc.mods.sodium.api.blockentity.BlockEntityRenderHandler;
-import net.caffeinemc.mods.sodium.api.blockentity.BlockEntityRenderPredicate;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Sodium integration, inert on this loader.
+ *
+ * <p>Upstream registers a Sodium render predicate per block-entity type, so that a block entity
+ * Flywheel has taken over is not also drawn by Sodium's own block-entity renderer. Sodium is a
+ * Fabric mod and its API is not on this classpath, so nothing is registered and the vanilla
+ * renderer path applies.
+ *
+ * <p>Kept rather than excluded because {@code FlwLibLinkImpl} and {@code BlockEntityTypeMixin}
+ * reference it. The signature is unchanged, including the opaque {@code Object} predicate handle,
+ * so callers are untouched; it simply always returns {@code null}.
+ *
+ * <p>TODO(port): double rendering -- a block entity drawn twice, by Flywheel and by the vanilla
+ * renderer -- is what this integration exists to prevent. On NeoForge that has to be solved
+ * against whatever renderer is actually in play, so if Create's contraptions or kinetics look
+ * doubled or ghosted, this class is where to start.
+ */
 public final class SodiumCompat {
-    public static final boolean ACTIVE = CompatMod.SODIUM.isLoaded;
-
-    static {
-        if (ACTIVE) {
-            FlwImpl.LOGGER.debug("Detected Sodium");
-        }
-    }
+    public static final boolean ACTIVE = false;
 
     private SodiumCompat() {
     }
@@ -28,38 +35,6 @@ public final class SodiumCompat {
         @Nullable BlockEntityVisualizer<? super T> newVisualizer,
         @Nullable Object predicate
     ) {
-        if (!ACTIVE) {
-            return null;
-        }
-
-        if (oldVisualizer == null && newVisualizer != null) {
-            if (predicate != null) {
-                throw new IllegalArgumentException("Sodium predicate must be null when old visualizer is null");
-            }
-
-            return Internals.addPredicate(type);
-        }
-        if (oldVisualizer != null && newVisualizer == null) {
-            if (predicate == null) {
-                throw new IllegalArgumentException("Sodium predicate must not be null when old visualizer is not null");
-            }
-
-            Internals.removePredicate(type, predicate);
-            return null;
-        }
-
-        return predicate;
-    }
-
-    private static final class Internals {
-        static <T extends BlockEntity> Object addPredicate(BlockEntityType<T> type) {
-            BlockEntityRenderPredicate<T> predicate = (getter, pos, be) -> !VisualizationHelper.tryAddBlockEntity(be);
-            BlockEntityRenderHandler.instance().addRenderPredicate(type, predicate);
-            return predicate;
-        }
-
-        static <T extends BlockEntity> void removePredicate(BlockEntityType<T> type, Object predicate) {
-            BlockEntityRenderHandler.instance().removeRenderPredicate(type, (BlockEntityRenderPredicate<T>) predicate);
-        }
+        return null;
     }
 }

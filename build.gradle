@@ -112,6 +112,11 @@ sourceSets {
             // Replaced by client/platform/CreatePackFinders, which uses AddPackFindersEvent.
             exclude 'com/zurrtum/create/client/mixin/ClientPackSourceMixin.java'
 
+            // Trinkets is a Fabric accessory mod; the NeoForge equivalent is Curios, which needs a
+            // new renderer rather than a port of this one. Only client/compat/CompatMod referenced
+            // it, and that no longer does.
+            exclude 'com/zurrtum/create/client/compat/trinkets/**'
+
             // Optional integrations, off until their NeoForge side is wired up. The JEI categories
             // still call Fabric's custom-ingredient API, so switching enable_jei on means porting
             // those call sites to NeoForge ICustomIngredient first -- see PORTING.md.
@@ -119,7 +124,16 @@ sourceSets {
                 exclude 'com/zurrtum/create/client/compat/jei/**'
             }
             if (!project.enable_cct.toBoolean()) {
-                exclude 'com/zurrtum/create/compat/computercraft/**'
+                // Only the parts that import CC:T's own API. Create's loader-neutral half of the
+                // feature -- AbstractComputerBehaviour, ComputerDisplaySource and the event types
+                // -- stays compiled, because 17 block entities reference it. Excluding the whole
+                // package would cascade into all of them.
+                exclude 'com/zurrtum/create/compat/computercraft/implementation/**'
+                exclude 'com/zurrtum/create/compat/computercraft/AllComputerPeripherals.java'
+                exclude 'com/zurrtum/create/compat/computercraft/ComputerIntegration.java'
+                // Uses Fabric's RegistryEntryAddedCallback and is only reached through the CC:T
+                // integration, so it goes with it rather than being ported on its own.
+                exclude 'com/zurrtum/create/compat/computercraft/AllComputerDisplaySource.java'
             }
         }
     }

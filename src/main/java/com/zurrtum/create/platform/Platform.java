@@ -2,7 +2,7 @@ package com.zurrtum.create.platform;
 
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import org.jspecify.annotations.Nullable;
 
@@ -35,7 +35,9 @@ public final class Platform {
         return ModList.get().isLoaded(modId);
     }
 
-    public static Optional<ModContainer> getModContainer(String modId) {
+    // ModList hands back a wildcard; keeping it in the signature avoids an unchecked cast here
+    // and still assigns cleanly to a ModContainer at the call sites.
+    public static Optional<? extends ModContainer> getModContainer(String modId) {
         return ModList.get().getModContainerById(modId);
     }
 
@@ -56,7 +58,7 @@ public final class Platform {
             .orElse(null);
     }
 
-    public static Collection<ModContainer> getAllMods() {
+    public static Collection<? extends ModContainer> getAllMods() {
         return ModList.get().getSortedMods();
     }
 
@@ -69,6 +71,7 @@ public final class Platform {
     }
 
     public static boolean isDevelopmentEnvironment() {
-        return !FMLLoader.isProduction();
+        // FMLEnvironment, not FMLLoader: the latter's isProduction() is an instance method.
+        return !FMLEnvironment.isProduction();
     }
 }
