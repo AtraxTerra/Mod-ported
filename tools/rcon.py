@@ -65,16 +65,19 @@ def main() -> int:
             command = line.strip()
             if not command or command.startswith("#"):
                 continue
-            # Minecraft splits replies longer than 4096 bytes into several packets with the same id.
-            # A packet of an unknown type is answered once, after them, so it marks the end.
-            marker = n + 1_000_000
-            sock.sendall(packet(n, 2, command) + packet(marker, 99, ""))
-            body = ""
-            while True:
-                request_id, _, part = read_packet(sock)
-                if request_id == marker:
-                    break
-                body += part
+            # Minecraft splits a reply into 4096-character packets. It also parses one packet per
+            # socket read, so nothing may be pipelined: only once a full-size chunk has arrived is a
+            # cheap second command sent, whose reply (commands are answered in order) marks the end.
+            sock.sendall(packet(n, 2, command))
+            _, _, body = read_packet(sock)
+            if len(body) >= 4096:
+                marker = n + 1_000_000
+                sock.sendall(packet(marker, 2, "seed"))
+                while True:
+                    request_id, _, part = read_packet(sock)
+                    if request_id == marker:
+                        break
+                    body += part
             print(f"{command}\t{' '.join(body.split())}", flush=True)
     return 0
 
