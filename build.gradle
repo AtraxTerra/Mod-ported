@@ -164,6 +164,8 @@ jar {
 tasks.named('sourcesJar', Jar) {
     from('LICENSE')
     from('NOTICE')
+    // Fabric-only metadata stays in the tree for upstream syncs but ships in neither jar.
+    exclude 'fabric.mod.json', 'createdieselgenerators.accesswidener'
 }
 
 // --- namespace check (ported from the Fabric build) ------------------------------------------
