@@ -21,7 +21,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
 
@@ -138,6 +138,39 @@ jobs:
           echo "Create Fly: $fly / Diesel Generators: $cdg"
           bash deps/create-fly/tools/migration-test.sh "$fly" 26.2.0.93 "$cdg"
 
+      # The survival server's whole mod list, with Create Fly and this port in place of the two
+      # Adapted mods: does it all load together, server side and client side?
+      - name: Fetch the survival server's other mods (Modrinth)
+        id: modlist-fetch
+        continue-on-error: true
+        shell: bash
+        run: python3 -I deps/create-fly/tools/fetch_server_mods.py deps/create-fly/tools/server-mods.txt modlist-mods
+
+      - name: Server boot with the full mod list
+        id: modlist-server
+        continue-on-error: true
+        shell: bash
+        run: |
+          fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources' | head -1)
+          cdg=$(ls build/libs/createdieselgenerators-*.jar | grep -v -- '-sources' | head -1)
+          bash deps/create-fly/tools/modlist-boot-test.sh modlist-mods "$fly" "$cdg"
+
+      - name: Client boot with the full mod list (headless)
+        id: modlist-client
+        continue-on-error: true
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils
+          rm -rf run/mods run/crash-reports run/logs
+          mkdir -p run/mods && cp modlist-mods/*.jar run/mods/
+          cp deps/create-fly/tools/client-boot-test.sh tools-client-boot-test.sh
+          xvfb-run -a -s "-screen 0 1280x720x24" bash tools-client-boot-test.sh 1500 60
+          echo "## Survival mod list + this port: client boot" >> "$GITHUB_STEP_SUMMARY"
+          tail -25 client-boot-test.log >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
       - name: Upload the boot log
         if: always()
         uses: actions/upload-artifact@v4
@@ -145,6 +178,8 @@ jobs:
           name: cdg-boot-log-${{ github.sha }}
           path: |
             boot-test.log
+            client-boot-test.log
+            modlist-server/server.log
             run/logs/*.log
             run/crash-reports/*.txt
           if-no-files-found: ignore
