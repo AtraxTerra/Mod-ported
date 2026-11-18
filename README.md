@@ -4,16 +4,14 @@
 26.2. Upstream is ZurrTum's Fabric port of [Create](https://github.com/Creators-of-Create/Create);
 this repository carries the loader change only, on the same Minecraft version.
 
-> **Status: the build is green and produces a jar.** 417 compile errors on the first CI run
-> (~139 distinct), then 105 → 73 → 41 → 28 → 18 → **0**. Download it from the Build workflow's
-> artifacts.
->
-> **It has never been run.** A green compile is gate 1 of 8 and is blind to mixins by construction,
-> so treat the jar as untested. The `boot-test` job attempts gate 2 — a dedicated-server boot — and
-> is expected to fail at first. See [PORTING.md](PORTING.md).
+> **Status:** the jar builds, every mixin passes a bytecode audit against the patched game, and CI
+> boots a dedicated server and a headless client to the title screen on every push. It also takes
+> over a world saved by **Create: Adapted** without losing blocks, machine contents or
+> contraptions (the `migration-test` job). Not yet checked: real play on a client, JEI and
+> CC: Tweaked integration (both off). Download the jar from the Build workflow's artifacts.
 
-**Read [PORTING.md](PORTING.md)** for what changed, the order to work through the first build, and
-the 11 known gaps. The two sharp edges, in short: fluid amounts are droplets inside Create and
+**Read [PORTING.md](PORTING.md)** for what changed, how a Create: Adapted world is converted, and the
+known gaps. The two sharp edges, in short: fluid amounts are droplets inside Create and
 millibuckets in NeoForge (a factor of 81 that throws nothing when you get it wrong), and the `c:`
 convention tags are now NeoForge's rather than a bundled Fabric snapshot, which can leave a recipe
 silently uncraftable rather than erroring.

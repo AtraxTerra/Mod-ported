@@ -3,15 +3,12 @@
 Port of [ZurrTum/Create-Fly](https://github.com/ZurrTum/Create-Fly) (branch `26.2`, commit
 `3a9fe3e`, Create 6.0.9) from Fabric to NeoForge, same Minecraft version.
 
-> **Status: the build is green and produces a jar** (~19.7 MiB, uploaded by the Build workflow).
-> The first CI run reported 417 errors (~139 distinct, since the log triples each); successive
-> passes took that to 105 → 73 → 41 → 28 → 18 → **0**.
->
-> **This does not mean the mod works.** A green compile is gate 1 of 8, and it is specifically
-> blind to mixins: they are applied by name at class load, so one targeting a member that moved
-> compiles perfectly and fails the moment the class is touched. The port has never been run. Gate 2
-> (dedicated-server boot) is wired up as the `boot-test` job and is expected to fail at first; the
-> remaining gates are in [First build](#first-build).
+> **Status:** builds, passes the bytecode audit of every mixin, boots a dedicated server and a
+> headless client to the title screen, and takes over a world saved by Create: Adapted (blocks,
+> block entity contents, contraptions) -- all checked in CI on every push. See
+> [Running it](#1c-running-it-what-neoforges-patches-changed-under-the-mixins) and
+> [Taking over a Create: Adapted world](#1d-taking-over-a-create-adapted-world).
+> Still unchecked: real play on a client (rendering, GUIs), JEI and CC: Tweaked (off).
 
 ---
 
@@ -195,6 +192,49 @@ the client only; NeoForge has no per-config environment, so the client `MixinPlu
   like an inversion upstream and should be reported there before being "fixed" here.
 - Copycat blocks on the flat (non-AO) render path now take light from their own state, not the
   material's. Emission is unaffected; only an emissive-rendering material would look different.
+
+---
+
+## 1d. Taking over a Create: Adapted world
+
+The world this port is meant for was played with Create: Adapted (a NeoForge port of the original
+Create 6.0.10). Registry ids are the same apart from two renames, aliased in `LegacyCreateIds`
+(`create:simple_kinetic` block entity, `create:copper_nugget` item). The saved data is not: Create
+Fly rewrote nearly all of Create's serialization, so the original layout read as garbage or, worse,
+threw -- a mechanical crafter, chain conveyor or brass tunnel failed to load, a stock ticker could
+no longer be saved, and every contraption (windmill, bearing, piston...) vanished with its blocks.
+
+Two converters rewrite the original layout into Fly's before anything reads it:
+
+- `LegacyBlockEntityData`, on `BlockEntity.loadStatic` (chunks, schematics, contraption
+  disassembly);
+- `LegacyEntityData`, on `Entity.load` for `create:` entities (through the tag behind the
+  `TagValueInput`).
+
+What they translate: `{X,Y,Z}` positions and `asLong()` positions, string UUIDs, int and
+upper-case directions, JSON names, **millibuckets to droplets** (x81), NeoForge `ItemStackHandler`
+inventories (Create: Adapted nests the stack: `{Slot, Stack:{...}}`) and Create `ItemSlots`
+inventories into Fly's stack lists, nested LerpedFloat tank levels, pipe open ends, maps stored as
+entry lists, `[{Pos}]` position lists, glue boxes. Each rewrite keys on a shape only the original
+layout has, so a world Fly saved passes through untouched. Upper-case enum names are read by
+`LegacyEnumCodec` instead. Three Fly readers that threw on bad input now report it and carry on.
+
+`tools/migration-test.sh` (CI job `migration-test`) is the check: a production NeoForge server runs
+Create: Adapted, places every Create block, fills the ones that hold things (hoppers, merged
+fluids, a drain emptying a bucket), builds a bearing contraption with a glued chest, a powered shaft
+line, a belt with items and a chest of Create items with data components, and saves; then the same
+world boots with this jar and every block, block entity, item and fluid stack is compared. Current
+result: nothing lost, no load or save error.
+
+Known losses, all small:
+
+- an item part-way through a **sequenced assembly** keeps its item but loses its progress (Fly
+  tracks the sequence differently; `create:sequenced_assembly` is dropped);
+- `create:shadow_steel` and `create:refined_radiance` do not exist in Create Fly and disappear;
+- **trains** (graphs, signals, schedules in `create_tracks.dat`) are not covered by the test; the
+  world this is for has no railway data;
+- `TargetSpeed` of a speed controller (a ComputerCraft field) and items in flight from a weighted
+  ejector are not carried over.
 
 ---
 
