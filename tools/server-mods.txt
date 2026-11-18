@@ -1,7 +1,8 @@
 # The survival server's mods/ folder (2026-11-18), minus the two this port replaces
 # (create-adapted, createdieselgenerators-...-adapted). Read by fetch_server_mods.py.
+# A line may give the download URL after a tab (CurseForge-only mods); otherwise Modrinth is searched.
 ae2wtlib-26.2.0-beta.jar
-appliedenergistics2-26.2.1-alpha.jar
+appliedenergistics2-26.2.1-alpha.jar	https://edge.forgecdn.net/files/9031/936/appliedenergistics2-26.2.1-alpha.jar
 arc-neoforge-21.2.7.jar
 architectury-neoforge-21.1.12.jar
 balm-neoforge-26.2-26.2.0.9.jar

@@ -15,7 +15,11 @@ ROOT="$(pwd)/modlist-server"
 PASSWORD="ml-$$-$RANDOM"
 status=0
 
-rm -rf "$ROOT" && mkdir -p "$ROOT/mods" && cp "$MODS"/*.jar "$ROOT/mods/" && cp "$@" "$ROOT/mods/"
+rm -rf "$ROOT" && mkdir -p "$ROOT/mods" && cp "$MODS"/*.jar "$ROOT/mods/"
+echo "::group::Mods whose dependencies are not in the (partial) list"
+python3 -I "$TOOLS/prune_mods.py" "$ROOT/mods" "$@"
+echo "::endgroup::"
+cp "$@" "$ROOT/mods/"
 cd "$ROOT"
 echo "::group::Installing NeoForge $NEO server ($(ls mods | wc -l) mods)"
 curl -fsSL -o installer.jar "https://maven.neoforged.net/releases/net/neoforged/neoforge/$NEO/neoforge-$NEO-installer.jar"

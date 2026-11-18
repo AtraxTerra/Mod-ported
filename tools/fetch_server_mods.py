@@ -4,8 +4,9 @@
 Usage: fetch_server_mods.py <server-mods.txt> <dest-dir>
 
 For each file name: search Modrinth with the name's leading words, list the NeoForge versions of the
-top hits and keep the one that ships a file of exactly that name. Prints one line per jar (found /
-not on Modrinth) and exits 0 either way: a CurseForge-only mod is reported, not fatal.
+top hits and keep the one that ships a file of exactly that name. A line may instead give the URL after a
+tab. Prints one line per jar (found / not on Modrinth) and exits 0 either way: a mod that is not
+public, or only on CurseForge without a URL, is reported, not fatal.
 """
 import json
 import os
@@ -69,11 +70,12 @@ def main():
     os.makedirs(dest, exist_ok=True)
     found = missing = 0
     for line in open(listing):
-        name = line.strip()
+        name, _, direct = line.rstrip("\n").partition("\t")
+        name = name.strip()
         if not name or name.startswith("#"):
             continue
         try:
-            slug, url = find(name)
+            slug, url = ("direct", direct.strip()) if direct.strip() else find(name)
         except Exception as e:
             slug, url = None, None
             print(f"error   {name}: {e}")
