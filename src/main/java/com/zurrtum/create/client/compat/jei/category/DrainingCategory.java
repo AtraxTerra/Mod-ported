@@ -94,6 +94,9 @@ public class DrainingCategory extends CreateCategory<RecipeHolder<EmptyingRecipe
                         ingredient
                     )
                 ));
+            } catch (RuntimeException e) {
+                // Port: see JeiPlatform.leftOut.
+                com.zurrtum.create.client.compat.jei.JeiPlatform.leftOut("draining", stack, e);
             }
         });
         return recipes;

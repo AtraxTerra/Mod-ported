@@ -1,8 +1,10 @@
 package com.zurrtum.create.client.compat.jei;
 
+import com.zurrtum.create.Create;
 import com.zurrtum.create.foundation.recipe.ComponentsIngredient;
 import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import com.zurrtum.create.platform.FluidUnits;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
@@ -55,5 +57,16 @@ public final class JeiPlatform {
     /** JEI's (NeoForge, millibucket) fluid stack -> Create's. */
     public static FluidStack fromJei(net.neoforged.neoforge.fluids.FluidStack stack) {
         return new FluidStack(stack.getFluid(), FluidUnits.toDroplets(stack.getAmount()), stack.getComponentsPatch());
+    }
+
+    /**
+     * Draining and spout filling find their recipes by trying every item stack JEI knows through its
+     * fluid handler, other mods' handlers included. One that throws used to stop JEI's whole Create
+     * plugin, the categories registered after it included (NTM's chemical thrower throws when it is
+     * emptied); that item is left out of the category instead, with this line in the log.
+     */
+    public static void leftOut(String category, ItemStack stack, RuntimeException e) {
+        Create.LOGGER.warn("JEI {}: {} left out, its fluid handler threw {}", category,
+            BuiltInRegistries.ITEM.getKey(stack.getItem()), e.toString());
     }
 }

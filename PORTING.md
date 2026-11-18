@@ -307,6 +307,12 @@ empty container): JEI drops the rest of a plugin's `registerRecipes`, so spout f
 cutting were empty too. `DrainingCategory` now leaves such an item out, as `SpoutFillingCategory`
 already did for an empty result.
 
+With draining through, spout filling stopped the plugin the same way on another mod's item: both
+categories try every item stack JEI knows through its fluid handler, and NTM's chemical thrower
+throws from its handler when emptied. An item whose handler throws is now left out of the category,
+with one line in the log (`JeiPlatform.leftOut`), and what JEI registers after spout filling -- toolbox
+dyeing, block cutting -- is back with it.
+
 ## 1h. Picture-in-picture renderers: one texture cache, several renderers
 
 Ten of Create's GUI renderers keep their textures in a static cache (`TEXTURES`, by element id or
