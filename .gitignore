@@ -43,3 +43,4 @@ replay_*.log
 /run/
 /runs/
 /.neoforge/
+__pycache__/

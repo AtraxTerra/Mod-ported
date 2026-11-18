@@ -92,9 +92,11 @@ printf 'setworldspawn 0 -60 0\nforceload add %d %d %d %d\n' "-$reach" "-$reach" 
 sleep 10
 awk -F'\t' '{print "setblock "$1" "$2" "$3" "$4}' grid.tsv | rcon > placeA.tsv
 sleep 20
-python3 -I "$TOOLS/migration_fill.py" grid.tsv "$half" fill.cmds extra.cmds
+python3 -I "$TOOLS/migration_fill.py" grid.tsv "$half" fill.cmds unfill.cmds extra.cmds
 rcon < fill.cmds > fillA.tsv
 sleep 40
+rcon < unfill.cmds > /dev/null
+sleep 2
 rcon < extra.cmds > extraA.tsv
 awk -F'\t' '{print "execute if block "$1" "$2" "$3" "$4}' grid.tsv | rcon > presentA.tsv
 awk -F'\t' '{print "data get block "$1" "$2" "$3}' grid.tsv | rcon > dataA.tsv

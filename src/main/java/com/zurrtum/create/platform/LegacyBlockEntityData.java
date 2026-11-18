@@ -44,6 +44,10 @@ public final class LegacyBlockEntityData {
     /** Keys whose (vanilla) Direction value the original Create wrote as an int or upper case. */
     private static final Set<String> DIRECTION_KEYS = Set.of(
         "PreferredSpoutput", "DisabledSpoutput", "Ringing", "StackEnteredFrom", "Flaps", "Sides", "InDirection");
+    /** Keys whose vanilla enum value (DyeColor) the original Create wrote as {@code Enum.name()}. */
+    private static final Set<String> LOWER_CASE_KEYS = Set.of("Dye");
+    /** Keys holding a block position the original Create wrote as {@code BlockPos.asLong()}. */
+    private static final Set<String> LONG_POS_KEYS = Set.of("LastKnownPosition");
     private static final Map<String, Consumer<CompoundTag>> BY_TYPE = new HashMap<>();
 
     private LegacyBlockEntityData() {
@@ -57,6 +61,7 @@ public final class LegacyBlockEntityData {
         }
         try {
             values(tag);
+            text(tag, "CustomName");
             Consumer<CompoundTag> fixer = BY_TYPE.get(id.substring("create:".length()));
             if (fixer != null) {
                 fixer.accept(tag);
@@ -91,6 +96,12 @@ public final class LegacyBlockEntityData {
             if (pos != null) {
                 return new IntArrayTag(pos);
             }
+            // TransportedItemStack (belts, depots, drains, tunnels): Create: Adapted calls its stack "Stack"
+            if (compound.contains("InSegment") && compound.get("Stack") instanceof CompoundTag stack && !compound.contains(
+                "Item")) {
+                compound.remove("Stack");
+                compound.put("Item", stack);
+            }
             values(compound);
             return compound;
         }
@@ -112,7 +123,15 @@ public final class LegacyBlockEntityData {
                 Direction d = Direction.byName(s.toLowerCase(Locale.ROOT));
                 return d == null ? value : StringTag.valueOf(d.getSerializedName());
             }
+            if (LOWER_CASE_KEYS.contains(key) && !s.equals(s.toLowerCase(Locale.ROOT))) {
+                return StringTag.valueOf(s.toLowerCase(Locale.ROOT));
+            }
             return value;
+        }
+        if (LONG_POS_KEYS.contains(key) && value instanceof LongTag(long packed)) {
+            return new IntArrayTag(new int[]{
+                net.minecraft.core.BlockPos.getX(packed), net.minecraft.core.BlockPos.getY(packed),
+                net.minecraft.core.BlockPos.getZ(packed)});
         }
         if (DIRECTION_KEYS.contains(key) && value instanceof NumericTag number) {
             return StringTag.valueOf(Direction.from3DDataValue(number.asInt().orElse(0)).getSerializedName());
@@ -141,8 +160,12 @@ public final class LegacyBlockEntityData {
                         for (String k : level.keySet()) {
                             tank.put(k, level.get(k));
                         }
-                        if (tank.get("TankContent") instanceof CompoundTag fluid) {
+                        CompoundTag fluid = fluidOf(tank.get("TankContent"));
+                        if (fluid != null) {
                             millibucketsToDroplets(fluid);
+                            tank.put("TankContent", fluid);
+                        } else {
+                            tank.remove("TankContent");
                         }
                     }
                 }
@@ -152,8 +175,8 @@ public final class LegacyBlockEntityData {
                 "OpenEnd") instanceof CompoundTag openEnd && openEnd.contains("Location")) {
                 CompoundTag fixed = new CompoundTag();
                 fixed.putBoolean("Pulling", openEnd.getBooleanOr("Pulling", false));
-                CompoundTag fluid = openEnd.getCompoundOrEmpty("Tank").copy();
-                if (!fluid.isEmpty()) {
+                CompoundTag fluid = fluidOf(openEnd.contains("Tank") ? openEnd.get("Tank") : openEnd);
+                if (fluid != null) {
                     millibucketsToDroplets(fluid);
                     fixed.put("Fluid", fluid);
                 }
@@ -191,14 +214,26 @@ public final class LegacyBlockEntityData {
             }
         }, "basin");
         type(t -> {
-            if (t.get("TankContent") instanceof CompoundTag fluid) {
+            if (t.contains("TankContent")) {
+                CompoundTag fluid = fluidOf(t.get("TankContent"));
                 t.remove("TankContent");
-                if (!fluid.isEmpty() && !fluid.getStringOr("id", "minecraft:empty").equals("minecraft:empty")) {
+                if (fluid != null) {
                     millibucketsToDroplets(fluid);
                     t.put("Fluid", fluid);
                 }
             }
         }, "fluid_tank", "creative_fluid_tank");
+        type(t -> {
+            // the hose pulley's internal tank
+            if (t.contains("Tank") && !t.contains("Fluid")) {
+                CompoundTag fluid = fluidOf(t.get("Tank"));
+                t.remove("Tank");
+                if (fluid != null) {
+                    millibucketsToDroplets(fluid);
+                    t.put("Fluid", fluid);
+                }
+            }
+        }, "hose_pulley");
         type(t -> {
             if (t.get("Inventory") instanceof CompoundTag) {
                 t.put("Inventory", compact(slots(t.get("Inventory"))));
@@ -336,6 +371,16 @@ public final class LegacyBlockEntityData {
         }, "stock_ticker");
     }
 
+    static {
+        type(t -> {
+            if (t.get("Facing") instanceof NumericTag facing) {
+                // a horizontal index (get2DDataValue), not a 3D one
+                t.putString("Facing", Direction.from2DDataValue(Math.floorMod(facing.asInt().orElse(0), 4)).getSerializedName());
+            }
+        }, "table_cloth");
+        type(t -> text(t, "PrevTrainName"), "track_station");
+    }
+
     private static void type(Consumer<CompoundTag> fixer, String... ids) {
         for (String id : ids) {
             BY_TYPE.merge(id, fixer, Consumer::andThen);
@@ -370,7 +415,8 @@ public final class LegacyBlockEntityData {
 
     /**
      * The stacks of an inventory in either original layout, by slot, {@code null} for an empty slot:
-     * NeoForge's ItemStackHandler {@code {Size, Items:[{Slot, id, count, components}]}} or Create's
+     * an ItemStackHandler {@code {Size, Items:[{Slot, Stack:{id, count, components}}]}} (NeoForge's own
+     * inlines the stack next to {@code Slot}; both are read) or Create's
      * ItemSlots {@code {size, items:{"<slot>": {id, count, components}}}}. At least {@code minSize} long.
      */
     private static List<CompoundTag> slots(Tag inventory, int minSize) {
@@ -379,9 +425,10 @@ public final class LegacyBlockEntityData {
             int size = Math.max(inv.getIntOr("Size", 0), inv.getIntOr("size", 0));
             if (inv.get("Items") instanceof ListTag items) {
                 for (Tag e : items) {
-                    if (e instanceof CompoundTag stack) {
-                        int slot = stack.getIntOr("Slot", out.size());
-                        set(out, slot, stack);
+                    if (e instanceof CompoundTag entry) {
+                        int slot = entry.getIntOr("Slot", out.size());
+                        // Create: Adapted nests the stack: {Slot, Stack:{id, count}}; NeoForge inlines it
+                        set(out, slot, entry.get("Stack") instanceof CompoundTag nested ? nested : entry);
                     }
                 }
             } else if (inv.get("items") instanceof CompoundTag items) {
@@ -450,6 +497,22 @@ public final class LegacyBlockEntityData {
             }
         }
         return list;
+    }
+
+    /**
+     * The fluid stack in an original tank NBT: NeoForge's FluidTank wrote {@code {Fluid:{id,amount}}},
+     * a bare FluidStack is {@code {id,amount}}; {@code null} when empty. Returns a copy.
+     */
+    private static CompoundTag fluidOf(Tag tag) {
+        if (!(tag instanceof CompoundTag compound)) {
+            return null;
+        }
+        CompoundTag fluid = compound.get("Fluid") instanceof CompoundTag inner ? inner : compound;
+        String id = fluid.getStringOr("id", "minecraft:empty");
+        if (id.equals("minecraft:empty") || fluid.getIntOr("amount", 0) <= 0) {
+            return null;
+        }
+        return fluid.copy();
     }
 
     private static void millibucketsToDroplets(CompoundTag fluid) {
