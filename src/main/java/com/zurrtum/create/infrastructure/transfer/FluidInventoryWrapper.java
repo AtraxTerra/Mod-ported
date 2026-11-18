@@ -45,7 +45,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
     public void clearContent() {
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<FluidResource> view : ResourceView.nonEmpty(storage)) {
-                view.extract(view.getResource(), view.getAmount(), transaction);
+                view.extract(view.getResource(), view.getAmountAsInt(), transaction);
             }
             transaction.commit();
         }
@@ -63,12 +63,12 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
     @Override
     public int count(FluidStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long extract = storage.extract(
+            int extract = storage.extract(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 maxAmount,
                 transaction
             );
-            return (int) extract;
+            return extract;
         }
     }
 
@@ -79,7 +79,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
                 if (predicate.test(stack)) {
-                    long extract = view.extract(variant, view.getAmount(), transaction);
+                    int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -100,7 +100,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
                 if (predicate.test(stack)) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -117,7 +117,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             for (ResourceView<FluidResource> view : ResourceView.nonEmpty(storage)) {
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
-                long extract = view.extract(variant, view.getAmount(), transaction);
+                int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -136,7 +136,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             for (ResourceView<FluidResource> view : ResourceView.nonEmpty(storage)) {
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
-                long extract = storage.extract(variant, maxAmount, transaction);
+                int extract = storage.extract(variant, maxAmount, transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -158,12 +158,12 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
     @Override
     public int countSpace(FluidStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 maxAmount,
                 transaction
             );
-            return (int) insert;
+            return insert;
         }
     }
 
@@ -196,7 +196,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 Object2IntMap.Entry<FluidStack> entry = iterator.next();
                 FluidStack stack = entry.getKey();
                 int amount = entry.getIntValue();
-                long insert = storage.insert(
+                int insert = storage.insert(
                     FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                     amount,
                     transaction
@@ -221,13 +221,13 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
     @Override
     public int extract(FluidStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long extract = storage.extract(
+            int extract = storage.extract(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 maxAmount,
                 transaction
             );
             transaction.commit();
-            return (int) extract;
+            return extract;
         }
     }
 
@@ -238,7 +238,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
                 if (predicate.test(stack)) {
-                    long extract = view.extract(variant, view.getAmount(), transaction);
+                    int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -260,7 +260,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
                 if (predicate.test(stack)) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -277,7 +277,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<FluidResource> view : ResourceView.nonEmpty(storage)) {
                 FluidResource variant = view.getResource();
-                long extract = view.extract(variant, view.getAmount(), transaction);
+                int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -296,7 +296,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<FluidResource> view : ResourceView.nonEmpty(storage)) {
                 FluidResource variant = view.getResource();
-                long extract = view.extract(variant, maxAmount, transaction);
+                int extract = view.extract(variant, maxAmount, transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -345,15 +345,15 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             return FluidStack.EMPTY;
         }
         FluidResource variant = view.getResource();
-        return new FluidStack(variant.getFluid(), view.getAmount(), variant.getComponentsPatch());
+        return new FluidStack(variant.getFluid(), view.getAmountAsInt(), variant.getComponentsPatch());
     }
 
     protected void init() {
         int max = 0;
         for (ResourceView<FluidResource> view : ResourceView.all(storage)) {
-            long capacity = view.getCapacity();
+            int capacity = view.getCapacityAsInt();
             if (max < capacity) {
-                max = (int) capacity;
+                max = capacity;
             }
         }
         capacity = max;
@@ -373,13 +373,13 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
     @Override
     public int insert(FluidStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 maxAmount,
                 transaction
             );
             transaction.commit();
-            return (int) insert;
+            return insert;
         }
     }
 
@@ -427,7 +427,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 Object2IntMap.Entry<FluidStack> entry = iterator.next();
                 FluidStack stack = entry.getKey();
                 int amount = entry.getIntValue();
-                long insert = storage.insert(
+                int insert = storage.insert(
                     FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                     amount,
                     transaction
@@ -468,13 +468,13 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             return 0;
         }
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 stack.getAmount(),
                 transaction
             );
             transaction.commit();
-            return (int) insert;
+            return insert;
         }
     }
 
@@ -498,7 +498,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         }
         try (Transaction transaction = Transaction.openRoot()) {
             int amount = stack.getAmount();
-            long extract = storage.extract(
+            int extract = storage.extract(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 amount,
                 transaction
@@ -521,7 +521,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 FluidResource variant = view.getResource();
                 FluidStack stack = FluidInventoryStorage.getCachedStack(variant);
                 if (predicate.test(stack)) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -547,7 +547,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
     @Override
     public boolean preciseInsert(FluidStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                 maxAmount,
                 transaction
@@ -585,7 +585,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 Object2IntMap.Entry<FluidStack> entry = iterator.next();
                 FluidStack stack = entry.getKey();
                 int amount = entry.getIntValue();
-                long insert = storage.insert(
+                int insert = storage.insert(
                     FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
                     amount,
                     transaction
@@ -609,7 +609,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             return FluidStack.EMPTY;
         }
         FluidResource variant = view.getResource();
-        long amount = view.getAmount();
+        int amount = view.getAmountAsInt();
         if (variant.isEmpty() || amount == 0) {
             return FluidStack.EMPTY;
         }
@@ -630,7 +630,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
             return FluidStack.EMPTY;
         }
         FluidResource variant = view.getResource();
-        if (variant.isEmpty() || view.getAmount() == 0) {
+        if (variant.isEmpty() || view.getAmountAsInt() == 0) {
             return FluidStack.EMPTY;
         }
         try (Transaction transaction = Transaction.openRoot()) {
@@ -651,7 +651,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         }
         FluidResource variant = view.getResource();
         try (Transaction transaction = Transaction.openRoot()) {
-            if (variant.isEmpty() || view.getAmount() == 0) {
+            if (variant.isEmpty() || view.getAmountAsInt() == 0) {
                 if (stack.isEmpty()) {
                     return;
                 }
@@ -663,7 +663,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 );
             } else if (FluidInventoryStorage.matches(variant, stack)) {
                 int amount = stack.getAmount();
-                int targetAmount = (int) view.getAmount();
+                int targetAmount = view.getAmountAsInt();
                 if (amount == targetAmount) {
                     return;
                 }
@@ -674,7 +674,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                     view.extract(variant, change, transaction);
                 }
             } else {
-                view.extract(variant, view.getAmount(), transaction);
+                view.extract(variant, view.getAmountAsInt(), transaction);
                 insert(
                     view,
                     FluidResource.of(stack.getFluid(), stack.getComponentChanges()),
@@ -1122,13 +1122,13 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                 List<ResourceView<FluidResource>> emptys = new ArrayList<>();
                 FluidResource variant = FluidResource.of(stack.getFluid(), stack.getComponentChanges());
                 int maxAmount = stack.getAmount();
-                long remaining = maxAmount;
+                int remaining = maxAmount;
                 for (int i = 0, size = storage.size(); i < size; i++) {
                     ResourceView<FluidResource> target = new ResourceView<>(storage, i);
-                    if (target.getAmount() == 0 || target.isResourceBlank()) {
+                    if (target.getAmountAsInt() == 0 || target.isResourceBlank()) {
                         emptys.add(target);
                     } else {
-                        long insert = target.insert(variant, remaining, transaction);
+                        int insert = target.insert(variant, remaining, transaction);
                         if (insert == remaining) {
                             transaction.commit();
                             return maxAmount;
@@ -1137,7 +1137,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                     }
                 }
                 for (ResourceView<FluidResource> target : ResourceView.all(emptys)) {
-                    long insert = target.insert(variant, remaining, transaction);
+                    int insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         transaction.commit();
                         return maxAmount;
@@ -1145,7 +1145,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
                     remaining -= insert;
                 }
                 transaction.commit();
-                return maxAmount - (int) remaining;
+                return maxAmount - remaining;
             }
         }
 
@@ -1171,7 +1171,7 @@ public abstract class FluidInventoryWrapper<T extends ResourceHandler<FluidResou
         public FluidStack next() {
             ResourceView<FluidResource> view = iterator.next();
             FluidResource variant = view.getResource();
-            return new FluidStack(variant.getFluid(), view.getAmount(), variant.getComponentsPatch());
+            return new FluidStack(variant.getFluid(), view.getAmountAsInt(), variant.getComponentsPatch());
         }
     }
 }

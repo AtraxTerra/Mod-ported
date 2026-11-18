@@ -46,7 +46,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     public void clearContent() {
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
-                view.extract(view.getResource(), view.getAmount(), transaction);
+                view.extract(view.getResource(), view.getAmountAsInt(), transaction);
             }
             transaction.commit();
         }
@@ -64,12 +64,12 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     @Override
     public int count(ItemStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long extract = storage.extract(
+            int extract = storage.extract(
                 ItemResource.of(stack),
                 maxAmount,
                 transaction
             );
-            return (int) extract;
+            return extract;
         }
     }
 
@@ -81,7 +81,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
-                    long extract = view.extract(variant, view.getAmount(), transaction);
+                    int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -103,7 +103,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -125,7 +125,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract != maxAmount) {
                         continue;
                     }
@@ -142,19 +142,19 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         if (maxAmount == 0) {
             return 0;
         }
-        long count = 0;
+        int count = 0;
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
                 if (predicate.test(variant.toStack())) {
-                    count += view.extract(variant, view.getAmount(), transaction);
+                    count += view.extract(variant, view.getAmountAsInt(), transaction);
                     if (count >= maxAmount) {
                         return maxAmount;
                     }
                 }
             }
         }
-        return (int) count;
+        return count;
     }
 
     @Override
@@ -164,7 +164,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
-                long extract = view.extract(variant, view.getAmount(), transaction);
+                int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -184,7 +184,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
-                long extract = storage.extract(variant, maxAmount, transaction);
+                int extract = storage.extract(variant, maxAmount, transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -206,12 +206,12 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     @Override
     public int countSpace(ItemStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 ItemResource.of(stack),
                 maxAmount,
                 transaction
             );
-            return (int) insert;
+            return insert;
         }
     }
 
@@ -244,7 +244,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 Object2IntMap.Entry<ItemStack> entry = iterator.next();
                 ItemStack stack = entry.getKey();
                 int count = entry.getIntValue();
-                long insert = storage.insert(
+                int insert = storage.insert(
                     ItemResource.of(stack),
                     count,
                     transaction
@@ -279,13 +279,13 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     @Override
     public int extract(ItemStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long extract = storage.extract(
+            int extract = storage.extract(
                 ItemResource.of(stack),
                 maxAmount,
                 transaction
             );
             transaction.commit();
-            return (int) extract;
+            return extract;
         }
     }
 
@@ -297,7 +297,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
-                    long extract = view.extract(variant, view.getAmount(), transaction);
+                    int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -320,7 +320,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemResource variant = view.getResource();
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -379,7 +379,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     ItemStack stack = entry.getKey();
                     int count = entry.getIntValue();
                     ItemResource variant = cache.computeIfAbsent(stack, ItemResource::of);
-                    long extract = view.extract(variant, count, transaction);
+                    int extract = view.extract(variant, count, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -420,7 +420,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
-                long extract = view.extract(variant, view.getAmount(), transaction);
+                int extract = view.extract(variant, view.getAmountAsInt(), transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -440,7 +440,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
-                long extract = storage.extract(variant, maxAmount, transaction);
+                int extract = storage.extract(variant, maxAmount, transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -458,7 +458,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
                 int maxAmount = variant.getComponents().getOrDefault(DataComponents.MAX_STACK_SIZE, 1);
-                long extract = storage.extract(variant, maxAmount, transaction);
+                int extract = storage.extract(variant, maxAmount, transaction);
                 if (extract == 0) {
                     continue;
                 }
@@ -478,7 +478,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
                     int maxAmount = variant.getComponents().getOrDefault(DataComponents.MAX_STACK_SIZE, 1);
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract == 0) {
                         continue;
                     }
@@ -496,12 +496,12 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         if (maxAmount == 0) {
             return 0;
         }
-        long remaining = maxAmount;
+        int remaining = maxAmount;
         try (Transaction transaction = Transaction.openRoot()) {
             for (ResourceView<ItemResource> view : ResourceView.nonEmpty(storage)) {
                 ItemResource variant = view.getResource();
                 if (predicate.test(variant.toStack())) {
-                    long extract = view.extract(variant, remaining, transaction);
+                    int extract = view.extract(variant, remaining, transaction);
                     if (extract == remaining) {
                         transaction.commit();
                         return maxAmount;
@@ -552,15 +552,15 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             return ItemStack.EMPTY;
         }
         ItemResource variant = view.getResource();
-        return new ItemStack(variant.typeHolder(), (int) view.getAmount(), variant.getComponentsPatch());
+        return new ItemStack(variant.typeHolder(), view.getAmountAsInt(), variant.getComponentsPatch());
     }
 
     protected void init() {
         int max = 0;
         for (ResourceView<ItemResource> view : ResourceView.all(storage)) {
-            long capacity = view.getCapacity();
+            int capacity = view.getCapacityAsInt();
             if (max < capacity) {
-                max = (int) capacity;
+                max = capacity;
             }
         }
         capacity = max;
@@ -580,13 +580,13 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     @Override
     public int insert(ItemStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 ItemResource.of(stack),
                 maxAmount,
                 transaction
             );
             transaction.commit();
-            return (int) insert;
+            return insert;
         }
     }
 
@@ -634,7 +634,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 Object2IntMap.Entry<ItemStack> entry = iterator.next();
                 ItemStack stack = entry.getKey();
                 int count = entry.getIntValue();
-                long insert = storage.insert(
+                int insert = storage.insert(
                     ItemResource.of(stack),
                     count,
                     transaction
@@ -691,13 +691,13 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     @Override
     public int insertExist(ItemStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 ItemResource.of(stack),
                 maxAmount,
                 transaction
             );
             transaction.commit();
-            return (int) insert;
+            return insert;
         }
     }
 
@@ -721,7 +721,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         }
         try (Transaction transaction = Transaction.openRoot()) {
             int amount = stack.getCount();
-            long extract = storage.extract(
+            int extract = storage.extract(
                 ItemResource.of(stack),
                 amount,
                 transaction
@@ -745,7 +745,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             ItemStack stack = variant.toStack();
             if (predicate.test(stack)) {
                 try (Transaction transaction = Transaction.openRoot()) {
-                    long extract = storage.extract(variant, maxAmount, transaction);
+                    int extract = storage.extract(variant, maxAmount, transaction);
                     if (extract != maxAmount) {
                         continue;
                     }
@@ -769,7 +769,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
     @Override
     public boolean preciseInsert(ItemStack stack, int maxAmount) {
         try (Transaction transaction = Transaction.openRoot()) {
-            long insert = storage.insert(
+            int insert = storage.insert(
                 ItemResource.of(stack),
                 maxAmount,
                 transaction
@@ -807,7 +807,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 Object2IntMap.Entry<ItemStack> entry = iterator.next();
                 ItemStack stack = entry.getKey();
                 int count = entry.getIntValue();
-                long insert = storage.insert(
+                int insert = storage.insert(
                     ItemResource.of(stack),
                     count,
                     transaction
@@ -831,7 +831,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             return ItemStack.EMPTY;
         }
         ItemResource variant = view.getResource();
-        long amount = view.getAmount();
+        int amount = view.getAmountAsInt();
         if (variant.isEmpty() || amount == 0) {
             return ItemStack.EMPTY;
         }
@@ -852,7 +852,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             return ItemStack.EMPTY;
         }
         ItemResource variant = view.getResource();
-        if (variant.isEmpty() || view.getAmount() == 0) {
+        if (variant.isEmpty() || view.getAmountAsInt() == 0) {
             return ItemStack.EMPTY;
         }
         try (Transaction transaction = Transaction.openRoot()) {
@@ -873,7 +873,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         }
         ItemResource variant = view.getResource();
         try (Transaction transaction = Transaction.openRoot()) {
-            if (variant.isEmpty() || view.getAmount() == 0) {
+            if (variant.isEmpty() || view.getAmountAsInt() == 0) {
                 if (stack.isEmpty()) {
                     return;
                 }
@@ -885,7 +885,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 );
             } else if (variant.matches(stack)) {
                 int amount = stack.getCount();
-                int targetCount = (int) view.getAmount();
+                int targetCount = view.getAmountAsInt();
                 if (amount == targetCount) {
                     return;
                 }
@@ -896,7 +896,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     view.extract(variant, change, transaction);
                 }
             } else {
-                view.extract(variant, view.getAmount(), transaction);
+                view.extract(variant, view.getAmountAsInt(), transaction);
                 insert(
                     view,
                     ItemResource.of(stack),
@@ -916,7 +916,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
             ItemStack stack = variant.toStack();
             if (predicate.test(stack)) {
                 try (Transaction transaction = Transaction.openRoot()) {
-                    long amount = view.getAmount();
+                    int amount = view.getAmountAsInt();
                     ItemStack replace = update.apply(new ItemStack(
                         variant.typeHolder(),
                         (int) amount,
@@ -938,13 +938,13 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                             return true;
                         }
                     } else {
-                        long extract = view.extract(variant, amount, transaction);
+                        int extract = view.extract(variant, amount, transaction);
                         if (extract != 0) {
                             if (replace.isEmpty()) {
                                 transaction.commit();
                                 return true;
                             }
-                            long insert = storage.insert(
+                            int insert = storage.insert(
                                 ItemResource.of(replace),
                                 replace.getCount(),
                                 transaction
@@ -1548,13 +1548,13 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 List<ResourceView<ItemResource>> emptys = new ArrayList<>();
                 ItemResource variant = ItemResource.of(stack);
                 int maxAmount = stack.getCount();
-                long remaining = maxAmount;
+                int remaining = maxAmount;
                 for (int i = 0, size = storage.size(); i < size; i++) {
                     ResourceView<ItemResource> target = new ResourceView<>(storage, i);
-                    if (target.getAmount() == 0 || target.isResourceBlank()) {
+                    if (target.getAmountAsInt() == 0 || target.isResourceBlank()) {
                         emptys.add(target);
                     } else {
-                        long insert = target.insert(variant, remaining, transaction);
+                        int insert = target.insert(variant, remaining, transaction);
                         if (insert == remaining) {
                             transaction.commit();
                             return maxAmount;
@@ -1563,7 +1563,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     }
                 }
                 for (ResourceView<ItemResource> target : ResourceView.all(emptys)) {
-                    long insert = target.insert(variant, remaining, transaction);
+                    int insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         transaction.commit();
                         return maxAmount;
@@ -1571,7 +1571,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     remaining -= insert;
                 }
                 transaction.commit();
-                return maxAmount - (int) remaining;
+                return maxAmount - remaining;
             }
         }
 
@@ -1579,16 +1579,16 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         public int countSpace(ItemStack stack, int maxAmount, int start, int end) {
             try (Transaction transaction = Transaction.openRoot()) {
                 ItemResource variant = ItemResource.of(stack);
-                long remaining = maxAmount;
+                int remaining = maxAmount;
                 for (int i = start; i <= end; i++) {
                     ResourceView<ItemResource> target = new ResourceView<>(storage, i);
-                    long insert = target.insert(variant, remaining, transaction);
+                    int insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         return maxAmount;
                     }
                     remaining -= insert;
                 }
-                return maxAmount - (int) remaining;
+                return maxAmount - remaining;
             }
         }
 
@@ -1622,7 +1622,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     ItemStack stack = entry.getKey();
                     int count = entry.getIntValue();
                     ItemResource variant = ItemResource.of(stack);
-                    long remaining = count;
+                    int remaining = count;
                     for (int i = start; i <= end; i++) {
                         ResourceView<ItemResource> target = new ResourceView<>(storage, i);
                         remaining -= target.insert(variant, remaining, transaction);
@@ -1647,10 +1647,10 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         public int insert(ItemStack stack, int maxAmount, int start, int end) {
             try (Transaction transaction = Transaction.openRoot()) {
                 ItemResource variant = ItemResource.of(stack);
-                long remaining = maxAmount;
+                int remaining = maxAmount;
                 for (int i = start; i <= end; i++) {
                     ResourceView<ItemResource> target = new ResourceView<>(storage, i);
-                    long insert = target.insert(variant, remaining, transaction);
+                    int insert = target.insert(variant, remaining, transaction);
                     if (insert == remaining) {
                         transaction.commit();
                         return maxAmount;
@@ -1658,7 +1658,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     remaining -= insert;
                 }
                 transaction.commit();
-                return maxAmount - (int) remaining;
+                return maxAmount - remaining;
             }
         }
 
@@ -1710,7 +1710,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                         ItemStack stack = entry.getKey();
                         int count = entry.getIntValue();
                         ItemResource variant = cache.computeIfAbsent(stack, ItemResource::of);
-                        long insert = slot.insert(variant, count, transaction);
+                        int insert = slot.insert(variant, count, transaction);
                         if (insert == 0) {
                             continue;
                         }
@@ -1790,7 +1790,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                     ItemStack stack = entry.getKey();
                     int count = entry.getIntValue();
                     ItemResource variant = ItemResource.of(stack);
-                    long remaining = count;
+                    int remaining = count;
                     for (int i = start; i <= end; i++) {
                         ResourceView<ItemResource> target = new ResourceView<>(storage, i);
                         remaining -= target.insert(variant, remaining, transaction);
@@ -1837,7 +1837,7 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                 ItemStack stack = variant.toStack();
                 if (predicate.test(stack)) {
                     try (Transaction transaction = Transaction.openRoot()) {
-                        long amount = slot.getAmount();
+                        int amount = slot.getAmountAsInt();
                         ItemStack replace = update.apply(new ItemStack(
                             variant.typeHolder(),
                             (int) amount,
@@ -1859,13 +1859,13 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
                                 return true;
                             }
                         } else {
-                            long extract = slot.extract(variant, amount, transaction);
+                            int extract = slot.extract(variant, amount, transaction);
                             if (extract != 0) {
                                 if (replace.isEmpty()) {
                                     transaction.commit();
                                     return true;
                                 }
-                                long insert = slot.insert(
+                                int insert = slot.insert(
                                     ItemResource.of(replace),
                                     replace.getCount(),
                                     transaction
@@ -1904,11 +1904,11 @@ public abstract class InventoryWrapper<T extends ResourceHandler<ItemResource>, 
         @Override
         public ItemStack next() {
             ResourceView<ItemResource> view = iterator.next();
-            if (view.getAmount() == 0 || view.isResourceBlank()) {
+            if (view.getAmountAsInt() == 0 || view.isResourceBlank()) {
                 return ItemStack.EMPTY;
             }
             ItemResource variant = view.getResource();
-            return new ItemStack(variant.typeHolder(), (int) view.getAmount(), variant.getComponentsPatch());
+            return new ItemStack(variant.typeHolder(), view.getAmountAsInt(), variant.getComponentsPatch());
         }
     }
 }

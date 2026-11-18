@@ -49,6 +49,24 @@ public record ResourceView<T extends Resource>(ResourceHandler<T> handler, int i
         return handler.getCapacityAsLong(index, getResource());
     }
 
+    /**
+     * The amount as an {@code int}, saturating rather than overflowing.
+     *
+     * <p>Fabric's Transfer API counted in {@code long}; NeoForge counts in {@code int}. Upstream's
+     * adapters therefore pass amounts straight from a view into an insert or extract call, which no
+     * longer type-checks. These two accessors exist so those call sites read as they did, with the
+     * narrowing stated once and safely, instead of scattering casts that would silently wrap on a
+     * value no real inventory can hold anyway.
+     */
+    public int getAmountAsInt() {
+        return (int) Math.min(getAmount(), Integer.MAX_VALUE);
+    }
+
+    /** The capacity as an {@code int}, saturating. See {@link #getAmountAsInt()}. */
+    public int getCapacityAsInt() {
+        return (int) Math.min(getCapacity(), Integer.MAX_VALUE);
+    }
+
     public boolean isResourceBlank() {
         return getResource().isEmpty() || getAmount() <= 0;
     }

@@ -20,7 +20,7 @@ import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.access.StackItemAccess;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -177,8 +177,9 @@ public class AllTransfer {
             return false;
         }
         // An ItemAccess replaces Fabric's ContainerItemContext: it describes the stack being
-        // operated on and carries the updated one back. Nothing to close.
-        return Capabilities.Fluid.ITEM.getCapability(stack, new StackItemAccess(stack)) != null;
+        // operated on and carries the updated one back. Nothing to close. The capability is
+        // queried through the access, which is the route NeoForge's own FluidUtil documents.
+        return ItemAccess.forStack(stack).getCapability(Capabilities.Fluid.ITEM) != null;
     }
 
     @Nullable
@@ -186,8 +187,8 @@ public class AllTransfer {
         if (DISABLE) {
             return null;
         }
-        StackItemAccess access = new StackItemAccess(stack);
-        ResourceHandler<FluidResource> inventory = Capabilities.Fluid.ITEM.getCapability(stack, access);
+        ItemAccess access = ItemAccess.forStack(stack);
+        ResourceHandler<FluidResource> inventory = access.getCapability(Capabilities.Fluid.ITEM);
         if (inventory == null) {
             return null;
         }

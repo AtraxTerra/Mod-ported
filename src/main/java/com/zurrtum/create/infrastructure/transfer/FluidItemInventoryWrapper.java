@@ -50,12 +50,12 @@ public class FluidItemInventoryWrapper extends FluidInventoryWrapper<ResourceHan
 
     @Override
     public ItemStack getContainer() {
-        return access.getResource().toStack(access.getAmount());
+        return access.getResource().toStack(access.getAmountAsInt());
     }
 
     @Override
     public boolean isEmpty() {
-        return access.getResource().isEmpty() || access.getAmount() <= 0;
+        return access.getResource().isEmpty() || access.getAmountAsInt() <= 0;
     }
 
     @Override
@@ -197,9 +197,9 @@ public class FluidItemInventoryWrapper extends FluidInventoryWrapper<ResourceHan
             int count = 0;
             int max = 0;
             for (ResourceView<FluidResource> view : ResourceView.all(storage)) {
-                long capacity = view.getCapacity();
+                int capacity = view.getCapacityAsInt();
                 if (max < capacity) {
-                    max = (int) capacity;
+                    max = capacity;
                 }
                 count++;
             }
