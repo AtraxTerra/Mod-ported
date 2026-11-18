@@ -19,7 +19,9 @@ import java.util.Map;
 public class PartialElementRenderer extends PictureInPictureRenderer<PartialRenderState> {
     private static final Map<PartialRenderState, GpuTexture> TEXTURES = new IdentityHashMap<>();
     private final PoseStack matrices = new PoseStack();
-    private int windowScaleFactor;
+    // Port: static like TEXTURES, see PORTING.md 1h. NeoForge creates a renderer per state drawn
+    // in a frame, and a new one saw scale 0 and closed textures already queued for drawing.
+    private static int texturesScale;
 
     public static void clear(PartialRenderState block) {
         GpuTexture texture = TEXTURES.remove(block);
@@ -38,8 +40,8 @@ public class PartialElementRenderer extends PictureInPictureRenderer<PartialRend
         if (partial.model == null) {
             return;
         }
-        if (this.windowScaleFactor != windowScaleFactor) {
-            this.windowScaleFactor = windowScaleFactor;
+        if (texturesScale != windowScaleFactor) {
+            texturesScale = windowScaleFactor;
             TEXTURES.values().forEach(GpuTexture::close);
             TEXTURES.clear();
         }

@@ -35,7 +35,9 @@ public class SceneRenderer extends PictureInPictureRenderer<SceneRenderState> {
     private static final Vector3f DIFFUSE_LIGHT_1 = new Vector3f(-0.4F, -0.5F, 0.7F).normalize();
     private static final Int2ObjectMap<GpuTexture> TEXTURES = new Int2ObjectArrayMap<>();
     private final PoseStack matrices = new PoseStack();
-    private int windowScaleFactor;
+    // Port: static like TEXTURES, see PORTING.md 1h. NeoForge creates a renderer per state drawn
+    // in a frame, and a new one saw scale 0 and closed textures already queued for drawing.
+    private static int texturesScale;
 
     @Override
     public void prepare(
@@ -44,8 +46,8 @@ public class SceneRenderer extends PictureInPictureRenderer<SceneRenderState> {
         FeatureRenderDispatcher featureRenderDispatcher,
         int windowScaleFactor
     ) {
-        if (this.windowScaleFactor != windowScaleFactor) {
-            this.windowScaleFactor = windowScaleFactor;
+        if (texturesScale != windowScaleFactor) {
+            texturesScale = windowScaleFactor;
             TEXTURES.values().forEach(GpuTexture::close);
             TEXTURES.clear();
         }

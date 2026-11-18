@@ -163,7 +163,7 @@ be wrong (the `FuelValues` case below), or erase NeoForge behaviour other mods r
 | `FuelValues.vanillaBurnTimes` | the `neoforge:furnace_fuels` data map (`data/neoforge/data_maps/item/furnace_fuels.json`), kept in step with `AllFuelTimes` by `tools/check_fuels.py` in CI. Retargeting the mixin would have applied and done nothing: on NeoForge that method only feeds datagen |
 | `StructureTemplate.placeEntities` | `StructureProcessor.processEntity`, overridden by `EntityControlStructureProcessor` |
 | `ReloadableServerResources.listeners()`, client `registerReloadListener` | `AddServerReloadListenersEvent` / `AddClientReloadListenersEvent` (`platform/CreateReloadListeners`, `client/platform/CreateClientReloadListeners`). NeoForge rejects listeners added any other way, fatally on the server |
-| `GuiRenderer` PiP renderer map | `RegisterPictureInPictureRenderersEvent` — `client/platform/CreatePictureInPictureRenderers` |
+| `GuiRenderer` PiP renderer map | `RegisterPictureInPictureRenderersEvent` — `client/platform/CreatePictureInPictureRenderers`; renderers sharing a static texture cache keep their scale static too (1h) |
 | `Hud` train overlay | a GUI layer before the contextual bar that cancels the bar while it draws — `client/platform/TrainHudLayer` |
 | `ModelBlockRenderer.tesselateBlock` (`@Overwrite`) | not overwritten: that would erase NeoForge's renderer patches for every block. `VanillinModelLayerMixin` keeps the one Vanillin call; `WrapperBlockStateModel` overrides the level-aware `collectParts`; enhanced AO is NeoForge's `EnhancedBlockModelLighter` |
 | packs (`BuiltInPackSource`, `ClientPackSource`) | `AddPackFindersEvent` — `client/platform/CreatePackFinders` |
@@ -306,6 +306,23 @@ and stopped on the first one that drains into nothing (`ItemStackTemplate.fromNo
 empty container): JEI drops the rest of a plugin's `registerRecipes`, so spout filling and block
 cutting were empty too. `DrainingCategory` now leaves such an item out, as `SpoutFillingCategory`
 already did for an empty result.
+
+## 1h. Picture-in-picture renderers: one texture cache, several renderers
+
+Ten of Create's GUI renderers keep their textures in a static cache (`TEXTURES`, by element id or
+key) and close the whole cache when the GUI scale changes: the deployer, press, spout, drain and
+manual-application ones under `foundation/gui/render`, catnip's item, block, partial and entity-block
+elements, and the ponder scene. Upstream kept the last scale in an instance field, which was the
+same thing there: Fabric builds one renderer per state class.
+
+NeoForge pools them instead (`PictureInPictureRendererPool`): a frame that draws three deployers
+gets three renderers, made by the factory registered in `CreatePictureInPictureRenderers`. Each new
+one started at scale 0, so it closed every cached texture, including the one the previous renderer
+had just queued for drawing, and the frame crashed with `Texture view Sampler0 (...) has been
+closed!` -- the first JEI page with two deployer recipes did it. The scale now sits next to the cache
+(`texturesScale`, static), as does the allocation count of the drain and manual-application
+renderers, which belongs to their shared ring of textures. Renderers built on `GuiBlockRenderer`'s own
+per-instance texture (basin, mixer, millstone, saw...) are what the pool expects and are unchanged.
 
 ---
 

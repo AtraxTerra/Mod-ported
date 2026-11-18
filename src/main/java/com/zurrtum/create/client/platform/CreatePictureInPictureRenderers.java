@@ -23,6 +23,9 @@ import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEven
  *
  * <p>NeoForge takes a factory rather than an instance: it may create several renderers per state
  * class (one per state drawn in a frame), which also fixes vanilla's "last state wins" reuse bug.
+ * Renderers whose textures live in a static cache must keep everything about that cache static
+ * as well (the GUI scale it was made at, the drain ring's allocation count): a renderer created
+ * mid-frame must not close textures another one has just queued. See PORTING.md 1h.
  * When upstream adds a renderer to its mixin, add it here; the upstream-sync PR will show the change
  * in {@code GuiRendererMixin}, which is kept in the tree for exactly that reason but not applied.
  */
