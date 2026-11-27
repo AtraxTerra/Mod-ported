@@ -4,6 +4,7 @@
   "package": "com.railwayteam.railways.neoforge.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "ClientItemInfoLoaderMixin",
     "ObjModelMeshMixin"
   ],
   "injectors": {
