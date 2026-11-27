@@ -63,8 +63,11 @@ public final class CRPaintFluidRendering {
                 .set(DataComponents.CUSTOM_DATA, CustomData.of(PaintFluid.setColor(new CompoundTag(), PalettesColor.RED)))
                 .build();
             int expectedColor = 0xff000000 | PalettesColor.RED.getDiffuseColor();
+            // A FluidStack cannot be built this early in client start (fluid default components are
+            // not bound yet), so the NeoForge side is checked through the component map that
+            // colorAsStack reads.
             if (AllFluidConfigs.TINT.get(paint).get(paint, redPaint) != expectedColor
-                || PaintTint.INSTANCE.colorAsStack(new FluidStack(paint, 1000, redPaint)) != expectedColor) {
+                || color(asGetter(redPaint)) != expectedColor) {
                 throw new IllegalStateException("Paint fluid component tint runtime check failed");
             }
             Railways.LOGGER.info("Paint fluid model and component-aware tint runtime check passed");
