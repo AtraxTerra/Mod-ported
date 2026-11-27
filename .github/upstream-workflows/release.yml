@@ -1,0 +1,213 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      curseforge:
+        description: "Publish to CurseForge"
+        type: boolean
+        required: true
+        default: true
+      modrinth:
+        description: "Publish to Modrinth"
+        type: boolean
+        required: true
+        default: true
+      maven:
+        description: "Publish to Maven"
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Read build_tools.config
+        id: cfg
+        run: |
+          CONFIG=build_tools.config
+          if [ ! -f "$CONFIG" ]; then
+            echo "::error::$CONFIG not found in the repository root"
+            exit 1
+          fi
+          {
+            echo "java_versions<<EOF"
+            jq -r '(.java_versions // [17, 21])[]' "$CONFIG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.cfg.outputs.java_versions }}
+
+      - name: Register Java toolchains
+        run: |
+          mkdir -p ~/.gradle
+          INSTALLATIONS=$(env | grep -o '^JAVA_HOME_[0-9]*_[A-Z0-9]*' | sort -u | paste -sd,)
+          echo "org.gradle.java.installations.fromEnv=${INSTALLATIONS}" >> ~/.gradle/gradle.properties
+          echo "Toolchains: ${INSTALLATIONS}"
+
+      - name: Cache Gradle & Loom
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            **/.gradle/loom-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle.properties', '**/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+          gradle-version: wrapper
+
+      - name: Build mod files
+        run: |
+          chmod +x gradlew
+          ./gradlew buildRelease -PbuildProfile=platform
+
+      - name: Read metadata
+        id: meta
+        run: |
+          get() { jq -r "$1" metadata.json; }
+          {
+            echo "tag=$(get '.git_tag')"
+            echo "title=$(get '.release_title')"
+            echo "full_version=$(get '.full_version')"
+            echo "prerelease=$(get '.is_prerelease')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check tag is free
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          STATE=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
+          if [ "$STATE" = "false" ]; then
+            echo "::error::Release $TAG is already published. Raise mod_version in gradle.properties."
+            exit 1
+          fi
+          if [ "$STATE" = "true" ]; then
+            echo "Removing the previous draft of $TAG so its assets do not pile up."
+            gh release delete "$TAG" --yes
+          fi
+
+      - name: Collect release assets
+        run: |
+          mkdir -p release-assets
+          MISSING=0
+
+          copy() {
+            NAME="$1"
+            KIND="$2"
+            [ -n "$NAME" ] && [ "$NAME" != "null" ] || { echo "::warning::No $KIND jar configured for $3"; return; }
+            FOUND=$(find . -type f -name "$NAME" ! -path "*/.gradle/*" ! -path "./release-assets/*" | head -n1)
+            if [ -z "$FOUND" ]; then
+              if [ "$KIND" = "main" ]; then
+                echo "::error::Missing $KIND jar: $NAME"
+                MISSING=1
+              else
+                echo "::warning::Missing $KIND jar: $NAME"
+              fi
+              return
+            fi
+            cp "$FOUND" release-assets/
+            echo "  $KIND: $NAME"
+          }
+
+          for LOADER in $(jq -r '.artifacts | keys[]' metadata.json); do
+            echo "$LOADER"
+            copy "$(jq -r --arg l "$LOADER" '.artifacts[$l].main_jar' metadata.json)" main "$LOADER"
+            copy "$(jq -r --arg l "$LOADER" '.artifacts[$l].sources_jar' metadata.json)" sources "$LOADER"
+            copy "$(jq -r --arg l "$LOADER" '.artifacts[$l].javadoc_jar' metadata.json)" javadoc "$LOADER"
+          done
+
+          [ "$MISSING" -eq 0 ] || exit 1
+          ls -1 release-assets
+
+      - name: Stage Maven artifacts
+        if: ${{ inputs.maven }}
+        run: ./gradlew publishLocal -PbuildProfile=maven
+
+      - name: Prepare internal artifact
+        id: internal
+        run: |
+          mkdir -p internal-staging/assets
+          cp metadata.json internal-staging/metadata.json
+          rsync -a release-assets/ internal-staging/assets/
+
+          jq -n \
+            --argjson curseforge ${{ inputs.curseforge }} \
+            --argjson modrinth ${{ inputs.modrinth }} \
+            --argjson maven ${{ inputs.maven }} \
+            '{curseforge: $curseforge, modrinth: $modrinth, maven: $maven}' \
+            > internal-staging/release_plan.json
+
+          if [ "${{ inputs.maven }}" = "true" ]; then
+            mkdir -p internal-staging/maven
+            rsync -a "$(jq -r '.maven_local_path' metadata.json)/" internal-staging/maven/
+          fi
+
+          cat internal-staging/release_plan.json
+
+      - name: Upload internal artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: internal-${{ steps.meta.outputs.tag }}
+          path: internal-staging/
+          retention-days: 30
+
+      - name: Compose release notes
+        run: |
+          cp CHANGELOG.md release-notes.md
+          printf '\n<!--mbt-run:%s-->\n' "$GITHUB_RUN_ID" >> release-notes.md
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.title }}
+          target_commitish: ${{ github.sha }}
+          draft: true
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          body_path: release-notes.md
+          files: release-assets/*
+
+      - name: Summary
+        run: |
+          {
+            echo "### ${{ steps.meta.outputs.title }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Tag | \`${{ steps.meta.outputs.tag }}\` |"
+            echo "| Version | \`${{ steps.meta.outputs.full_version }}\` |"
+            echo "| Loaders | $(jq -r '.loaders | join(", ")' metadata.json) |"
+            echo "| Java | $(jq -r '.java_version' metadata.json) |"
+            echo "| CurseForge | ${{ inputs.curseforge }} |"
+            echo "| Modrinth | ${{ inputs.modrinth }} |"
+            echo "| Maven | ${{ inputs.maven }} |"
+            echo ""
+            echo "Review the draft, then publish it to start the upload."
+          } >> "$GITHUB_STEP_SUMMARY"

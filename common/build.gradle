@@ -1,0 +1,16 @@
+architectury {
+    common rootProject.enabled_platforms.split(',')
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/dragonlib.accesswidener")
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:$rootProject.fabric_loader_version"
+    modImplementation "dev.architectury:architectury:$rootProject.architectury_api_version"
+    modImplementation "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${rootProject.neoforge_config_api_port_version}"
+
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${rootProject.mixin_extras_version}"))
+    implementation("io.github.llamalad7:mixinextras-fabric:${rootProject.mixin_extras_version}")
+}
