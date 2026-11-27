@@ -5,14 +5,12 @@ import com.zurrtum.create.infrastructure.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.minecraft.core.component.DataComponentType;
-import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
 public class FluidInventorySlotWrapper extends SingleFluidStackStorage {
     private final FluidInventoryStorageImpl storage;
     final int slot;
-    private @Nullable FluidStack lastReleasedSnapshot;
 
     FluidInventorySlotWrapper(FluidInventoryStorageImpl storage, int slot) {
         this.storage = storage;
@@ -57,17 +55,15 @@ public class FluidInventorySlotWrapper extends SingleFluidStackStorage {
         super.updateSnapshots(transaction);
     }
 
-    @Override
-    protected void releaseSnapshot(FluidStack snapshot) {
-        lastReleasedSnapshot = snapshot;
-    }
-
-    // Fabric's onFinalCommit is NeoForge's onRootCommit, which also hands back the original
-    // state. This body uses lastReleasedSnapshot, which releaseSnapshot still records, so the
-    // parameter is unused rather than the field being replaced by it.
+    // Fabric's onFinalCommit is NeoForge's onRootCommit. Fabric releases the root snapshot first, and
+    // upstream read it back from the last released snapshot; NeoForge calls onRootCommit before it
+    // releases anything and hands that snapshot over as originalState: the stack that was in the slot
+    // when the transaction began (createSnapshot keeps it and puts a copy in the slot). Reading the
+    // last released snapshot instead gave null on a first transaction, so every insert into a Create
+    // tank through Capabilities.Fluid.BLOCK crashed on commit, or a stale stack from an earlier one.
     @Override
     protected void onRootCommit(FluidStack originalState) {
-        FluidStack original = lastReleasedSnapshot;
+        FluidStack original = originalState;
         FluidStack currentStack = getStack();
 
         if (!original.isEmpty() && original.getFluid() == currentStack.getFluid()) {
