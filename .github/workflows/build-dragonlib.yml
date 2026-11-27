@@ -75,24 +75,30 @@ jobs:
           grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" || true
           sed -n '/What went wrong/,/^\* Get more help/p' compile.log | head -40 || true
 
-      # Port reference: the decompiled Minecraft 26.2 that ModDevGradle builds for the IDE, so the port
-      # reads the exact 26.2 API it compiles against. Workflow artifact (repository members only), kept
-      # one day; never published as a release asset.
-      - name: Upload the Minecraft sources used by this build
+      # Port reference: public signatures (javap) of the 26.2 classes the port reads, from the exact
+      # jar this build compiles against. The list is .github/port/api-classes.txt.
+      - name: API reference
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: minecraft-26.2-sources-${{ github.sha }}
-          path: build/moddev/artifacts/*sources*.jar
-          if-no-files-found: warn
-          retention-days: 1
+        shell: bash
+        run: |
+          mc=$(find build/moddev/artifacts -name 'minecraft-patched-*.jar' | grep -v sources | head -1)
+          nf=$(find ~/.gradle/caches -name 'neoforge-26.2*-universal.jar' | head -1)
+          echo "minecraft: $mc  neoforge: $nf"
+          grep -vE '^\s*(#|$)' .github/port/api-classes.txt | while read -r cls; do
+            echo "=== API $cls"
+            javap -public -cp "$mc:$nf" "$cls" 2>&1 | sed 's/^/API| /'
+          done > api-reference.txt
+          wc -l api-reference.txt
+          cat api-reference.txt
 
       - name: Upload the compile log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dragonlib-compile-log-${{ github.sha }}
-          path: compile.log
+          path: |
+            compile.log
+            api-reference.txt
           if-no-files-found: ignore
           retention-days: 7
 
