@@ -128,6 +128,6 @@ public class PlayerSelectionImpl extends PlayerSelection {
 
     /** Fabric's {@code PlayerLookup.tracking(ServerLevel, BlockPos)}: whoever watches the chunk. */
     private static Collection<ServerPlayer> trackingPlayers(ServerLevel level, BlockPos pos) {
-        return level.getChunkSource().chunkMap.getPlayers(new ChunkPos(pos), false);
+        return level.getChunkSource().chunkMap.getPlayers(new ChunkPos(pos.getX() >> 4, pos.getZ() >> 4), false);
     }
 }

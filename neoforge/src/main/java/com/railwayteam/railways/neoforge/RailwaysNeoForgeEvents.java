@@ -10,6 +10,7 @@ import com.railwayteam.railways.events.CommonEvents;
 import com.railwayteam.railways.multiloader.CommandRegistrar;
 import com.railwayteam.railways.multiloader.fabric.PacketSetImpl;
 import com.railwayteam.railways.registry.fabric.CRFluidsImpl;
+import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
@@ -70,7 +71,9 @@ public final class RailwaysNeoForgeEvents {
 
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
-        boolean dedicated = event.getCommandSelection().includeDedicated;
+        // Fabric hands over CommandSelection.includeDedicated (widened by Fabric API): true for ALL and DEDICATED.
+        Commands.CommandSelection selection = event.getCommandSelection();
+        boolean dedicated = selection == Commands.CommandSelection.ALL || selection == Commands.CommandSelection.DEDICATED;
         for (CommandRegistrar registrar : COMMANDS)
             registrar.register(event.getDispatcher(), dedicated, event.getBuildContext());
     }
