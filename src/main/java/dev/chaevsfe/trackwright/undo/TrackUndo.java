@@ -6,7 +6,7 @@ import com.zurrtum.create.content.trains.track.ITrackBlock;
 import com.zurrtum.create.content.trains.track.TrackBlockEntity;
 import com.zurrtum.create.content.trains.track.TrackPropagator;
 import dev.chaevsfe.trackwright.Trackwright;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import dev.chaevsfe.trackwright.neoforge.PlatformEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -192,7 +192,7 @@ public final class TrackUndo {
             BlockEntity entity = level.getBlockEntity(pos);
             if (!level.mayInteract(player, pos)
                 || player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
-                || !PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(level, player, pos, state, entity)) {
+                || !PlatformEvents.beforeBlockBreak(level, player, pos, state, entity)) {
                 return false;
             }
         }

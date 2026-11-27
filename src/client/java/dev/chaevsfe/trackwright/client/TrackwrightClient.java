@@ -1,8 +1,8 @@
 package dev.chaevsfe.trackwright.client;
 
-import dev.chaevsfe.trackwright.Trackwright;
 import com.zurrtum.create.AllBlockEntityTypes;
 import com.zurrtum.create.client.AllBlockEntityBehaviours;
+import dev.chaevsfe.trackwright.Trackwright;
 import dev.chaevsfe.trackwright.client.actors.RollerTerrainScroll;
 import dev.chaevsfe.trackwright.client.config.ClientConfig;
 import dev.chaevsfe.trackwright.client.controls.TrainControlKeys;
@@ -11,7 +11,6 @@ import dev.chaevsfe.trackwright.client.guide.BoreShaping;
 import dev.chaevsfe.trackwright.client.guide.ClearBedPreview;
 import dev.chaevsfe.trackwright.client.guide.RadiusLock;
 import dev.chaevsfe.trackwright.client.guide.TrackGuide;
-import dev.chaevsfe.trackwright.client.guide.TrackGuideHud;
 import dev.chaevsfe.trackwright.client.guide.UndoKey;
 import dev.chaevsfe.trackwright.client.guide.WidestTurnLock;
 import dev.chaevsfe.trackwright.client.markers.ClientMarkers;
@@ -19,26 +18,30 @@ import dev.chaevsfe.trackwright.client.schedule.ActorStepsClient;
 import dev.chaevsfe.trackwright.client.track.FarEnd;
 import dev.chaevsfe.trackwright.config.RemoteSettings;
 import dev.chaevsfe.trackwright.markers.Markers;
-import dev.chaevsfe.trackwright.network.MarkersPayload;
+import dev.chaevsfe.trackwright.neoforge.PlatformEvents;
 import dev.chaevsfe.trackwright.network.SettingsPayload;
-import dev.chaevsfe.trackwright.network.UndoStatePayload;
+import dev.chaevsfe.trackwright.network.TrackwrightNetwork;
 import dev.chaevsfe.trackwright.track.BoreProfiles;
 import dev.chaevsfe.trackwright.track.Messages;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
-public final class TrackwrightClient implements ClientModInitializer {
-    @Override
+/**
+ * Port: upstream's Fabric {@code client} entrypoint. Create Fly's addon entrypoint calls
+ * {@link #onInitializeClient} at the same moment, in Minecraft's constructor (see
+ * {@code neoforge.TrackwrightEntrypoint}). Fabric's client events become NeoForge's; the key mappings
+ * and the guide's HUD layer go to the mod bus events in {@code neoforge.TrackwrightClientEvents}, and
+ * the block entity load and unload events come from {@code neoforge.mixin.LevelChunkMixin} and
+ * {@code ClientChunkCacheMixin}, as Fabric API's own implementation does.
+ */
+public final class TrackwrightClient {
     public void onInitializeClient() {
         Trackwright.loadHookedClasses(
             "com.zurrtum.create.client.content.trains.schedule.ScheduleScreen",
@@ -55,7 +58,10 @@ public final class TrackwrightClient implements ClientModInitializer {
             "net.minecraft.client.MouseHandler",
             "net.minecraft.client.renderer.ScreenEffectRenderer",
             "net.minecraft.client.Minecraft",
-            "com.zurrtum.create.client.content.contraptions.ContraptionHandlerClient"
+            "com.zurrtum.create.client.content.contraptions.ContraptionHandlerClient",
+            // Port: the vanilla classes of the block entity load and unload hooks (neoforge.mixin).
+            "net.minecraft.client.multiplayer.ClientChunkCache",
+            "net.minecraft.world.level.chunk.LevelChunk"
         );
         ClientConfig.load();
         AllBlockEntityBehaviours.add(AllBlockEntityTypes.MECHANICAL_ROLLER, RollerTerrainScroll::new);
@@ -69,56 +75,47 @@ public final class TrackwrightClient implements ClientModInitializer {
         BoreProfiles.setClientSource(BoreShaping::request);
         Markers.setClientSource(ClientMarkers::contains);
         Markers.setClientCoverage(ClientMarkers::covers);
-        ClientPlayNetworking.registerGlobalReceiver(SettingsPayload.TYPE, (payload, context) -> receiveSettings(payload));
-        ClientPlayNetworking.registerGlobalReceiver(UndoStatePayload.TYPE, (payload, context) -> UndoKey.receive(payload));
-        ClientPlayNetworking.registerGlobalReceiver(MarkersPayload.TYPE, (payload, context) -> ClientMarkers.receive(payload));
-        ClientPlayConnectionEvents.INIT.register((handler, client) -> {
-            RemoteSettings.clear();
-            UndoKey.reset();
-            ActionBarHold.reset();
-            TrackGuide.reset();
-            FarEnd.reset();
-            BoreShaping.reset();
-            RadiusLock.reset();
-            ClearBedPreview.reset();
-            TrainControlKeys.reset();
-            ClientMarkers.reset();
-        });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            RemoteSettings.clear();
-            UndoKey.reset();
-            ActionBarHold.reset();
-            TrackGuide.reset();
-            FarEnd.reset();
-            BoreShaping.reset();
-            RadiusLock.reset();
-            ClearBedPreview.reset();
-            TrainControlKeys.reset();
-            ClientMarkers.reset();
-        });
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            if (overlay && Messages.isOwnOverlay(message)) {
+        TrackwrightNetwork.receiveOnClient(TrackwrightClient::receiveSettings, UndoKey::receive, ClientMarkers::receive);
+        var game = NeoForge.EVENT_BUS;
+        // Fabric's INIT (a new play connection) and DISCONNECT.
+        game.addListener(ClientPlayerNetworkEvent.LoggingIn.class, event -> reset());
+        game.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> reset());
+        // Fabric's GAME message event sees the messages that are shown: the lowest priority, not cancelled.
+        game.addListener(EventPriority.LOWEST, false, ClientChatReceivedEvent.System.class, event -> {
+            if (event.isOverlay() && Messages.isOwnOverlay(event.getMessage())) {
                 ActionBarHold.start();
             }
         });
-        ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register((blockEntity, level) -> FarEnd.endLoaded(blockEntity));
-        ClientBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register((blockEntity, level) -> FarEnd.endUnloaded(blockEntity));
-        ClientTickEvents.END_CLIENT_TICK.register(FarEnd::refresh);
-        UseBlockCallback.EVENT.register(WidestTurnLock::beforeBlockUse);
-        UseBlockCallback.EVENT.register(BoreShaping::beforeBlockUse);
-        ClientTickEvents.END_CLIENT_TICK.register(WidestTurnLock::tick);
-        ClientTickEvents.END_CLIENT_TICK.register(RadiusLock::tick);
-        ClientTickEvents.END_CLIENT_TICK.register(UndoKey::tick);
-        ClientTickEvents.END_CLIENT_TICK.register(BoreShaping::tick);
-        ClientTickEvents.END_CLIENT_TICK.register(ClearBedPreview::tick);
-        ClientTickEvents.END_CLIENT_TICK.register(TrainControlKeys::tick);
-        ClientTickEvents.END_CLIENT_TICK.register(ClientMarkers::tick);
-        ItemTooltipCallback.EVENT.register(ClientMarkers::tooltip);
-        HudElementRegistry.attachElementBefore(
-            VanillaHudElements.CHAT,
-            Identifier.fromNamespaceAndPath(Trackwright.MOD_ID, "track_guide"),
-            TrackGuideHud::extract
-        );
+        game.addListener(ClientTickEvent.Post.class, event -> FarEnd.refresh(Minecraft.getInstance()));
+        PlatformEvents.onUseBlock(WidestTurnLock::beforeBlockUse);
+        PlatformEvents.onUseBlock(BoreShaping::beforeBlockUse);
+        game.addListener(ClientTickEvent.Post.class, event -> {
+            Minecraft mc = Minecraft.getInstance();
+            WidestTurnLock.tick(mc);
+            RadiusLock.tick(mc);
+            UndoKey.tick(mc);
+            BoreShaping.tick(mc);
+            ClearBedPreview.tick(mc);
+            TrainControlKeys.tick(mc);
+            ClientMarkers.tick(mc);
+        });
+        game.addListener(ItemTooltipEvent.class, event -> ClientMarkers.tooltip(event.getItemStack(), event.getContext(), event.getFlags(), event.getToolTip()));
+    }
+
+    /** The guide's HUD layer, below the chat as upstream attaches it: registered by TrackwrightClientEvents. */
+    public static final Identifier GUIDE_LAYER = Identifier.fromNamespaceAndPath(Trackwright.MOD_ID, "track_guide");
+
+    private static void reset() {
+        RemoteSettings.clear();
+        UndoKey.reset();
+        ActionBarHold.reset();
+        TrackGuide.reset();
+        FarEnd.reset();
+        BoreShaping.reset();
+        RadiusLock.reset();
+        ClearBedPreview.reset();
+        TrainControlKeys.reset();
+        ClientMarkers.reset();
     }
 
     private static void receiveSettings(SettingsPayload payload) {

@@ -4,7 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.zurrtum.create.AllDataComponents;
 import com.zurrtum.create.content.trains.track.ITrackBlock;
 import com.zurrtum.create.infrastructure.packet.c2s.PlaceExtendedCurvePacket;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import dev.chaevsfe.trackwright.client.neoforge.KeyMappings;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -30,7 +30,7 @@ public final class WidestTurnLock {
     }
 
     public static void register(KeyMapping.Category category) {
-        key = KeyMappingHelper.registerKeyMapping(new KeyMapping(KEY_NAME, InputConstants.UNKNOWN.getValue(), category));
+        key = KeyMappings.register(new KeyMapping(KEY_NAME, InputConstants.UNKNOWN.getValue(), category));
     }
 
     public static void tick(Minecraft mc) {

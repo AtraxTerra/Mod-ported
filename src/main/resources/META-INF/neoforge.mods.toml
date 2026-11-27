@@ -1,0 +1,58 @@
+# Interpolated by processResources in build.gradle.kts. Converted from src/main/resources/fabric.mod.json.
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GPL-3.0-or-later"
+issueTrackerURL = "https://github.com/AtraxTerra/Mod-ported/issues"
+
+[[mods]]
+modId = "trackwright"
+version = "${version}"
+displayName = "Create Fly: Trackwright"
+authors = "chaevsfe"
+credits = "Create Fly: Trackwright by chaevsfe, with E-Thang; NeoForge port in AtraxTerra/Mod-ported"
+displayURL = "https://github.com/chaevsfe/Trackwright"
+logoFile = "assets/trackwright/icon.png"
+description = '''
+Track placement for Create: a guide on screen, straight track and tunnels through blocks, undo, and fixes for trains.
+'''
+
+[[mixins]]
+config = "trackwright.mixins.json"
+
+# Upstream's client mixins: the config only lists "client" mixins, which a dedicated server skips.
+[[mixins]]
+config = "trackwright.client.mixins.json"
+
+# The NeoForge port's own client mixins (Fabric API's client block entity events), client-only too.
+[[mixins]]
+config = "trackwright-neoforge.client.mixins.json"
+
+[[dependencies.trackwright]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neoforge_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.trackwright]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Create Fly (NeoForge). Loaded first: this mod starts through Create's addon entrypoints.
+[[dependencies.trackwright]]
+modId = "create"
+type = "required"
+versionRange = "${create_fly_version_range}"
+ordering = "AFTER"
+side = "BOTH"
+
+# Optional, as upstream: wide and narrow gauge bores follow Steam 'n' Rails' tracks when it is there.
+[[dependencies.trackwright]]
+modId = "railways"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"

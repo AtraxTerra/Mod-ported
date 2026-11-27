@@ -10,20 +10,26 @@ import dev.chaevsfe.trackwright.track.ClearBed;
 import dev.chaevsfe.trackwright.track.PassengerResync;
 import dev.chaevsfe.trackwright.undo.UndoCommand;
 import dev.chaevsfe.trackwright.undo.UndoJournal;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class Trackwright implements ModInitializer {
+/**
+ * Port: upstream's Fabric {@code main} entrypoint. Create Fly's addon entrypoint calls
+ * {@link #onInitialize} at the same moment (see {@code neoforge.TrackwrightEntrypoint}); each Fabric
+ * event becomes its NeoForge counterpart on the game event bus.
+ */
+public final class Trackwright {
     public static final String MOD_ID = "trackwright";
     public static final Logger LOGGER = LoggerFactory.getLogger("Trackwright");
 
-    @Override
     public void onInitialize() {
         loadHookedClasses(
             "com.zurrtum.create.AllHandle",
@@ -53,20 +59,29 @@ public final class Trackwright implements ModInitializer {
         ClearBed.register();
         ActorSteps.register();
         Markers.register();
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> ServerConfig.reload());
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> PassengerResync.clear());
-        ServerTickEvents.END_SERVER_TICK.register(PassengerResync::tick);
-        ServerTickEvents.END_SERVER_TICK.register(UndoJournal::tick);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> UndoJournal.clearAll());
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> UndoJournal.forget(handler.player.getUUID()));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BoreProfiles.forget(handler.player.getUUID()));
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> BoreProfiles.clearAll());
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> TrainControls.clearAll());
-        ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> UndoJournal.clear(player));
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> UndoCommand.register(dispatcher));
-        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
-            ServerConfig.reload();
-            TrackwrightNetwork.sendToAll(server);
+        var game = NeoForge.EVENT_BUS;
+        // Fabric's SERVER_STARTING comes before the worlds load, like ServerAboutToStartEvent.
+        game.addListener(ServerAboutToStartEvent.class, event -> ServerConfig.reload());
+        game.addListener(ServerStoppedEvent.class, event -> PassengerResync.clear());
+        game.addListener(ServerTickEvent.Post.class, event -> PassengerResync.tick(event.getServer()));
+        game.addListener(ServerTickEvent.Post.class, event -> UndoJournal.tick(event.getServer()));
+        game.addListener(ServerStoppedEvent.class, event -> UndoJournal.clearAll());
+        game.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> UndoJournal.forget(event.getEntity().getUUID()));
+        game.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> BoreProfiles.forget(event.getEntity().getUUID()));
+        game.addListener(ServerStoppedEvent.class, event -> BoreProfiles.clearAll());
+        game.addListener(ServerStoppedEvent.class, event -> TrainControls.clearAll());
+        game.addListener(PlayerEvent.PlayerChangedDimensionEvent.class, event -> {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                UndoJournal.clear(player);
+            }
+        });
+        game.addListener(RegisterCommandsEvent.class, event -> UndoCommand.register(event.getDispatcher()));
+        // Fabric's END_DATA_PACK_RELOAD: after a /reload, when the new data goes out to every player.
+        game.addListener(OnDatapackSyncEvent.class, event -> {
+            if (event.getPlayer() == null) {
+                ServerConfig.reload();
+                TrackwrightNetwork.sendToAll(event.getPlayerList().getServer());
+            }
         });
     }
 

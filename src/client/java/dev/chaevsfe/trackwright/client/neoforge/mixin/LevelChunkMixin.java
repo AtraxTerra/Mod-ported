@@ -1,0 +1,67 @@
+// Adapted from chaevsfe / Create Fly: Trackwright (https://github.com/chaevsfe/Trackwright)
+// Licensed under GPL-3.0-or-later — extracted/adapted with AI assistance.
+package dev.chaevsfe.trackwright.client.neoforge.mixin;
+
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import dev.chaevsfe.trackwright.client.track.FarEnd;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.Map;
+
+/**
+ * Port: Fabric API's client block entity load and unload events, which upstream's track guide uses
+ * ({@code FarEnd}), at the same places Fabric API hooks them; NeoForge has no such event. Taken from
+ * the NeoForge 1.21.1 build of Trackwright, with every {@code Map.remove} of
+ * {@code getBlockEntity(pos, type)} watched: on 26.2 the first one removes a pending tag, the
+ * block entity is the second.
+ */
+@Mixin(LevelChunk.class)
+public abstract class LevelChunkMixin {
+    @WrapOperation(method = "setBlockEntity", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"))
+    private Object trackwright$blockEntityLoaded(Map<Object, Object> blockEntities, Object pos, Object loaded, Operation<Object> original) {
+        Object replaced = original.call(blockEntities, pos, loaded);
+        if (trackwright$clientSide()) {
+            if (replaced instanceof BlockEntity old && old != loaded) {
+                FarEnd.endUnloaded(old);
+            }
+            if (loaded instanceof BlockEntity blockEntity) {
+                FarEnd.endLoaded(blockEntity);
+            }
+        }
+        return replaced;
+    }
+
+    @WrapOperation(
+        method = {
+            "removeBlockEntity",
+            "getBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/chunk/LevelChunk$EntityCreationType;)Lnet/minecraft/world/level/block/entity/BlockEntity;"
+        },
+        at = @At(value = "INVOKE", target = "Ljava/util/Map;remove(Ljava/lang/Object;)Ljava/lang/Object;")
+    )
+    private Object trackwright$blockEntityUnloaded(Map<Object, Object> blockEntities, Object pos, Operation<Object> original) {
+        Object removed = original.call(blockEntities, pos);
+        if (removed instanceof BlockEntity blockEntity && trackwright$clientSide()) {
+            FarEnd.endUnloaded(blockEntity);
+        }
+        return removed;
+    }
+
+    @Inject(method = "clearAllBlockEntities", at = @At("HEAD"))
+    private void trackwright$blockEntitiesUnloaded(CallbackInfo ci) {
+        if (trackwright$clientSide()) {
+            ((LevelChunk) (Object) this).getBlockEntities().values().forEach(FarEnd::endUnloaded);
+        }
+    }
+
+    @Unique
+    private boolean trackwright$clientSide() {
+        return ((LevelChunk) (Object) this).getLevel().isClientSide();
+    }
+}

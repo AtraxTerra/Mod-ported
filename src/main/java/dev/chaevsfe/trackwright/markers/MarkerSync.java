@@ -3,8 +3,8 @@ package dev.chaevsfe.trackwright.markers;
 import dev.chaevsfe.trackwright.config.ServerConfig;
 import dev.chaevsfe.trackwright.mining.BlockMiner;
 import dev.chaevsfe.trackwright.network.MarkersPayload;
+import dev.chaevsfe.trackwright.network.TrackwrightNetwork;
 import dev.chaevsfe.trackwright.track.TrackItems;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,7 +44,7 @@ public final class MarkerSync {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (!wantsMarkers(player) || !ServerPlayNetworking.canSend(player, MarkersPayload.TYPE)) {
+            if (!wantsMarkers(player) || !TrackwrightNetwork.canSend(player, MarkersPayload.TYPE)) {
                 SENT.remove(player.getUUID());
                 continue;
             }
@@ -54,7 +55,7 @@ public final class MarkerSync {
                 continue;
             }
             SENT.put(player.getUUID(), now);
-            ServerPlayNetworking.send(player, snapshot(level, player.blockPosition(), center));
+            PacketDistributor.sendToPlayer(player, snapshot(level, player.blockPosition(), center));
         }
     }
 
@@ -64,7 +65,7 @@ public final class MarkerSync {
         for (int dx = -RADIUS_CHUNKS; dx <= RADIUS_CHUNKS; dx++) {
             for (int dz = -RADIUS_CHUNKS; dz <= RADIUS_CHUNKS; dz++) {
                 LevelChunk chunk = level.getChunkSource().getChunkNow(center.x() + dx, center.z() + dz);
-                MarkerSet set = chunk == null ? null : chunk.getAttached(Markers.ATTACHMENT);
+                MarkerSet set = chunk == null ? null : chunk.getExistingDataOrNull(Markers.ATTACHMENT.get());
                 window[i++] = chunk == null ? null : set == null ? LOADED : set;
             }
         }

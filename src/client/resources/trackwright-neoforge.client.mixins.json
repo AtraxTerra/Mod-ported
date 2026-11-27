@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.chaevsfe.trackwright.client.neoforge.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "minVersion": "0.8.3",
+  "client": [
+    "ClientChunkCacheMixin",
+    "LevelChunkMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
