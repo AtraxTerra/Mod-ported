@@ -44,7 +44,13 @@ neoForge {
 
     runs {
         register("client") { client() }
-        register("server") { server() }
+        register("server") {
+            server()
+            // CI: -PprobeClasses links every class of the mod on a dedicated server (ServerClassProbe).
+            if (project.hasProperty("probeClasses")) {
+                jvmArguments.add("-Drailways.port.probeClasses=" + layout.buildDirectory.dir("classes/java/main").get().asFile.absolutePath)
+            }
+        }
     }
 
     mods {

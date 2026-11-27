@@ -148,6 +148,24 @@ jobs:
           gh release create snr-latest $jars --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "Create Fly: Steam 'n' Rails, NeoForge 26.2 (dernière version)" --notes-file notes.md
 
+      # Upstream's @Environment(CLIENT) members are not stripped on NeoForge: list every class a
+      # dedicated server cannot verify (ServerClassProbe), not just the first one a boot trips on.
+      - name: Server class probe
+        id: probe
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p run && printf 'eula=true\n' > run/eula.txt
+          timeout 600 ./gradlew runServer -PprobeClasses -Pcreate_fly_libs=deps/create-fly/build/libs --console=plain > probe.log 2>&1 || true
+          grep -E "PROBE" probe.log | sed 's/^.*PROBE/PROBE/' | sort | tee probe-summary.txt | head -300
+          {
+            echo "## Server class probe"
+            echo '```'
+            grep -E "PROBE done" probe-summary.txt || echo "(probe did not run)"
+            grep -vE "PROBE done" probe-summary.txt | head -80
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Boot a dedicated server with Create Fly + Steam 'n' Rails
         id: boot
         continue-on-error: true
@@ -179,6 +197,7 @@ jobs:
         with:
           name: snr-boot-log-${{ github.sha }}
           path: |
+            probe.log
             boot-test.log
             client-boot-test.log
             run/logs/*.log

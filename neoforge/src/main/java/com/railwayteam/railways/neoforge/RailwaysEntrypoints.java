@@ -15,6 +15,7 @@ import com.zurrtum.create.platform.AddonEntrypoint;
 public final class RailwaysEntrypoints implements AddonEntrypoint {
     @Override
     public void onInitialize() {
+        ServerClassProbe.runIfRequested();
         new RailwaysImpl().onInitialize();
     }
 
