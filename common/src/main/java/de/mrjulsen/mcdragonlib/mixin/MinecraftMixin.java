@@ -18,7 +18,8 @@ public class MinecraftMixin {
     }
      */
 
-    @Inject(method = "resizeDisplay", at = @At(value = "TAIL"))
+    // 26.2: resizeDisplay became resizeGui.
+    @Inject(method = "resizeGui", at = @At(value = "TAIL"))
     public void dragonlib$resizeDisplay(CallbackInfo ci) {
         DLOverlayManager.resizeDisplay();
     }

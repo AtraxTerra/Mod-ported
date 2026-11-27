@@ -75,8 +75,9 @@ jobs:
           grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" || true
           sed -n '/What went wrong/,/^\* Get more help/p' compile.log | head -40 || true
 
-      # Port reference: public signatures (javap) of the 26.2 classes the port reads, from the exact
-      # jar this build compiles against. The list is .github/port/api-classes.txt.
+      # Port reference: signatures (javap -p, private members included so mixin targets can be
+      # checked) of the 26.2 classes the port reads, from the exact jar this build compiles against.
+      # The list is .github/port/api-classes.txt.
       - name: API reference
         if: always()
         shell: bash
@@ -89,7 +90,7 @@ jobs:
           mkdir -p api-parts
           export CP="$mc:$nf:$arch"
           grep -vE '^\s*(#|$)' .github/port/api-classes.txt | nl -nrz -w4 | \
-            xargs -P 8 -L 1 bash -c 'javap -public -cp "$CP" "$1" > "api-parts/$0.txt" 2>&1; true'
+            xargs -P 8 -L 1 bash -c 'javap -p -cp "$CP" "$1" > "api-parts/$0.txt" 2>&1; true'
           grep -vE '^\s*(#|$)' .github/port/api-classes.txt | nl -nrz -w4 | while read -r n cls; do
             echo "=== API $cls"
             sed 's/^/API| /' "api-parts/$n.txt"

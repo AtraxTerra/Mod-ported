@@ -54,6 +54,17 @@ main.java.exclude(
     "de/mrjulsen/mcdragonlib/mixin/DimensionDataStorageAccessor.java",
 )
 
+// Upstream accessors whose targets 26.2 removed, and that nothing calls any more:
+// BakedGlyphAccessor (BakedGlyph is now an interface without the u0/u1/v0/v1 fields; BERLabel clips
+// the glyph quads instead of rewriting their UVs), FontAccessor (getFontSet, filterFishyGlyphs and
+// renderChar are gone; the glyph source comes from Font.getGlyphSource through the access
+// transformer) and ClientboundCustomPayloadPacketAccessor (MAX_PAYLOAD_SIZE was inlined).
+main.java.exclude(
+    "de/mrjulsen/mcdragonlib/mixin/BakedGlyphAccessor.java",
+    "de/mrjulsen/mcdragonlib/mixin/FontAccessor.java",
+    "de/mrjulsen/mcdragonlib/mixin/ClientboundCustomPayloadPacketAccessor.java",
+)
+
 neoForge {
     version = property("neoforge_version") as String
     // Upstream's access widener (common/src/main/resources/dragonlib.accesswidener), as a NeoForge
