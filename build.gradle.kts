@@ -111,13 +111,13 @@ tasks.jar {
     from("LICENSE")
     manifest {
         attributes(
-            "Specification-Title" to project.property("display_name"),
-            "Specification-Vendor" to project.property("authors"),
+            "Specification-Title" to project.property("display_name").toString(),
+            "Specification-Vendor" to project.property("authors").toString(),
             "Specification-Version" to "1",
-            "Implementation-Title" to project.property("display_name"),
-            "Implementation-Version" to project.version,
-            "Implementation-Vendor" to project.property("authors"),
-            "Built-On" to project.property("minecraft_version"),
+            "Implementation-Title" to project.property("display_name").toString(),
+            "Implementation-Version" to project.version.toString(),
+            "Implementation-Vendor" to project.property("authors").toString(),
+            "Built-On" to project.property("minecraft_version").toString(),
         )
     }
 }
