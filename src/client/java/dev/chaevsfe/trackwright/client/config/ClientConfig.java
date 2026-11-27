@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 import com.zurrtum.create.catnip.config.Builder;
 import dev.chaevsfe.trackwright.Trackwright;
 import dev.chaevsfe.trackwright.config.JsonConfigFile;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLPaths;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -30,7 +30,7 @@ public final class ClientConfig {
     }
 
     public static void load() {
-        Path configDir = FabricLoader.getInstance().getConfigDir();
+        Path configDir = FMLPaths.CONFIGDIR.get();
         Path path = configDir.resolve(FILE_NAME);
         JsonConfigFile.Contents contents = JsonConfigFile.read(path);
         JsonObject json = contents.json();
@@ -74,7 +74,7 @@ public final class ClientConfig {
     }
 
     static void saveFromMenu(ClientConfigValues values) {
-        Path path = FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
+        Path path = FMLPaths.CONFIGDIR.get().resolve(FILE_NAME);
         if (values == menuValues) {
             ClientConfigFile.store(path, values.settings());
         } else {

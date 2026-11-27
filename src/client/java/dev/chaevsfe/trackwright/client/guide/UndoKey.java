@@ -1,11 +1,11 @@
 package dev.chaevsfe.trackwright.client.guide;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.chaevsfe.trackwright.client.neoforge.ClientNetworking;
+import dev.chaevsfe.trackwright.client.neoforge.KeyMappings;
 import dev.chaevsfe.trackwright.network.UndoPayload;
 import dev.chaevsfe.trackwright.network.UndoStatePayload;
 import dev.chaevsfe.trackwright.track.TrackItems;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -26,7 +26,7 @@ public final class UndoKey {
     }
 
     public static void register(KeyMapping.Category category) {
-        key = KeyMappingHelper.registerKeyMapping(new KeyMapping(KEY_NAME, InputConstants.KEY_U, category));
+        key = KeyMappings.register(new KeyMapping(KEY_NAME, InputConstants.KEY_U, category));
     }
 
     public static void tick(Minecraft mc) {
@@ -39,8 +39,8 @@ public final class UndoKey {
             if (player == null || !holdsTrack(player)) {
                 continue;
             }
-            if (ClientPlayNetworking.canSend(UndoPayload.TYPE)) {
-                ClientPlayNetworking.send(UndoPayload.request());
+            if (ClientNetworking.canSend(UndoPayload.TYPE)) {
+                ClientNetworking.send(UndoPayload.request());
             } else {
                 player.sendOverlayMessage(Component.translatable("trackwright.undo.unsupported").withStyle(ChatFormatting.RED));
                 ActionBarHold.start();

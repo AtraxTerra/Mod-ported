@@ -12,13 +12,9 @@ import dev.chaevsfe.trackwright.config.ServerConfig;
 import dev.chaevsfe.trackwright.config.SettingMessages;
 import dev.chaevsfe.trackwright.config.TrackwrightSettings;
 import dev.chaevsfe.trackwright.mining.BlockMiner;
+import dev.chaevsfe.trackwright.neoforge.PlatformEvents;
 import dev.chaevsfe.trackwright.network.ClearBedPayload;
 import dev.chaevsfe.trackwright.network.TrackwrightNetwork;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -36,6 +32,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
@@ -70,11 +70,11 @@ public final class ClearBed {
     }
 
     public static void register() {
-        UseBlockCallback.EVENT.register(ClearBed::onUseBlock);
-        ServerTickEvents.END_SERVER_TICK.register(ClearBed::tick);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> forget(handler.player.getUUID()));
-        ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> forget(player.getUUID()));
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> clearAll());
+        PlatformEvents.onUseBlock(ClearBed::onUseBlock);
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, event -> tick(event.getServer()));
+        NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> forget(event.getEntity().getUUID()));
+        NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerChangedDimensionEvent.class, event -> forget(event.getEntity().getUUID()));
+        NeoForge.EVENT_BUS.addListener(ServerStoppedEvent.class, event -> clearAll());
     }
 
     public static void forget(UUID player) {

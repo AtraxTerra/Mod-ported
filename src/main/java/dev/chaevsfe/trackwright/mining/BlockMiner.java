@@ -8,8 +8,8 @@ import com.zurrtum.create.content.trains.track.ITrackBlock;
 import dev.chaevsfe.trackwright.Trackwright;
 import dev.chaevsfe.trackwright.actors.TrainActors;
 import dev.chaevsfe.trackwright.markers.Markers;
+import dev.chaevsfe.trackwright.neoforge.PlatformEvents;
 import dev.chaevsfe.trackwright.track.Messages;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -207,7 +207,7 @@ public final class BlockMiner {
                 BlockState state = level.getBlockState(pos);
                 if (!level.mayInteract(player, pos)
                     || player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
-                    || !PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(level, player, pos, state, null)) {
+                    || !PlatformEvents.beforeBlockBreak(level, player, pos, state, null)) {
                     return new Problem(Refusal.PROTECTED, pos, state);
                 }
             }

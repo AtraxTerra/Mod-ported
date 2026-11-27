@@ -15,13 +15,13 @@ import com.zurrtum.create.infrastructure.packet.c2s.ContraptionInteractionPacket
 import dev.chaevsfe.trackwright.actors.TrainControlMessages;
 import dev.chaevsfe.trackwright.actors.TrainControls;
 import dev.chaevsfe.trackwright.client.guide.ActionBarHold;
+import dev.chaevsfe.trackwright.client.neoforge.ClientNetworking;
+import dev.chaevsfe.trackwright.client.neoforge.KeyMappings;
 import dev.chaevsfe.trackwright.config.RemoteSettings;
 import dev.chaevsfe.trackwright.config.SettingMessages;
 import dev.chaevsfe.trackwright.config.TrackwrightSettings;
 import dev.chaevsfe.trackwright.network.TrainControlPayload;
 import dev.chaevsfe.trackwright.schedule.ActorSwitch;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -65,9 +65,9 @@ public final class TrainControlKeys {
 
     public static void register(KeyMapping.Category category) {
         for (int i = 0; i < SLOTS; i++) {
-            KEYS[i] = KeyMappingHelper.registerKeyMapping(new KeyMapping(KEY_NAMES[i], InputConstants.UNKNOWN.getValue(), category));
+            KEYS[i] = KeyMappings.register(new KeyMapping(KEY_NAMES[i], InputConstants.UNKNOWN.getValue(), category));
         }
-        openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(KEY_OPEN, InputConstants.UNKNOWN.getValue(), category));
+        openKey = KeyMappings.register(new KeyMapping(KEY_OPEN, InputConstants.UNKNOWN.getValue(), category));
     }
 
     public static void tick(Minecraft mc) {
@@ -157,13 +157,13 @@ public final class TrainControlKeys {
 
     public static void toggle(LocalPlayer player, ClientLevel level, ControlTarget target) {
         CarriageContraptionEntity entity = findCarriage(level, target.trainId(), target.carriageIndex());
-        if (ClientPlayNetworking.canSend(TrainControlPayload.TYPE)) {
+        if (ClientNetworking.canSend(TrainControlPayload.TYPE)) {
             TrackwrightSettings settings = RemoteSettings.get();
             if (settings == null || !settings.contraptionControlsHotkeys()) {
                 tell(player, SettingMessages.component(SettingMessages.HOTKEYS_OFF).withStyle(ChatFormatting.RED));
                 return;
             }
-            ClientPlayNetworking.send(TrainControlPayload.of(target.trainId(), target.carriageIndex(), target.localPos(), target.actorId()));
+            ClientNetworking.send(TrainControlPayload.of(target.trainId(), target.carriageIndex(), target.localPos(), target.actorId()));
             if (entity != null && TrainControls.isControl(entity.getContraption(), target.localPos(), target.actorId())) {
                 entity.handlePlayerInteraction(player, target.localPos(), Direction.UP, InteractionHand.MAIN_HAND);
             }

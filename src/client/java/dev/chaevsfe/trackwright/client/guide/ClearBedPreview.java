@@ -2,12 +2,13 @@ package dev.chaevsfe.trackwright.client.guide;
 
 import com.zurrtum.create.client.AllSpecialTextures;
 import com.zurrtum.create.client.catnip.outliner.Outliner;
-import com.zurrtum.create.client.content.trains.track.TrackBlockOutline;
 import com.zurrtum.create.client.content.trains.track.TrackBlockOutline.BezierPointSelection;
+import com.zurrtum.create.client.content.trains.track.TrackBlockOutline;
 import com.zurrtum.create.content.trains.track.BezierConnection;
 import com.zurrtum.create.content.trains.track.ITrackBlock;
 import com.zurrtum.create.content.trains.track.TrackBlockEntity;
 import dev.chaevsfe.trackwright.client.input.CreateClickFirst;
+import dev.chaevsfe.trackwright.client.neoforge.ClientNetworking;
 import dev.chaevsfe.trackwright.config.BoreMode;
 import dev.chaevsfe.trackwright.config.BoreProfile;
 import dev.chaevsfe.trackwright.config.RemoteSettings;
@@ -21,7 +22,6 @@ import dev.chaevsfe.trackwright.track.ClearBed;
 import dev.chaevsfe.trackwright.track.ClearBedPlan;
 import dev.chaevsfe.trackwright.track.ClearMessages;
 import dev.chaevsfe.trackwright.track.Messages;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -81,7 +81,7 @@ public final class ClearBedPreview {
         }
         Target target = target(mc, player, curve);
         TrackwrightSettings settings = RemoteSettings.get();
-        if (target == null || settings == null || !ClientPlayNetworking.canSend(ClearBedPayload.TYPE) || !settings.clearTrackBed().allows(player)) {
+        if (target == null || settings == null || !ClientNetworking.canSend(ClearBedPayload.TYPE) || !settings.clearTrackBed().allows(player)) {
             return false;
         }
         if (sentWhileHeld) {
@@ -91,7 +91,7 @@ public final class ClearBedPreview {
         ClearBedPlan current = ClearBedPlan.of(player.level(), target.track(), target.connection(), player.getMainHandItem(), player.isCreative(), profile,
             settings);
         Long hash = current.guessed() ? null : current.hash();
-        ClientPlayNetworking.send(ClearBedPayload.of(target.track(), target.target(), target.aim(), BoreShaping.shaped(), hash, current.count()));
+        ClientNetworking.send(ClearBedPayload.of(target.track(), target.target(), target.aim(), BoreShaping.shaped(), hash, current.count()));
         player.swing(InteractionHand.MAIN_HAND);
         sentWhileHeld = true;
         plan = null;
@@ -110,7 +110,7 @@ public final class ClearBedPreview {
             return;
         }
         TrackwrightSettings settings = RemoteSettings.get();
-        boolean served = settings != null && ClientPlayNetworking.canSend(ClearBedPayload.TYPE);
+        boolean served = settings != null && ClientNetworking.canSend(ClearBedPayload.TYPE);
         ItemStack tool = player.getMainHandItem();
         if (!BlockMiner.isTool(tool) && (served || !diggerTool(tool))) {
             plan = null;

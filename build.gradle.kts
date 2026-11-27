@@ -1,39 +1,75 @@
 import java.util.zip.ZipFile
 
+// NeoForge build of Create Fly: Trackwright (port/trackwright-neoforge-26.2). Upstream's Fabric build
+// (Loom) lives on upstream/trackwright-fabric-26.2; the verification tasks at the end are upstream's.
 plugins {
-    id("net.fabricmc.fabric-loom") version "1.16-SNAPSHOT"
+    // Same ModDevGradle as the Create Fly NeoForge port (gradle.properties: moddev_version).
+    id("net.neoforged.moddev") version "2.0.148"
 }
 
 group = property("maven_group") as String
-version = "${property("mod_version")}+fly-mc${property("mc_line")}"
+version = "${property("mod_version")}+neoforge-mc${property("mc_line")}"
 
 base {
     archivesName.set(property("archives_base_name") as String)
 }
 
-loom {
-    splitEnvironmentSourceSets()
+repositories {
+    mavenCentral()
+}
+
+// Upstream splits common and client code into two source sets (Loom's splitEnvironmentSourceSets), so
+// common code cannot reach client classes at compile time. The NeoForge build keeps that split: both
+// source sets make one mod, and one jar.
+val main: SourceSet = sourceSets.main.get()
+val clientSourceSet: SourceSet = sourceSets.create("client") {
+    compileClasspath += main.output
+    runtimeClasspath += main.output
+}
+
+// The NeoForge build of Create Fly, as a plain jar: compiled against, and loaded as a mod in runs.
+val createFlyLibs = file(property("create_fly_libs") as String)
+val createFly = fileTree(createFlyLibs) {
+    include("create-fly-*.jar")
+    exclude("*-sources.jar", "*-javadoc.jar")
+}
+
+neoForge {
+    version = property("neoforge_version") as String
+    // Create Fly's Container -> ContainerExtension injections, so its inventory API resolves here too.
+    interfaceInjectionData.from(file("create-fly-interface-injection.json"))
+    addModdingDependenciesTo(clientSourceSet)
+
+    runs {
+        register("client") {
+            client()
+            sourceSet = clientSourceSet
+        }
+        register("server") {
+            server()
+            // CI: -PprobeClasses links every common class of the mod on a dedicated server (ServerClassProbe).
+            if (project.hasProperty("probeClasses")) {
+                jvmArguments.add("-Dtrackwright.port.probeClasses=" + layout.buildDirectory.dir("classes/java/main").get().asFile.absolutePath)
+            }
+        }
+    }
+
     mods {
-        create("trackwright") {
-            sourceSet(sourceSets.main.get())
-            sourceSet(sourceSets["client"])
+        register("trackwright") {
+            sourceSet(main)
+            sourceSet(clientSourceSet)
         }
     }
 }
 
-repositories {
-    mavenCentral()
-    maven("https://maven.fabricmc.net/")
-    maven("https://api.modrinth.com/maven") {
-        content { includeGroup("maven.modrinth") }
-    }
-}
+val localRuntime: Configuration by configurations.creating
+configurations.runtimeClasspath { extendsFrom(localRuntime) }
+configurations.named(clientSourceSet.compileOnlyConfigurationName) { extendsFrom(configurations.compileOnly.get()) }
+configurations.named(clientSourceSet.runtimeOnlyConfigurationName) { extendsFrom(localRuntime) }
 
 dependencies {
-    minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    implementation("net.fabricmc:fabric-loader:${property("fabric_loader_version")}")
-    implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
-    implementation("maven.modrinth:create-fly:${property("create_fabric_version")}")
+    compileOnly(createFly)
+    localRuntime(createFly)
 }
 
 java {
@@ -54,21 +90,24 @@ tasks.withType<AbstractCopyTask>().configureEach {
 tasks.processResources {
     val expansions = mapOf(
         "version" to project.version.toString(),
-        "minecraft_dependency_version" to project.property("minecraft_dependency_version") as String,
-        "fabric_loader_version" to project.property("fabric_loader_version") as String,
-        "fabric_api_version_range" to project.property("fabric_api_version_range") as String,
-        "create_fabric_version_range" to project.property("create_fabric_version_range") as String,
+        "minecraft_version_range" to project.property("minecraft_version_range") as String,
+        "neoforge_version_range" to project.property("neoforge_version_range") as String,
+        "create_fly_version_range" to project.property("create_fly_version_range") as String,
     )
     expansions.forEach { (key, value) -> inputs.property(key, value) }
-    filesMatching("fabric.mod.json") { expand(expansions) }
+    filesMatching("META-INF/neoforge.mods.toml") { expand(expansions) }
+    // Upstream's Fabric metadata stays in the sources as the reference; NeoForge reads neoforge.mods.toml.
+    exclude("fabric.mod.json")
 }
 
 tasks.jar {
+    from(clientSourceSet.output)
     from("LICENSE")
     from("NOTICE")
 }
 
 tasks.named<Jar>("sourcesJar") {
+    from(clientSourceSet.allSource)
     from("LICENSE")
     from("NOTICE")
 }

@@ -7,17 +7,10 @@ import dev.chaevsfe.trackwright.config.SettingMessages;
 import dev.chaevsfe.trackwright.config.Sides;
 import dev.chaevsfe.trackwright.config.TrackwrightSettings;
 import dev.chaevsfe.trackwright.mining.BlockMiner;
+import dev.chaevsfe.trackwright.neoforge.PlatformEvents;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -36,6 +29,14 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
@@ -44,12 +45,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 
 public final class Markers {
     public static final TagKey<Item> TOOLS = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(Trackwright.MOD_ID, "marker_tools"));
-    public static final AttachmentType<MarkerSet> ATTACHMENT = AttachmentRegistry.create(
-        Identifier.fromNamespaceAndPath(Trackwright.MOD_ID, "markers"),
-        builder -> builder.persistent(MarkerSet.CODEC)
+    // Port: Fabric's attachment registry becomes NeoForge's attachment types, registered on the mod bus
+    // (TrackwrightNeoForge). Persistent as upstream; an empty set is not written.
+    public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, Trackwright.MOD_ID);
+    public static final Supplier<AttachmentType<MarkerSet>> ATTACHMENT = ATTACHMENT_TYPES.register(
+        "markers",
+        () -> AttachmentType.builder(() -> MarkerSet.EMPTY).serialize(MarkerSet.CODEC.fieldOf("cells"), set -> !set.isEmpty()).build()
     );
     public static final int BOX_CAP = 32768;
 
@@ -65,14 +70,14 @@ public final class Markers {
     }
 
     public static void register() {
-        UseBlockCallback.EVENT.register(Markers::onUseBlock);
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> MarkerCommands.register(dispatcher));
-        ServerTickEvents.END_SERVER_TICK.register(MarkerSync::tick);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            MarkerSync.forget(handler.player.getUUID());
-            HANDLED.remove(handler.player.getUUID());
+        PlatformEvents.onUseBlock(Markers::onUseBlock);
+        NeoForge.EVENT_BUS.addListener(RegisterCommandsEvent.class, event -> MarkerCommands.register(event.getDispatcher()));
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, event -> MarkerSync.tick(event.getServer()));
+        NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> {
+            MarkerSync.forget(event.getEntity().getUUID());
+            HANDLED.remove(event.getEntity().getUUID());
         });
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+        NeoForge.EVENT_BUS.addListener(ServerStoppedEvent.class, event -> {
             MarkerSync.clearAll();
             HANDLED.clear();
         });
@@ -117,7 +122,7 @@ public final class Markers {
 
     public static @Nullable MarkerSet setAt(Level level, int chunkX, int chunkZ) {
         LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
-        return chunk == null ? null : chunk.getAttached(ATTACHMENT);
+        return chunk == null ? null : chunk.getExistingDataOrNull(ATTACHMENT.get());
     }
 
     public static boolean isLoaded(Level level, BlockPos pos) {
@@ -136,7 +141,7 @@ public final class Markers {
             if (chunk == null) {
                 continue;
             }
-            MarkerSet before = chunk.getAttachedOrElse(ATTACHMENT, MarkerSet.EMPTY);
+            MarkerSet before = chunk.getExistingData(ATTACHMENT.get()).orElse(MarkerSet.EMPTY);
             int delta = 0;
             for (int cell : entry.getValue()) {
                 if (before.contains(cell) != marked) {
@@ -148,9 +153,9 @@ public final class Markers {
             }
             MarkerSet after = marked ? before.with(entry.getValue(), none) : before.with(none, entry.getValue());
             if (after.isEmpty()) {
-                chunk.removeAttached(ATTACHMENT);
+                chunk.removeData(ATTACHMENT.get());
             } else {
-                chunk.setAttached(ATTACHMENT, after);
+                chunk.setData(ATTACHMENT.get(), after);
             }
             chunk.markUnsaved();
             changed += delta;
@@ -178,7 +183,7 @@ public final class Markers {
         }
         return level.mayInteract(player, pos)
             && !player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
-            && PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(level, player, pos, level.getBlockState(pos), level.getBlockEntity(pos));
+            && PlatformEvents.beforeBlockBreak(level, player, pos, level.getBlockState(pos), level.getBlockEntity(pos));
     }
 
     private static InteractionResult onUseBlock(Player player, Level level, InteractionHand hand, BlockHitResult hit) {

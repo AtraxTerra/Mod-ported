@@ -6,62 +6,99 @@ import dev.chaevsfe.trackwright.track.BoreProfiles;
 import dev.chaevsfe.trackwright.track.ClearBed;
 import dev.chaevsfe.trackwright.undo.TrackUndo;
 import dev.chaevsfe.trackwright.undo.UndoJournal;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+import java.util.function.Consumer;
+
+/**
+ * Port: Fabric's payload registry and global receivers become one NeoForge registration, on the mod
+ * bus ({@link #registerPayloads}). The channels are optional, as on Fabric: a player without
+ * Trackwright can still join, and {@link #canSend} tells whether a player has it. Client handlers are
+ * common code on NeoForge, so they hand the payload to whatever the client set-up installed
+ * ({@link #receiveOnClient}). NeoForge runs every handler on the game thread.
+ */
 public final class TrackwrightNetwork {
+    public static final String PROTOCOL = "1";
+
+    private static volatile Consumer<SettingsPayload> settingsReceiver = payload -> {
+    };
+    private static volatile Consumer<UndoStatePayload> undoStateReceiver = payload -> {
+    };
+    private static volatile Consumer<MarkersPayload> markersReceiver = payload -> {
+    };
+
     private TrackwrightNetwork() {
     }
 
     public static void register() {
-        PayloadTypeRegistry.clientboundPlay().register(SettingsPayload.TYPE, SettingsPayload.STREAM_CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(UndoStatePayload.TYPE, UndoStatePayload.STREAM_CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(MarkersPayload.TYPE, MarkersPayload.STREAM_CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(UndoPayload.TYPE, UndoPayload.STREAM_CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(PlacementPayload.TYPE, PlacementPayload.STREAM_CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(ClearBedPayload.TYPE, ClearBedPayload.STREAM_CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(TrainControlPayload.TYPE, TrainControlPayload.STREAM_CODEC);
-        ServerPlayNetworking.registerGlobalReceiver(PlacementPayload.TYPE, (payload, context) -> {
-            ServerPlayer player = context.player();
-            BoreProfiles.Request request = payload.request();
-            context.server().execute(() -> BoreProfiles.receive(player, request));
+        NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> TrainControls.forget(event.getEntity().getUUID()));
+        NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedInEvent.class, event -> {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                sendTo(player);
+            }
         });
-        ServerPlayNetworking.registerGlobalReceiver(ClearBedPayload.TYPE, (payload, context) -> {
-            ServerPlayer player = context.player();
-            context.server().execute(() -> ClearBed.request(player, payload));
+    }
+
+    public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar(PROTOCOL).optional();
+        registrar.playToClient(SettingsPayload.TYPE, SettingsPayload.STREAM_CODEC, (payload, context) -> settingsReceiver.accept(payload));
+        registrar.playToClient(UndoStatePayload.TYPE, UndoStatePayload.STREAM_CODEC, (payload, context) -> undoStateReceiver.accept(payload));
+        registrar.playToClient(MarkersPayload.TYPE, MarkersPayload.STREAM_CODEC, (payload, context) -> markersReceiver.accept(payload));
+        registrar.playToServer(PlacementPayload.TYPE, PlacementPayload.STREAM_CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player) {
+                BoreProfiles.receive(player, payload.request());
+            }
         });
-        ServerPlayNetworking.registerGlobalReceiver(UndoPayload.TYPE, (payload, context) -> {
-            ServerPlayer player = context.player();
-            context.server().execute(() -> {
-                if (UndoJournal.acceptRequest(player)) {
-                    TrackUndo.undoAndTell(player);
-                }
-            });
+        registrar.playToServer(ClearBedPayload.TYPE, ClearBedPayload.STREAM_CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player) {
+                ClearBed.request(player, payload);
+            }
         });
-        ServerPlayNetworking.registerGlobalReceiver(TrainControlPayload.TYPE, (payload, context) -> {
-            ServerPlayer player = context.player();
-            context.server().execute(() -> TrainControls.receive(player, payload));
+        registrar.playToServer(UndoPayload.TYPE, UndoPayload.STREAM_CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player && UndoJournal.acceptRequest(player)) {
+                TrackUndo.undoAndTell(player);
+            }
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> TrainControls.forget(handler.player.getUUID()));
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> sendTo(handler.player));
+        registrar.playToServer(TrainControlPayload.TYPE, TrainControlPayload.STREAM_CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player) {
+                TrainControls.receive(player, payload);
+            }
+        });
+    }
+
+    /** Called by the client set-up: where the three client-bound payloads go. */
+    public static void receiveOnClient(Consumer<SettingsPayload> settings, Consumer<UndoStatePayload> undoState, Consumer<MarkersPayload> markers) {
+        settingsReceiver = settings;
+        undoStateReceiver = undoState;
+        markersReceiver = markers;
+    }
+
+    /** Fabric's {@code ServerPlayNetworking.canSend}: whether this player's client has the channel. */
+    public static boolean canSend(ServerPlayer player, CustomPacketPayload.Type<?> type) {
+        return !(player instanceof FakePlayer) && player.connection != null && player.connection.hasChannel(type.id());
     }
 
     public static boolean hasTrackwright(ServerPlayer player) {
-        return ServerPlayNetworking.canSend(player, SettingsPayload.TYPE);
+        return canSend(player, SettingsPayload.TYPE);
     }
 
     public static void sendTo(ServerPlayer player) {
         if (hasTrackwright(player)) {
-            ServerPlayNetworking.send(player, SettingsPayload.of(ServerConfig.get()));
+            PacketDistributor.sendToPlayer(player, SettingsPayload.of(ServerConfig.get()));
         }
     }
 
     public static void sendUndoState(ServerPlayer player, int placements, int ticksLeft, boolean result) {
-        if (ServerPlayNetworking.canSend(player, UndoStatePayload.TYPE)) {
-            ServerPlayNetworking.send(player, UndoStatePayload.of(placements, ticksLeft, result));
+        if (canSend(player, UndoStatePayload.TYPE)) {
+            PacketDistributor.sendToPlayer(player, UndoStatePayload.of(placements, ticksLeft, result));
         }
     }
 

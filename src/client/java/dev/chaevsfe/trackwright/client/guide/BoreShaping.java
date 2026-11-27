@@ -6,6 +6,8 @@ import com.zurrtum.create.content.trains.track.ITrackBlock;
 import com.zurrtum.create.content.trains.track.TrackMaterial;
 import com.zurrtum.create.content.trains.track.TrackPlacement.PlacementInfo;
 import com.zurrtum.create.infrastructure.component.ConnectingFrom;
+import dev.chaevsfe.trackwright.client.neoforge.ClientNetworking;
+import dev.chaevsfe.trackwright.client.neoforge.KeyMappings;
 import dev.chaevsfe.trackwright.config.BoreProfile;
 import dev.chaevsfe.trackwright.config.RemoteSettings;
 import dev.chaevsfe.trackwright.config.TrackwrightSettings;
@@ -14,8 +16,6 @@ import dev.chaevsfe.trackwright.network.ClearBedPayload;
 import dev.chaevsfe.trackwright.network.PlacementPayload;
 import dev.chaevsfe.trackwright.track.BoreProfiles;
 import dev.chaevsfe.trackwright.track.TrackItems;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -59,7 +59,7 @@ public final class BoreShaping {
     }
 
     public static void register(KeyMapping.Category category) {
-        key = KeyMappingHelper.registerKeyMapping(new KeyMapping(KEY_NAME, InputConstants.KEY_LALT, category));
+        key = KeyMappings.register(new KeyMapping(KEY_NAME, InputConstants.KEY_LALT, category));
     }
 
     public static void tick(Minecraft mc) {
@@ -93,25 +93,25 @@ public final class BoreShaping {
     }
 
     public static boolean supported() {
-        return RemoteSettings.get() != null && ClientPlayNetworking.canSend(PlacementPayload.TYPE);
+        return RemoteSettings.get() != null && ClientNetworking.canSend(PlacementPayload.TYPE);
     }
 
     public static void beforeUse(UseOnContext context) {
         if (wanted(context.getLevel(), context.getHand(), context.getItemInHand()) && !onTrackBlock(context.getLevel(), context.getClickedPos())) {
-            ClientPlayNetworking.send(PlacementPayload.of(shaped));
+            ClientNetworking.send(PlacementPayload.of(shaped));
         }
     }
 
     public static InteractionResult beforeBlockUse(Player player, Level level, InteractionHand hand, BlockHitResult hit) {
         if (player instanceof LocalPlayer && wanted(level, hand, player.getItemInHand(hand)) && onTrackBlock(level, hit.getBlockPos())) {
-            ClientPlayNetworking.send(PlacementPayload.of(shaped));
+            ClientNetworking.send(PlacementPayload.of(shaped));
         }
         return InteractionResult.PASS;
     }
 
     private static boolean wanted(Level level, InteractionHand hand, ItemStack stack) {
         return level.isClientSide() && hand == InteractionHand.MAIN_HAND && stack.has(AllDataComponents.TRACK_CONNECTING_FROM)
-            && ClientPlayNetworking.canSend(PlacementPayload.TYPE);
+            && ClientNetworking.canSend(PlacementPayload.TYPE);
     }
 
     private static boolean onTrackBlock(Level level, BlockPos pos) {
@@ -152,7 +152,7 @@ public final class BoreShaping {
         }
         TrackwrightSettings settings = RemoteSettings.get();
         BoreProfile current = clearing ? ClearBedPreview.profile(player) : current(player);
-        boolean channel = ClientPlayNetworking.canSend(clearing ? ClearBedPayload.TYPE : PlacementPayload.TYPE);
+        boolean channel = ClientNetworking.canSend(clearing ? ClearBedPayload.TYPE : PlacementPayload.TYPE);
         if (settings == null || current == null || !channel) {
             say(player, Component.translatable("trackwright.shape.unsupported").withStyle(ChatFormatting.RED));
             return true;

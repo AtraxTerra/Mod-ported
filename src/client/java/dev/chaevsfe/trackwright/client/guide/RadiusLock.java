@@ -6,12 +6,12 @@ import com.zurrtum.create.AllSoundEvents;
 import com.zurrtum.create.content.trains.track.ITrackBlock;
 import com.zurrtum.create.content.trains.track.TrackBlockItem;
 import com.zurrtum.create.content.trains.track.TrackMaterial;
-import com.zurrtum.create.content.trains.track.TrackPlacement;
 import com.zurrtum.create.content.trains.track.TrackPlacement.PlacementInfo;
+import com.zurrtum.create.content.trains.track.TrackPlacement;
 import com.zurrtum.create.infrastructure.component.ConnectingFrom;
+import dev.chaevsfe.trackwright.client.neoforge.KeyMappings;
 import dev.chaevsfe.trackwright.track.QuarterCircle;
 import dev.chaevsfe.trackwright.track.TrackItems;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -65,7 +65,7 @@ public final class RadiusLock {
     }
 
     public static void register(KeyMapping.Category category) {
-        key = KeyMappingHelper.registerKeyMapping(new KeyMapping(KEY_NAME, InputConstants.KEY_R, category));
+        key = KeyMappings.register(new KeyMapping(KEY_NAME, InputConstants.KEY_R, category));
     }
 
     public static boolean on() {
