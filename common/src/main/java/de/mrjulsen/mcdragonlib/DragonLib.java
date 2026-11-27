@@ -1,5 +1,7 @@
 package de.mrjulsen.mcdragonlib;
 
+import java.util.function.Function;
+import net.minecraft.resources.ResourceKey;
 import com.google.common.base.Suppliers;
 import com.google.gson.Gson;
 import de.mrjulsen.mcdragonlib.client.DLOverlayManager;
@@ -88,7 +90,7 @@ public class DragonLib {
     private static final Registrar<BlockEntityType<?>> BLOCK_ENTITIES = MANAGER.get().get(Registries.BLOCK_ENTITY_TYPE);
 
     /** A sample block which is added by DragonLib to test stuff. Does nothing by default and can safely be used in your world. Think of it as a small ~~easter~~ dragon egg. 🐉*/
-    public static final RegistrySupplier<Block> DRAGON_BLOCK = registerBlock("dragon", () -> new DragonLibBlock(BlockBehaviour.Properties.of().strength(1.5f)));
+    public static final RegistrySupplier<Block> DRAGON_BLOCK = registerBlock("dragon", key -> new DragonLibBlock(BlockBehaviour.Properties.of().strength(1.5f).setId(key)));
     public static final RegistrySupplier<BlockEntityType<DragonLibBlockEntity>> DRAGONLIB_BLOCK_ENTITY = BLOCK_ENTITIES.register(DLUtils.resourceLocation(MODID, "dragonlib_block_entity"), () -> new BlockEntityType<>(DragonLibBlockEntity::new, DragonLib.DRAGON_BLOCK.get()));
 
     public static final DLNetworkManager DRAGONLIB_NETWORK = new DLNetworkManager(DLUtils.resourceLocation(MODID, "network"), "14");
@@ -96,19 +98,24 @@ public class DragonLib {
     
     private static MinecraftServer currentServer;
 
-    private static <T extends Block, I extends BlockItem>RegistrySupplier<T> registerBlock(String name, Supplier<T> block) {
-        RegistrySupplier<T> toReturn = BLOCKS.register(DLUtils.resourceLocation(MODID, name), block);
+    // NeoForge 26.2 port: blocks and items read their registry key from their properties in the
+    // constructor ("Block id not set" otherwise), so the factory receives the key.
+    private static <T extends Block, I extends BlockItem>RegistrySupplier<T> registerBlock(String name, Function<ResourceKey<Block>, T> block) {
+        Identifier id = DLUtils.resourceLocation(MODID, name);
+        RegistrySupplier<T> toReturn = BLOCKS.register(id, () -> block.apply(ResourceKey.create(Registries.BLOCK, id)));
         registerBlockItem(name, toReturn, DragonLibBlock.DragonLibItem.class);
         return toReturn;
     }
 
     private static <T extends Block, I extends BlockItem>RegistrySupplier<Item> registerBlockItem(String name, RegistrySupplier<T> block, Class<I> blockItemClass) {
-        return ITEMS.register(DLUtils.resourceLocation(MODID, name), () -> {
+        Identifier id = DLUtils.resourceLocation(MODID, name);
+        return ITEMS.register(id, () -> {
+            ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
             try {
-                return blockItemClass.getDeclaredConstructor(Block.class, Item.Properties.class).newInstance(block.get(), new Item.Properties());
+                return blockItemClass.getDeclaredConstructor(Block.class, Item.Properties.class).newInstance(block.get(), new Item.Properties().setId(key).useBlockDescriptionPrefix());
             } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
                 LOGGER.error("Unable to register block item '" + name + "'.", e);
-                return new BlockItem(block.get(), new Item.Properties());
+                return new BlockItem(block.get(), new Item.Properties().setId(key).useBlockDescriptionPrefix());
             }
         });
     }

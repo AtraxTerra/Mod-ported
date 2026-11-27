@@ -154,3 +154,4 @@ net.minecraft.client.renderer.FaceInfo
 net.minecraft.client.renderer.FaceInfo$VertexInfo
 net.minecraft.client.renderer.texture.TextureAtlas
 net.minecraft.client.renderer.texture.TextureAtlasSprite
+net.neoforged.neoforge.client.model.ExtraFaceData

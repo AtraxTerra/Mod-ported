@@ -10,7 +10,8 @@ displayName = "${display_name}"
 displayURL = "${homepage}"
 authors = "${authors}"
 description = "${description}"
-logoFile = "${icon}"
+# NeoForge 26.2 refuses the old logoFile key. The DragonLib image is a 1280x256 banner.
+bannerFile = "${icon}"
 
 [[dependencies.${modid}]]
 modId = "neoforge"
