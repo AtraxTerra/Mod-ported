@@ -25,11 +25,6 @@ import com.railwayteam.railways.multiloader.PlayerSelection;
 import com.railwayteam.railways.multiloader.S2CPacket;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -40,6 +35,10 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ServerGamePacketListener;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
 import java.util.List;
@@ -52,24 +51,44 @@ public class PacketSetImpl extends PacketSet {
 							List<Function<FriendlyByteBuf, C2SPacket>> c2sPackets,
 							Object2IntMap<Class<? extends C2SPacket>> c2sTypes) {
 		super(id, version, s2cPackets, s2cTypes, c2sPackets, c2sTypes);
-		PayloadTypeRegistry.clientboundPlay().register(payloadType(s2cPacket), RailwaysPayload.STREAM_CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(payloadType(c2sPacket), RailwaysPayload.STREAM_CODEC);
+		// Port: NeoForge takes payload types and their handlers together, in RegisterPayloadHandlersEvent,
+		// which fires after this set exists (it is built while Create Fly registers its addons).
+		SETS.add(this);
 	}
 
-	@Environment(EnvType.CLIENT)
+	/** Port: every packet set made so far; NeoForge registers their payloads in {@link #registerPayloads}. */
+	private static final List<PacketSetImpl> SETS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+	/**
+	 * Port: Fabric's {@code PayloadTypeRegistry} and global receivers in one go. The handlers run on
+	 * the main thread (NeoForge's default), as Fabric's do; the packet set's own handling then defers
+	 * to the client or server executor exactly as upstream.
+	 */
+	public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+		for (PacketSetImpl set : SETS) {
+			PayloadRegistrar registrar = event.registrar(Integer.toString(set.version));
+			registrar.playToClient(payloadType(set.s2cPacket), RailwaysPayload.STREAM_CODEC,
+				(payload, context) -> com.railwayteam.railways.neoforge.RailwaysClientPackets.handle(set, payload.toBuffer()));
+			registrar.playToServer(payloadType(set.c2sPacket), RailwaysPayload.STREAM_CODEC,
+				(payload, context) -> handleFromClient(set, payload, context));
+		}
+	}
+
+	private static void handleFromClient(PacketSetImpl set, RailwaysPayload payload, IPayloadContext context) {
+		if (context.player() instanceof ServerPlayer player)
+			set.handleC2SPacket(player, payload.toBuffer());
+	}
+
+	// Port: NeoForge binds the handlers when it registers the payloads (registerPayloads); these
+	// two only mark the moments upstream did that.
 	public void registerS2CListener() {
-		ClientPlayNetworking.registerGlobalReceiver(payloadType(s2cPacket), (payload, context) ->
-			handleS2CPacket(context.client(), payload.toBuffer()));
 	}
 
 	public void registerC2SListener() {
-		ServerPlayNetworking.registerGlobalReceiver(payloadType(c2sPacket), (payload, context) ->
-			handleC2SPacket(context.player(), payload.toBuffer()));
 	}
 
-	@Environment(EnvType.CLIENT)
 	protected void doSendC2S(FriendlyByteBuf buf) {
-		ClientPlayNetworking.send(new RailwaysPayload(payloadType(c2sPacket), copyBytes(buf)));
+		ClientPacketDistributor.sendToServer(new RailwaysPayload(payloadType(c2sPacket), copyBytes(buf)));
 	}
 
 	public void send(Packet<? super ServerGamePacketListener> packet) {
@@ -127,7 +146,7 @@ public class PacketSetImpl extends PacketSet {
 			buf.writeByteArray(data);
 		}
 
-		private FriendlyByteBuf toBuffer() {
+		FriendlyByteBuf toBuffer() {
 			return new FriendlyByteBuf(Unpooled.wrappedBuffer(data));
 		}
 	}

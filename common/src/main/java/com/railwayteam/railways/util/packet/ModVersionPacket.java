@@ -24,8 +24,8 @@ import com.railwayteam.railways.config.CRConfigs;
 import com.railwayteam.railways.events.ClientEvents;
 import com.railwayteam.railways.multiloader.S2CPacket;
 import com.railwayteam.railways.registry.CRPackets;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -39,7 +39,6 @@ public record ModVersionPacket(String version) implements S2CPacket {
   public void write(FriendlyByteBuf buffer) {
     buffer.writeUtf(this.version);
   }
-  @Environment(EnvType.CLIENT)
   public void handle(Minecraft mc) {
     LocalPlayer player = mc.player;
     if (!RailwaysBuildInfo.VERSION.equals(version) && player != null) {

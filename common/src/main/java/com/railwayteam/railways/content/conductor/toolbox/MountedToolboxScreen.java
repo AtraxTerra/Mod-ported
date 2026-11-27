@@ -23,15 +23,14 @@ import com.railwayteam.railways.content.conductor.ConductorEntity;
 import com.zurrtum.create.client.content.equipment.toolbox.ToolboxScreen;
 import com.zurrtum.create.content.equipment.toolbox.ToolboxBlockEntity;
 import com.zurrtum.create.foundation.gui.menu.MenuType;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 
-@Environment(EnvType.CLIENT)
 public class MountedToolboxScreen {
     public static ToolboxScreen create(
         Minecraft mc,

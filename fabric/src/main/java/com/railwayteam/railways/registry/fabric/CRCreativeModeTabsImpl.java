@@ -28,7 +28,6 @@ import com.railwayteam.railways.registry.CRCreativeModeTabs.Tabs;
 import com.railwayteam.railways.registry.CRPalettes;
 import com.railwayteam.railways.shim.registrate.util.entry.RegistryEntry;
 import com.railwayteam.railways.shim.create.foundation.data.CreateRegistrate;
-import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -46,7 +45,7 @@ import static com.railwayteam.railways.registry.CRItems.ITEM_CONDUCTOR_CAP;
 public class CRCreativeModeTabsImpl {
 
     private static final TabInfo MAIN_TAB = register("main",
-        () -> FabricCreativeModeTab.builder()
+        () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.railways"))
             .icon(() -> ITEM_CONDUCTOR_CAP.get(DyeColor.BLUE).asStack())
             .displayItems(new RegistrateDisplayItemsGenerator(Tabs.MAIN))
@@ -54,14 +53,14 @@ public class CRCreativeModeTabsImpl {
 
     @SuppressWarnings("Convert2MethodRef")
     private static final TabInfo TRACKS_TAB = register("tracks",
-        () -> FabricCreativeModeTab.builder()
+        () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.railways_tracks"))
             .icon(() -> CRBlocks.DARK_OAK_TRACK.asStack())
             .displayItems(new RegistrateDisplayItemsGenerator(Tabs.TRACK))
             .build());
 
     private static final TabInfo PALETTES_TAB = register("palettes",
-            () -> FabricCreativeModeTab.builder()
+            () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.railways_palettes"))
                     .icon(() -> CRPalettes.Styles.BOILER.get(PalettesColor.RED).asStack())
                     .displayItems(new RegistrateDisplayItemsGenerator(Tabs.PALETTES))

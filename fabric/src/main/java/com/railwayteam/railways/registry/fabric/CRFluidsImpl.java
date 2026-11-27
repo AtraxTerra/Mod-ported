@@ -21,44 +21,44 @@ package com.railwayteam.railways.registry.fabric;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.content.palettes.PalettesColor;
 import com.railwayteam.railways.content.palettes.painting.PaintFluid;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeEvents;
 import com.railwayteam.railways.shim.create.content.fluids.VirtualFluid;
 import com.railwayteam.railways.shim.registrate.util.entry.FluidEntry;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributeHandler;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.component.CustomData;
+import net.neoforged.neoforge.fluids.FluidType;
 
 import java.util.Optional;
 
 public class CRFluidsImpl {
     public static FluidEntry<VirtualFluid> registerPaint() {
-        VirtualFluid paint = Registry.register(BuiltInRegistries.FLUID, Railways.asResource("paint"), new VirtualFluid());
-        FluidVariantAttributes.register(paint, new PaintFluidVariantAttributeHandler());
+        VirtualFluid paint = Registry.register(BuiltInRegistries.FLUID, Railways.asResource("paint"), new Paint());
         return new FluidEntry<>(Railways.asResource("paint"), paint);
     }
 
-    @Environment(EnvType.CLIENT)
     public static void initRendering() {
         com.railwayteam.railways.registry.fabric.client.CRPaintFluidRendering.register();
     }
 
-    public static Optional<PalettesColor> getPaintColor(FluidVariant variant) {
-        CustomData data = variant.get(DataComponents.CUSTOM_DATA);
+    /** The paint colour carried by a fluid stack's or resource's custom data. */
+    public static Optional<PalettesColor> getPaintColor(DataComponentGetter components) {
+        CustomData data = components.get(DataComponents.CUSTOM_DATA);
         return data == null ? Optional.empty() : PaintFluid.getColor(data.copyTag());
     }
 
-    private static class PaintFluidVariantAttributeHandler implements FluidVariantAttributeHandler {
+    /**
+     * Port: NeoForge asks every fluid for its {@link FluidType} (an entity in it, a fluid stack's name,
+     * JEI), and the default only knows vanilla's. Paint's type is registered with the other fluid types
+     * (see {@link RailwaysNeoForgeEvents}) and names each colour, as upstream's Fabric
+     * {@code FluidVariantAttributeHandler} did.
+     */
+    private static final class Paint extends VirtualFluid {
         @Override
-        public Component getName(FluidVariant variant) {
-            return Component.translatable(getPaintColor(variant)
-                .map(PalettesColor::getPaintNameId)
-                .orElse("fluid.railways.paint"));
+        public FluidType getFluidType() {
+            return RailwaysNeoForgeEvents.paintFluidType();
         }
     }
 }

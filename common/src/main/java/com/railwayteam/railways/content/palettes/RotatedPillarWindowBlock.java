@@ -20,8 +20,8 @@ package com.railwayteam.railways.content.palettes;
 
 import com.zurrtum.create.content.decoration.palettes.ConnectedGlassBlock;
 import com.zurrtum.create.content.decoration.palettes.WindowBlock;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.railwayteam.railways.shim.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
@@ -67,7 +67,6 @@ public class RotatedPillarWindowBlock extends WindowBlock {
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState().setValue(AXIS, context.getClickedFace().getAxis());
     }
-    @Environment(EnvType.CLIENT)
     public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
         boolean axisDisagreement = false;
         Axis myAxis = state.getOptionalValue(AXIS).orElse(null);

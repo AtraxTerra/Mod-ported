@@ -18,54 +18,42 @@
 
 package com.railwayteam.railways.fabric;
 
+import com.zurrtum.create.platform.Platform;
 import com.mojang.brigadier.CommandDispatcher;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.RailwaysClient;
-import com.railwayteam.railways.base.reload.ClientResourceReloadListener;
 import com.railwayteam.railways.content.buffer.headstock.fabric.CopycatHeadstockModelRegistration;
 import com.railwayteam.railways.content.conductor.fabric.ConductorCapItemRenderer;
-import com.railwayteam.railways.events.ClientEvents;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeClientEvents;
 import com.railwayteam.railways.registry.CRParticleTypes;
 import com.railwayteam.railways.registry.fabric.CRBlockEntitiesClientImpl;
 import com.railwayteam.railways.registry.fabric.client.CRTooltipBehaviours;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
-import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class RailwaysClientImpl implements ClientModInitializer {
+// Port: the Fabric ClientModInitializer, called by Create Fly through RailwaysEntrypoints inside
+// Minecraft's constructor, where Fabric would have called it. Fabric API's registries became queues
+// that RailwaysNeoForgeClientEvents hands to the matching NeoForge events, all of which fire later
+// (key mappings, particles, model layers, entity renderers, packs, reload listeners); its client
+// events are subscribed there too.
+public class RailwaysClientImpl {
 	public void onInitializeClient() {
 		CopycatHeadstockModelRegistration.register();
 		CRBlockEntitiesClientImpl.register();
 		CRTooltipBehaviours.register();
 		RailwaysClient.init();
-		if (FabricLoader.getInstance().isModLoaded("jei")) {
+		if (Platform.isModLoaded("jei")) {
 			registerJeiCompat();
 		}
 		ConductorCapItemRenderer.register();
 		CRParticleTypes.registerFactories();
-		registerClientEvents();
 	}
 
 	private static void registerJeiCompat() {
@@ -78,53 +66,19 @@ public class RailwaysClientImpl implements ClientModInitializer {
 		}
 	}
 
-	private static void registerClientEvents() {
-		ClientTickEvents.START_CLIENT_TICK.register(ClientEvents::onClientTickStart);
-		ClientTickEvents.END_CLIENT_TICK.register(ClientEvents::onClientTickEnd);
-		ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((mc, level) -> ClientEvents.onClientWorldLoad(level));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEvents.onClientDisconnect());
-		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
-			@Override
-			public Identifier getFabricId() {
-				return Railways.asResource("client_events");
-			}
-
-			@Override
-			public void onResourceManagerReload(ResourceManager resourceManager) {
-				ClientEvents.onTagsUpdated();
-			}
-		});
-		ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
-			@Override
-			public Identifier getFabricId() {
-				return Railways.asResource("client_resource_reload");
-			}
-
-			@Override
-			public void onResourceManagerReload(ResourceManager resourceManager) {
-				ClientResourceReloadListener.INSTANCE.onResourceManagerReload(resourceManager);
-			}
-		});
-	}
-
-	@SuppressWarnings({"unchecked", "rawtypes"}) // jank!
 	public static void registerClientCommands(Consumer<CommandDispatcher<SharedSuggestionProvider>> consumer) {
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			CommandDispatcher<SharedSuggestionProvider> casted = (CommandDispatcher) dispatcher;
-			consumer.accept(casted);
-		});
+		RailwaysNeoForgeClientEvents.CLIENT_COMMANDS.add(consumer);
 	}
 
 	public static void registerModelLayer(ModelLayerLocation layer, Supplier<LayerDefinition> definition) {
-		ModelLayerRegistry.registerModelLayer(layer, definition::get);
+		RailwaysNeoForgeClientEvents.LAYERS.put(layer, definition);
 	}
 
 	public static <T extends Entity> void registerEntityRenderer(EntityType<? extends T> type, EntityRendererProvider<T> provider) {
-		EntityRenderers.register(type, provider);
+		RailwaysNeoForgeClientEvents.ENTITY_RENDERERS.add(event -> event.registerEntityRenderer(type, provider));
 	}
 
 	public static void registerBuiltinPack(String id, String name) {
-		ModContainer mod = FabricLoader.getInstance().getModContainer(Railways.MOD_ID).orElseThrow();
-		ResourceManagerHelper.registerBuiltinResourcePack(Railways.asResource(id), mod, Component.literal(name), ResourcePackActivationType.NORMAL);
+		RailwaysNeoForgeClientEvents.PACKS.put(id, name);
 	}
 }

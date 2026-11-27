@@ -22,8 +22,8 @@ import com.zurrtum.create.content.trains.track.TrackBlock;
 import com.zurrtum.create.content.trains.track.TrackMaterial;
 import com.zurrtum.create.content.trains.track.TrackShape;
 import com.zurrtum.create.catnip.data.Pair;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
@@ -42,12 +42,10 @@ public interface IGenericCrossingTrackBE {
     @Nullable
     Pair<TrackMaterial, TrackShape> railways$getSecondCrossingPiece();
 
-    @Environment(EnvType.CLIENT)
     static @NotNull BlockStateModel getModel(@NotNull Pair<TrackMaterial, TrackShape> data) {
         return getModel(data.getFirst(), data.getSecond());
     }
 
-    @Environment(EnvType.CLIENT)
     static @NotNull BlockStateModel getModel(@NotNull TrackMaterial material, @NotNull TrackShape shape) {
         TrackBlock track = material.getBlock();
         return Minecraft.getInstance().getModelManager().getBlockStateModelSet()
@@ -56,12 +54,10 @@ public interface IGenericCrossingTrackBE {
             );
     }
 
-    @Environment(EnvType.CLIENT)
     static @NotNull List<BakedQuad> getQuads(@NotNull Pair<TrackMaterial, TrackShape> data, @Nullable Direction side, @NotNull RandomSource rand) {
         return getQuads(data.getFirst(), data.getSecond(), side, rand);
     }
 
-    @Environment(EnvType.CLIENT)
     static @NotNull List<BakedQuad> getQuads(@NotNull TrackMaterial material, @NotNull TrackShape shape, @Nullable Direction side, @NotNull RandomSource rand) {
         BlockStateModel model = getModel(material, shape);
         List<BlockStateModelPart> parts = new ArrayList<>();

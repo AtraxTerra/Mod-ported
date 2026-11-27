@@ -21,9 +21,7 @@ package com.railwayteam.railways.registry.fabric;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.shim.create.foundation.particle.ICustomParticleData;
 import com.railwayteam.railways.shim.create.foundation.particle.ICustomParticleDataWithSprite;
-import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeClientEvents;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleOptions;
@@ -42,10 +40,11 @@ public class CRParticleTypesParticleEntryImpl {
     }
 
     @SuppressWarnings("unchecked")
-    @Environment(EnvType.CLIENT)
     public static <T extends ParticleOptions> void registerFactory(ParticleType<T> object, ParticleEngine engine, ICustomParticleData<T> customParticleData) {
         if (customParticleData instanceof ICustomParticleDataWithSprite<T> withSprite) {
-            ParticleProviderRegistry.getInstance().register(object, sprite -> withSprite.getMetaFactory().apply(sprite));
+            // Port: NeoForge takes particle providers in RegisterParticleProvidersEvent, after this runs.
+            RailwaysNeoForgeClientEvents.PARTICLES.add(event ->
+                event.registerSpriteSet(object, sprite -> withSprite.getMetaFactory().apply(sprite)));
         }
     }
 }

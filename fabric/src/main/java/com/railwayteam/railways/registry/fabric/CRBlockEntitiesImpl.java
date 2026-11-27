@@ -13,13 +13,14 @@ package com.railwayteam.railways.registry.fabric;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.content.fuel.psi.PortableFuelInterfaceBlockEntity;
 import com.railwayteam.railways.content.fuel.tank.FuelTankBlockEntity;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeEvents;
 import com.railwayteam.railways.shim.registrate.util.entry.BlockEntityEntry;
 import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
 import com.zurrtum.create.foundation.blockEntity.SmartBlockEntity;
 import com.zurrtum.create.foundation.blockEntity.behaviour.CachedFluidInventoryBehaviour;
 import com.zurrtum.create.infrastructure.fluids.FluidInventory;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.neoforged.neoforge.capabilities.Capabilities;
 
 import java.util.function.Function;
 
@@ -44,7 +45,6 @@ public final class CRBlockEntitiesImpl {
         if (transferRegistered) {
             return;
         }
-
         registerFluidSide(FUEL_TANK.get(), blockEntity -> {
             if (blockEntity.fluidCapability == null) {
                 blockEntity.refreshCapability();
@@ -55,11 +55,18 @@ public final class CRBlockEntitiesImpl {
         transferRegistered = true;
     }
 
+    // Port: the same behaviour as upstream; the capability is NeoForge's, registered when NeoForge
+    // asks for capabilities (RegisterCapabilitiesEvent), long after this runs. Same split as Create
+    // Fly's own AllTransfer.
     private static <T extends SmartBlockEntity> void registerFluidSide(
         BlockEntityType<T> type,
         Function<T, FluidInventory> inventory
     ) {
         BlockEntityBehaviour.add(type, blockEntity -> new CachedFluidInventoryBehaviour<>(blockEntity, inventory));
-        FluidStorage.SIDED.registerForBlockEntity(CachedFluidInventoryBehaviour::get, type);
+        RailwaysNeoForgeEvents.CAPABILITIES.add(event -> event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            type,
+            CachedFluidInventoryBehaviour::get
+        ));
     }
 }

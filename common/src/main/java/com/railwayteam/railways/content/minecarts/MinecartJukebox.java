@@ -21,11 +21,8 @@ package com.railwayteam.railways.content.minecarts;
 import com.railwayteam.railways.registry.CREntities;
 import com.railwayteam.railways.registry.CRItems;
 import com.railwayteam.railways.util.packet.PacketSender;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
-import net.minecraft.client.resources.sounds.SoundInstance;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
@@ -54,8 +51,8 @@ public class MinecartJukebox extends MinecartBlock {
 
     private int cooldownCount = 0;
     private ItemStack disc = ItemStack.EMPTY;
-    @Environment(EnvType.CLIENT)
-    private JukeboxCartSoundInstance sound;
+    /** Client only: the sound playing the record (a MinecartJukeboxClient.JukeboxCartSoundInstance). */
+    Object sound;
 
     public MinecartJukebox(EntityType<?> type, Level level) {
         super(type, level, Blocks.JUKEBOX);
@@ -158,50 +155,11 @@ public class MinecartJukebox extends MinecartBlock {
         insertRecord(ItemStack.EMPTY);
     }
 
-    @Environment(EnvType.CLIENT)
+    // Port: the record's sound is client-only and lives in MinecartJukeboxClient. Upstream keeps it
+    // here under Fabric's @Environment(CLIENT), which strips it from a dedicated server; NeoForge
+    // strips nothing, and a server could not verify this entity class with it inside.
     private void updateClientSound() {
-        if (disc.isEmpty()) {
-            if (sound != null)
-                sound.requestStop();
-            return;
-        }
-
-        if (sound != null && !sound.isStopped())
-            sound.requestStop();
-
-        JukeboxSong.fromStack(disc)
-            .map(Holder::value)
-            .ifPresent(this::startPlaying);
-    }
-
-    @Environment(EnvType.CLIENT)
-    private void startPlaying(JukeboxSong song) {
-        sound = new JukeboxCartSoundInstance(song);
-        Minecraft.getInstance().getSoundManager().play(sound);
-    }
-
-    @Environment(EnvType.CLIENT)
-    public class JukeboxCartSoundInstance extends AbstractTickableSoundInstance {
-        public JukeboxCartSoundInstance(JukeboxSong song) {
-            super(song.soundEvent().value(), SoundSource.RECORDS, SoundInstance.createUnseededRandom());
-            this.x = MinecartJukebox.this.getX();
-            this.y = MinecartJukebox.this.getY();
-            this.z = MinecartJukebox.this.getZ();
-        }
-
-        @Override
-        public void tick() {
-            if (MinecartJukebox.this.isRemoved())
-                requestStop();
-
-            this.x = MinecartJukebox.this.getX();
-            this.y = MinecartJukebox.this.getY();
-            this.z = MinecartJukebox.this.getZ();
-        }
-
-        public void requestStop() {
-            stop();
-        }
+        MinecartJukeboxClient.updateSound(this);
     }
 
     @Override

@@ -36,8 +36,8 @@ import com.zurrtum.create.client.content.trains.track.TrackBlockOutline.BezierPo
 import com.zurrtum.create.content.trains.track.TrackTargetingBehaviour;
 import com.zurrtum.create.client.catnip.outliner.Outliner;
 import com.zurrtum.create.catnip.theme.Color;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -52,7 +52,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayList;
 
-@Environment(EnvType.CLIENT)
 public class TrackEdgePointHighlighter {
     private static class HolderSet {
         final Object BLOCK_BOX = new Object();

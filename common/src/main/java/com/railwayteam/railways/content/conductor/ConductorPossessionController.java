@@ -15,8 +15,8 @@ import com.railwayteam.railways.util.packet.CameraMovePacket;
 import com.railwayteam.railways.util.packet.ClientPacketHandlers;
 import com.railwayteam.railways.util.packet.DismountCameraPacket;
 import com.railwayteam.railways.util.packet.SpyConductorInteractPacket;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -31,9 +31,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 
 public class ConductorPossessionController {
-	@Environment(EnvType.CLIENT)
 	private static ClientChunkCache.Storage cameraStorage;
-	@Environment(EnvType.CLIENT)
 	public static CameraType previousCameraType;
 	private static boolean wasUpPressed;
 	private static boolean wasDownPressed;
@@ -46,7 +44,6 @@ public class ConductorPossessionController {
 	private static boolean wasUsingBefore;
 	private static int positionReminder;
 
-	@Environment(EnvType.CLIENT)
 	public static void onClientTick(Minecraft mc, boolean start) {
 		if (start)
 			ClientPacketHandlers.retryPendingCameraView(mc);
@@ -111,7 +108,6 @@ public class ConductorPossessionController {
 		}
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static void onHandleKeybinds(Minecraft mc, boolean start) {
 		if (!(mc.getCameraEntity() instanceof ConductorEntity))
 			return;
@@ -148,23 +144,19 @@ public class ConductorPossessionController {
 		}
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static void dismount() {
 		CRPackets.PACKETS.send(new DismountCameraPacket());
 		wasMounted = false;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static ClientChunkCache.Storage getCameraStorage() {
 		return cameraStorage;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static void setCameraStorage(ClientChunkCache.Storage newStorage) {
 		cameraStorage = newStorage;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static void setRenderPosition(Entity entity) {
 		if (entity instanceof ConductorEntity && cameraStorage != null) {
 			cameraStorage.viewCenterX = entity.chunkPosition().x();
@@ -172,7 +164,6 @@ public class ConductorPossessionController {
 		}
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static void tryUpdatePossession(ConductorEntity conductorEntity) {
 		if (ClientHandler.getPlayerMountedOnCamera() == conductorEntity)
 			setRenderPosition(conductorEntity);
@@ -201,32 +192,26 @@ public class ConductorPossessionController {
 		return null;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static boolean wasUpPressed() {
 		return wasUpPressed;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static boolean wasDownPressed() {
 		return wasDownPressed;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static boolean wasLeftPressed() {
 		return wasLeftPressed;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static boolean wasRightPressed() {
 		return wasRightPressed;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static boolean wasSprintPressed() {
 		return wasSprintPressed;
 	}
 
-	@Environment(EnvType.CLIENT)
 	public static boolean wasJumpPressed() {
 		return wasJumpPressed;
 	}

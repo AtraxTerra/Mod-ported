@@ -18,36 +18,14 @@
 
 package com.railwayteam.railways.fabric.events;
 
-import com.railwayteam.railways.content.fuel.LiquidFuelManager;
-import com.railwayteam.railways.events.CommonEvents;
-import com.railwayteam.railways.Railways;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.resources.ResourceManager;
-import org.jetbrains.annotations.NotNull;
-
+/**
+ * Port: upstream subscribes to Fabric API's server tick, player join and data-pack reload events here
+ * and registers the liquid fuel reload listener. On NeoForge those are
+ * {@code com.railwayteam.railways.neoforge.RailwaysNeoForgeEvents}, an {@code @EventBusSubscriber}
+ * (level tick, player login, tags updated, server reload listeners), so there is nothing left to do
+ * when the mod initialises. Kept so {@code RailwaysImpl} reads as upstream's.
+ */
 public class CommonEventsFabric {
 	public static void init() {
-		ServerTickEvents.START_LEVEL_TICK.register(CommonEvents::onWorldTickStart);
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> CommonEvents.onPlayerJoin(handler.player));
-		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register(((server, resourceManager, success) -> {
-			CommonEvents.onTagsUpdated();
-		}));
-		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
-			@Override
-			public Identifier getFabricId() {
-				return Railways.asResource(LiquidFuelManager.ReloadListener.ID);
-			}
-
-			@Override
-			public void onResourceManagerReload(@NotNull ResourceManager resourceManager) {
-				LiquidFuelManager.ReloadListener.INSTANCE.onResourceManagerReload(resourceManager);
-			}
-		});
 	}
 }

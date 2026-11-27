@@ -27,13 +27,19 @@ import com.railwayteam.railways.content.buffer.single_deco.GenericDyeableSingleB
 import com.railwayteam.railways.content.buffer.single_deco.LinkPinBlock;
 import com.railwayteam.railways.content.custom_tracks.generic_crossing.GenericCrossingBlock;
 import com.railwayteam.railways.content.custom_tracks.generic_crossing.fabric.GenericCrossingModel;
-import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
-import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
+import com.zurrtum.create.client.AllModels;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 
+/**
+ * Port: upstream wraps these blocks' models through Fabric API's model loading plugin, before baking.
+ * Create Fly does the same for its own blocks through {@link AllModels#register}, a block -> wrapper
+ * map applied at the same point by its loader-independent model loading, so the wrappers go there.
+ *
+ * <p>Not ported yet: the matching item model wrappers (upstream's {@code modifyItemModelBeforeBake},
+ * which shows the copied material on the headstock and buffer items). Those items render with their
+ * plain models until NeoForge offers a hook for unbaked item models.
+ */
 public class CopycatHeadstockModelRegistration {
 	private static boolean registered;
 
@@ -42,31 +48,16 @@ public class CopycatHeadstockModelRegistration {
 			return;
 		registered = true;
 
-		ModelLoadingPlugin.register(context -> {
-			context.modifyBlockModelBeforeBake().register((model, modifierContext) -> {
-				BlockState state = modifierContext.state();
-				Block block = state.getBlock();
-				if (block instanceof CopycatHeadstockBlock)
-					return new CopycatHeadstockBlockStateModel(state, model);
-				if (block instanceof CopycatHeadstockBarsBlock)
-					return new CopycatHeadstockBarsModel(state, model);
-				if (block instanceof GenericCrossingBlock)
-					return new GenericCrossingModel(state, model);
-				if (isBufferBlock(block))
-					return new BufferModel(state, model);
-				return model;
-			});
-
-			context.modifyItemModelBeforeBake().register((model, modifierContext) -> {
-				if (!(model instanceof CuboidItemModelWrapper.Unbaked cuboid))
-					return model;
-				if (!(BuiltInRegistries.ITEM.getValue(modifierContext.itemId()) instanceof BlockItem blockItem))
-					return model;
-				if (blockItem.getBlock() instanceof CopycatHeadstockBlock)
-					return new CopycatHeadstockBlockStateModel.UnbakedItemModel(cuboid);
-				return isBufferBlock(blockItem.getBlock()) ? new BufferModel.UnbakedItemModel(cuboid) : model;
-			});
-		});
+		for (Block block : BuiltInRegistries.BLOCK) {
+			if (block instanceof CopycatHeadstockBlock)
+				AllModels.register(block, CopycatHeadstockBlockStateModel::new);
+			else if (block instanceof CopycatHeadstockBarsBlock)
+				AllModels.register(block, CopycatHeadstockBarsModel::new);
+			else if (block instanceof GenericCrossingBlock)
+				AllModels.register(block, GenericCrossingModel::new);
+			else if (isBufferBlock(block))
+				AllModels.register(block, BufferModel::new);
+		}
 	}
 
 	private static boolean isBufferBlock(Block block) {

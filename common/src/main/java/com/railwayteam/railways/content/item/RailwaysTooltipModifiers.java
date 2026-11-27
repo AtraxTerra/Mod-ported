@@ -23,8 +23,8 @@ import com.zurrtum.create.client.catnip.lang.FontHelper;
 import com.zurrtum.create.client.foundation.item.ItemDescription;
 import com.zurrtum.create.client.foundation.item.KineticStats;
 import com.zurrtum.create.client.foundation.item.TooltipModifier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /**
  * Kept in its own class (rather than inline in {@link Railways}) so the client-only
@@ -33,7 +33,6 @@ import net.fabricmc.api.Environment;
  * verified - and its return type resolved - the moment its declaring class is loaded,
  * regardless of any runtime {@code Env} guard around the call site.
  */
-@Environment(EnvType.CLIENT)
 public class RailwaysTooltipModifiers {
   public static void register() {
     Railways.registrate().setTooltipModifierFactory(item -> new ItemDescription.Modifier(item, FontHelper.Palette.STANDARD_CREATE)
