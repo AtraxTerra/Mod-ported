@@ -1,6 +1,6 @@
 package de.mrjulsen.mcdragonlib.client.gui.widgets.richtext.action;
 
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.network.chat.Component;
 import java.net.URI;
 

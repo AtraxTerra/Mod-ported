@@ -223,8 +223,8 @@ public class DLWindowManager implements IEventDispatcher<DLWindowManager>, MenuA
     }
 
     public void render(DLGuiGraphics graphics, int mouseX, int mouseY) {
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
+        // 1.21 turned depth testing off here so that draw order decided what is on top; the 26.2 GUI
+        // always works that way (the z translations below no longer matter either).
 
         for (RenderLayer layer : RenderLayer.values()) {
             graphics.poseStack().pushPose();
@@ -268,9 +268,7 @@ public class DLWindowManager implements IEventDispatcher<DLWindowManager>, MenuA
             invokeEvent(this, new DLGuiStandardEvents.RenderEvent(graphics, mouseX, mouseY, layer, Rectangle.withSize(0, 0, getScreenWidth(), getScreenHeight())));
             graphics.poseStack().popPose();
         }
-        
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(true);
+
     }
 
     public void tick() {        
@@ -1113,32 +1111,38 @@ public class DLWindowManager implements IEventDispatcher<DLWindowManager>, MenuA
         CursorType.set(null);
     }
 
+    // NeoForge 26.2 port: Screen's static modifier helpers moved to Minecraft (and to the key events);
+    // the shortcut checks below are 1.21's Screen#isCut/isPaste/isCopy/isSelectAll.
     public static boolean hasControlDown() {
-        return Screen.hasControlDown();
+        return Minecraft.getInstance().hasControlDown();
     }
 
     public static boolean hasShiftDown() {
-        return Screen.hasShiftDown();
+        return Minecraft.getInstance().hasShiftDown();
     }
 
     public static boolean hasAltDown() {
-        return Screen.hasAltDown();
+        return Minecraft.getInstance().hasAltDown();
+    }
+
+    private static boolean isShortcut(int keyCode, int key) {
+        return keyCode == key && hasControlDown() && !hasShiftDown() && !hasAltDown();
     }
 
     public static boolean isCut(int keyCode) {
-        return Screen.isCut(keyCode);
+        return isShortcut(keyCode, GLFW.GLFW_KEY_X);
     }
 
     public static boolean isPaste(int keyCode) {
-        return Screen.isPaste(keyCode);
+        return isShortcut(keyCode, GLFW.GLFW_KEY_V);
     }
 
     public static boolean isCopy(int keyCode) {
-        return Screen.isCopy(keyCode);
+        return isShortcut(keyCode, GLFW.GLFW_KEY_C);
     }
 
     public static boolean isSelectAll(int keyCode) {
-        return Screen.isSelectAll(keyCode);
+        return isShortcut(keyCode, GLFW.GLFW_KEY_A);
     }
 
     public double getScreenWidth() {

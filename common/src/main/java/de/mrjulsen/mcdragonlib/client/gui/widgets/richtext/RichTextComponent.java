@@ -2,7 +2,7 @@ package de.mrjulsen.mcdragonlib.client.gui.widgets.richtext;
 
 import com.google.common.collect.Maps;
 
-import de.mrjulsen.mcdragonlib.mixin.FontAccessor;
+import de.mrjulsen.mcdragonlib.client.util.FontUtils;
 import de.mrjulsen.mcdragonlib.util.Cache;
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
@@ -31,8 +31,7 @@ public class RichTextComponent {
     }
 
     private static final WidthProvider widthProvider = (style, characterCodePoint) -> {
-        FontAccessor accessor = (FontAccessor)style.font();
-        return accessor.dragonlib$invokeGetFontSet(Style.DEFAULT_FONT).getGlyphInfo(characterCodePoint, accessor.dragonlib$filterFishyGlyphs()).getAdvance(style.bold()) * style.scale();
+        return FontUtils.defaultGlyphInfo(style.font(), characterCodePoint).getAdvance(style.bold()) * style.scale();
     };
 
     private final Cache<Float> textWidthCache = new Cache<>(() -> calcWidthOfSection(0, length()));

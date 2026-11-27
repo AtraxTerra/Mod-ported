@@ -1,9 +1,5 @@
 package de.mrjulsen.mcdragonlib.client.util;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -12,83 +8,64 @@ import org.apache.commons.lang3.mutable.MutableFloat;
 
 import com.mojang.blaze3d.font.GlyphInfo;
 
-import de.mrjulsen.mcdragonlib.mixin.BakedGlyphAccessor;
-import de.mrjulsen.mcdragonlib.mixin.FontAccessor;
 import de.mrjulsen.mcdragonlib.mixin.StringSplitterAccessor;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.font.FontSet;
+import net.minecraft.client.gui.GlyphSource;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.Identifier;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.StringDecomposer;
 
+/**
+ * NeoForge 26.2 port: 26.2 fonts hand out immutable glyphs drawn after extraction, so the 1.21 tools
+ * that shifted a glyph's texture coordinates while drawing (pushUV/popUV) are gone; BERLabel clips the
+ * character quad instead. Glyphs come from the font's {@link GlyphSource} for a {@link FontDescription}
+ * (1.21: the {@code FontSet} of a font location).
+ */
 public class FontUtils {
     public Font font;
-    public FontSet fontSet;
-    
-    protected static record UVData(float u0, float v0, float u1, float v1) {}
-    protected static final Map<Integer, Deque<UVData>> uvStack = new HashMap<>();
+    public final FontDescription fontDescription;
 
-    public FontUtils(Identifier fontStyle) {
+    public FontUtils(FontDescription fontStyle) {
         this.font = Minecraft.getInstance().font;
-        this.fontSet = ((FontAccessor)this.font).dragonlib$invokeGetFontSet(fontStyle);
-    }    
+        this.fontDescription = fontStyle;
+    }
 
-    private void checkAndUpdateFont() {
+    /** Glyphs of this font (looked up on each call, so a resource reload is picked up). */
+    public GlyphSource glyphs() {
+        return glyphs(fontDescription);
+    }
+
+    public GlyphSource glyphs(FontDescription description) {
         if (this.font != Minecraft.getInstance().font) {
+            this.font = Minecraft.getInstance().font;
         }
-    }
-
-    public BakedGlyphAccessor getGlyphAccessor(int charCode) {
-        return (BakedGlyphAccessor)getGlyph(charCode);
-    }
-
-    public void pushUV(int charCode) {
-        BakedGlyphAccessor glyph = getGlyphAccessor(charCode);
-        pushUV(charCode, glyph.dragonlib$getU0(), glyph.dragonlib$getV0(), glyph.dragonlib$getU1(), glyph.dragonlib$getV1());
-    }
-
-    protected void pushUV(int charCode, float u0, float v0, float u1, float v1) {
-        if (!uvStack.containsKey(charCode)) {
-            uvStack.put(charCode, new ArrayDeque<>());
-        }
-        uvStack.get(charCode).addLast(new UVData(u0, v0, u1, v1));
-    }
-
-    public boolean popUV(int charCode) {
-        if (!uvStack.containsKey(charCode)) {
-            return false;
-        }
-
-        UVData data = uvStack.get(charCode).pollLast();
-        if (uvStack.get(charCode).isEmpty()) {
-            uvStack.remove(charCode);
-        }
-        
-        BakedGlyphAccessor glyph = getGlyphAccessor(charCode);
-        glyph.dragonlib$setU0(data.u0());
-        glyph.dragonlib$setV0(data.v0());
-        glyph.dragonlib$setU1(data.u1());
-        glyph.dragonlib$setV1(data.v1());
-        return true;
+        return font.getGlyphSource(description);
     }
 
     public GlyphInfo getGlyphInfo(int charCode) {
-        return fontSet.getGlyphInfo(charCode, false);
+        return getGlyph(charCode).info();
     }
 
     public BakedGlyph getGlyph(int charCode) {
-        return fontSet.getGlyph(charCode);
+        return glyphs().getGlyph(charCode);
     }
 
     public void reset() {
-        uvStack.clear();
+    }
+
+    /**
+     * Metrics of {@code codePoint} in {@code font}'s default font, what 1.21 read from
+     * {@code getFontSet(Style.DEFAULT_FONT).getGlyphInfo(codePoint, filterFishyGlyphs)}.
+     */
+    public static GlyphInfo defaultGlyphInfo(Font font, int codePoint) {
+        return font.getGlyphSource(FontDescription.DEFAULT).getGlyph(codePoint).info();
     }
 
 

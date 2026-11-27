@@ -3,7 +3,6 @@ package de.mrjulsen.mcdragonlib.client.gui.widgets.components;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.font.GlyphInfo;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
@@ -26,7 +25,9 @@ import de.mrjulsen.mcdragonlib.client.util.GuiUtils;
 import de.mrjulsen.mcdragonlib.data.ETextAlignment;
 import de.mrjulsen.mcdragonlib.events.EventListenerId;
 import de.mrjulsen.mcdragonlib.events.IEvent;
-import de.mrjulsen.mcdragonlib.mixin.FontAccessor;
+import de.mrjulsen.mcdragonlib.client.util.FontUtils;
+import de.mrjulsen.mcdragonlib.client.util.GuiPoseStack;
+import de.mrjulsen.mcdragonlib.client.util.GuiVertexRecorder;
 import de.mrjulsen.mcdragonlib.util.DLColor;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.Holder.MutableHolder;
@@ -37,16 +38,11 @@ import de.mrjulsen.mcdragonlib.util.properties.ColorProperty;
 import de.mrjulsen.mcdragonlib.util.properties.NumberProperty;
 import de.mrjulsen.mcdragonlib.util.properties.Property;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.font.FontSet;
-import net.minecraft.client.gui.font.glyphs.BakedGlyph;
-import net.minecraft.client.gui.font.glyphs.EmptyGlyph;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import org.joml.Matrix4f;
@@ -433,14 +429,14 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
         this.linesByIndex = tempList;
     }
 
-    private void setPose(PoseStack stack, float x, float y, float scale) {
+    private void setPose(GuiPoseStack stack, float x, float y, float scale) {
         stack.pushPose();
         stack.translate(x, y, 0);
         stack.pushPose();
         stack.scale(scale, scale, 1);
     }
 
-    private void clearPose(PoseStack stack) {
+    private void clearPose(GuiPoseStack stack) {
         stack.popPose();
         stack.popPose();
     }
@@ -506,13 +502,8 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
         float dYInScaledSpace;
 
         Matrix4f pose = graphics.poseStack().last().pose();
-        BufferSource bufferSource = graphics.graphics().bufferSource();
-        Font.DisplayMode mode = Font.DisplayMode.NORMAL;
-        int packedLightCoords = LightTexture.FULL_BRIGHT;
         float dimFactor = renderShadow ? 0.25F : 1.0F;
         Font font = segment.style().font();
-        FontAccessor accessor = (FontAccessor) font;
-        FontSet fontSet = accessor.dragonlib$invokeGetFontSet(Style.DEFAULT_FONT);
 
         boolean bold = segment.style().bold();
         int textColor = segment.style().color();
@@ -576,8 +567,8 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
             }
 
 
-            GlyphInfo glyphInfo = fontSet.getGlyphInfo(c, accessor.dragonlib$filterFishyGlyphs());
-            BakedGlyph bakedGlyph = segment.style().obfuscated() && c != 32 ? fontSet.getRandomGlyph(glyphInfo) : fontSet.getGlyph(c);
+            // 26.2: metrics from the default font's glyph source, as 1.21 read them from its FontSet.
+            GlyphInfo glyphInfo = FontUtils.defaultGlyphInfo(font, c);
             float charWidthInScaledSpace = glyphInfo.getAdvance(bold);
 
             if (!(multiline.get() && lineWrap.get())) {
@@ -606,21 +597,12 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
                 float hX2 = dX + charWidthInScaledSpace;
                 float hY2 = currentLineMarker.lineHeight() / segment.style().scale() + (float)lineSpacing.get() / 2f;
 
-                RenderSystem.setShader(GameRenderer::getPositionColorShader);
-                RenderSystem.enableBlend();
-                RenderSystem.defaultBlendFunc();
-                RenderSystem.disableCull();
-
-                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+                GuiVertexRecorder bufferBuilder = GuiVertexRecorder.colored(graphics);
                 bufferBuilder.addVertex(pose, hX1, hY2, 0.0F).setColor(hr, hg, hb, ha);
                 bufferBuilder.addVertex(pose, hX2, hY2, 0.0F).setColor(hr, hg, hb, ha);
                 bufferBuilder.addVertex(pose, hX2, hY1, 0.0F).setColor(hr, hg, hb, ha);
                 bufferBuilder.addVertex(pose, hX1, hY1, 0.0F).setColor(hr, hg, hb, ha);
-                BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-
-                RenderSystem.enableCull();
-                RenderSystem.disableBlend();
-                RenderSystem.setShader(GameRenderer::getPositionTexShader);
+                bufferBuilder.submit();
             }
 
 
@@ -636,37 +618,33 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
                 float hX2 = dX + charWidthInScaledSpace;
                 float hY2 = currentLineMarker.lineHeight() / segment.style().scale();
 
-                RenderSystem.setShader(GameRenderer::getPositionColorShader);
-                RenderSystem.enableBlend();
-                RenderSystem.defaultBlendFunc();
-                RenderSystem.disableCull();
-
-                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+                GuiVertexRecorder bufferBuilder = GuiVertexRecorder.colored(graphics);
                 bufferBuilder.addVertex(pose, hX1, hY2, 0.0F).setColor(hr, hg, hb, ha);
                 bufferBuilder.addVertex(pose, hX2, hY2, 0.0F).setColor(hr, hg, hb, ha);
                 bufferBuilder.addVertex(pose, hX2, hY1, 0.0F).setColor(hr, hg, hb, ha);
                 bufferBuilder.addVertex(pose, hX1, hY1, 0.0F).setColor(hr, hg, hb, ha);
-                BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-
-                RenderSystem.enableCull();
-                RenderSystem.disableBlend();
-                RenderSystem.setShader(GameRenderer::getPositionTexShader);
+                bufferBuilder.submit();
             }
 
-            if (!(bakedGlyph instanceof EmptyGlyph)) {
-                float boldOffset = bold ? glyphInfo.getBoldOffset() : 0.0F;
+            if (c != 32) {
+                // 26.2: no glyph-level drawing into GUI buffers; each character is extracted as text of its
+                // own at its exact position (bold, italic and obfuscation come from the style, the
+                // underline and strikethrough are drawn below, from the effect batch, as in 1.21).
                 float shadowOffset = renderShadow ? glyphInfo.getShadowOffset() : 0.0F;
-                VertexConsumer vertexConsumer = bufferSource.getBuffer(bakedGlyph.renderType(mode));
-                accessor.dragonlib$renderChar(bakedGlyph, bold, segment.style().italic(), boldOffset, dX + shadowOffset, dYInScaledSpace + shadowOffset, pose, vertexConsumer, red, green, blue, alpha, packedLightCoords);
+                Style charStyle = Style.EMPTY.withBold(bold).withItalic(segment.style().italic()).withObfuscated(segment.style().obfuscated());
+                graphics.poseStack().pushPose();
+                graphics.poseStack().translate(dX + shadowOffset, dYInScaledSpace + shadowOffset, 0);
+                graphics.graphics().text(font, FormattedCharSequence.codepoint(c, charStyle), 0, 0, ARGB.colorFromFloat(alpha, red, green, blue), false);
+                graphics.poseStack().popPose();
             }
 
             float glyphAdvanceRenderShadowOffset = renderShadow ? 1.0F : 0.0F;
             if (segment.style().strikethrough()) {
-                effectHolder.addEffectToBatch(new BakedGlyph.Effect(dX + glyphAdvanceRenderShadowOffset - 1.0F, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 4.5F, dX + glyphAdvanceRenderShadowOffset + charWidthInScaledSpace, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 4.5F - 1.0F, 0.01F, red, green, blue, alpha));
+                effectHolder.addEffectToBatch(new EffectBatch.Effect(dX + glyphAdvanceRenderShadowOffset - 1.0F, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 4.5F, dX + glyphAdvanceRenderShadowOffset + charWidthInScaledSpace, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 4.5F - 1.0F, 0.01F, red, green, blue, alpha));
             }
 
             if (segment.style().underlined()) {
-                effectHolder.addEffectToBatch(new BakedGlyph.Effect(dX + glyphAdvanceRenderShadowOffset - 1.0F, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 9.0F, dX + glyphAdvanceRenderShadowOffset + charWidthInScaledSpace, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 9.0F - 1.0F, 0.01F, red, green, blue, alpha));
+                effectHolder.addEffectToBatch(new EffectBatch.Effect(dX + glyphAdvanceRenderShadowOffset - 1.0F, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 9.0F, dX + glyphAdvanceRenderShadowOffset + charWidthInScaledSpace, dYInScaledSpace + glyphAdvanceRenderShadowOffset + 9.0F - 1.0F, 0.01F, red, green, blue, alpha));
             }
             dX += charWidthInScaledSpace;
         }
@@ -700,18 +678,12 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
 
         setPose(graphics.poseStack(), (float)screenPoseX, (float)screenPoseY, effectScale);
         Matrix4f pose = graphics.poseStack().last().pose();
-        MultiBufferSource.BufferSource bufferSource = graphics.graphics().bufferSource();
-        Font.DisplayMode mode = Font.DisplayMode.NORMAL;
-        int packedLightCoords = LightTexture.FULL_BRIGHT;
-
-        Font font = Minecraft.getInstance().font;
-        FontAccessor accessor = (FontAccessor) font;
-        BakedGlyph whiteGlyph = accessor.dragonlib$invokeGetFontSet(Style.DEFAULT_FONT).whiteGlyph();
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(whiteGlyph.renderType(mode));
-
-        for (BakedGlyph.Effect effect : effectsBatch.getEffects()) {
-            whiteGlyph.renderEffect(effect, pose, vertexConsumer, packedLightCoords);
+        // 26.2: effect quads in plain color (1.21 drew them with the font's white glyph).
+        GuiVertexRecorder vertexConsumer = GuiVertexRecorder.colored(graphics);
+        for (EffectBatch.Effect effect : effectsBatch.getEffects()) {
+            effect.addTo(vertexConsumer, pose);
         }
+        vertexConsumer.submit();
         clearPose(graphics.poseStack());
     }
 
@@ -804,7 +776,6 @@ public class DLRichTextLabel extends DLGuiComponent implements DLContextMenu.Men
             graphics.poseStack().popPose();
         }
 
-        graphics.graphics().bufferSource().endBatch();
         GuiUtils.enableScissor(graphics, (int)renderBounds.x(), (int)renderBounds.y(), (int)renderBounds.width(), (int)renderBounds.height());
     }
 

@@ -23,7 +23,7 @@ import de.mrjulsen.mcdragonlib.client.gui.widgets.render.ILayeredStateRenderer;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.render.VanillaSlotRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.AbstractContainerMenu;

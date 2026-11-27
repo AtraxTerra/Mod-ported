@@ -83,11 +83,12 @@ jobs:
         run: |
           mc=$(find build/moddev/artifacts -name 'minecraft-patched-*.jar' | grep -v sources | head -1)
           nf=$(find ~/.gradle/caches -name 'neoforge-26.2*-universal.jar' | head -1)
-          echo "minecraft: $mc  neoforge: $nf"
+          arch=$(find ~/.gradle/caches -name 'architectury-neoforge-*.jar' | grep -v sources | head -1)
+          echo "minecraft: $mc  neoforge: $nf  architectury: $arch"
           set +e
           grep -vE '^\s*(#|$)' .github/port/api-classes.txt | while read -r cls; do
             echo "=== API $cls"
-            javap -public -cp "$mc:$nf" "$cls" 2>&1 | sed 's/^/API| /' || true
+            javap -public -cp "$mc:$nf:$arch" "$cls" 2>&1 | sed 's/^/API| /' || true
           done > api-reference.txt
           wc -l api-reference.txt
           cat api-reference.txt

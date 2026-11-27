@@ -10,7 +10,7 @@ public abstract class BasicBlockEntityRenderer<T extends BlockEntity> extends Sa
 
     public BasicBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
         super(context);
-        this.font = context.getFont();
+        this.font = context.font();
     }
 
     @Override

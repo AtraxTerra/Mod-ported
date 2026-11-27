@@ -148,16 +148,16 @@ public abstract class DLWindow extends DLGuiComponent {
             window.set(win);
             return win;
         });
-        Minecraft.getInstance().setScreen(wrapper);
+        Minecraft.getInstance().gui.setScreen(wrapper);
         return window.get();
     }
 
     public static void closeWindow() {
-        Screen screen = Minecraft.getInstance().screen;
+        Screen screen = Minecraft.getInstance().gui.screen();
         if (screen instanceof DLScreen wrapper) {
             wrapper.getWindowManager().close();
         } else {
-            Minecraft.getInstance().setScreen(null);
+            Minecraft.getInstance().gui.setScreen(null);
         }
     }
     

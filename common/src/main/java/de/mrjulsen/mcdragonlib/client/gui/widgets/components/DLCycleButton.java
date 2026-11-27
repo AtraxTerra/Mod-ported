@@ -3,7 +3,6 @@ package de.mrjulsen.mcdragonlib.client.gui.widgets.components;
 import java.util.Optional;
 import org.lwjgl.glfw.GLFW;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
 import de.mrjulsen.mcdragonlib.annotations.SupportsEvents;
@@ -62,7 +61,7 @@ public class DLCycleButton<T> extends DLButton {
     @Override
     public boolean defaultButtonClickAction(DLGuiComponent src, ClickEvent event) {
         int targetIndex = selectedIndex.get();
-        if (Screen.hasShiftDown()) {
+        if (Minecraft.getInstance().hasShiftDown()) {
             targetIndex--;
         } else {
             targetIndex++;
@@ -80,7 +79,7 @@ public class DLCycleButton<T> extends DLButton {
 
     @Override
     public void renderMainLayer(DLGuiGraphics graphics, double mouseX, double mouseY, Rectangle renderBounds) {
-        RenderSystem.enableBlend();
+        // 26.2: blending comes with the GUI pipeline (1.21: RenderSystem.enableBlend()).
         DLWindowManager manager = getWindowManager();
         GuiUtils.setTint(backgroundTint.get());
         if (!enabled.get()) {

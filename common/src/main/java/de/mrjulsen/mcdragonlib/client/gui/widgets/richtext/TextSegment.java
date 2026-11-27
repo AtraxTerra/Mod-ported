@@ -1,8 +1,8 @@
 package de.mrjulsen.mcdragonlib.client.gui.widgets.richtext;
 
-import de.mrjulsen.mcdragonlib.mixin.FontAccessor;
+import de.mrjulsen.mcdragonlib.client.util.FontUtils;
+import net.minecraft.client.gui.Font;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
-import net.minecraft.client.gui.font.FontSet;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -77,10 +77,9 @@ public class TextSegment {
         }
 
         MutableFloat mutableFloat = new MutableFloat();
-        FontAccessor accessor = (FontAccessor) style().font();
-        FontSet fontSet = accessor.dragonlib$invokeGetFontSet(Style.DEFAULT_FONT);
+        Font font = style().font();
         iterate(this, 0, (idx, style, c) -> {
-            mutableFloat.add(fontSet.getGlyphInfo(c, accessor.dragonlib$filterFishyGlyphs()).getAdvance(style().bold()));
+            mutableFloat.add(FontUtils.defaultGlyphInfo(font, c).getAdvance(style().bold()));
             return true;
         }, length());
         return mutableFloat.floatValue() * style().scale();

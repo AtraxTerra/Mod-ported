@@ -2,7 +2,6 @@ package de.mrjulsen.mcdragonlib.client.gui.widgets.components;
 
 import org.lwjgl.glfw.GLFW;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
 import de.mrjulsen.mcdragonlib.annotations.SupportsEvents;
@@ -191,7 +190,7 @@ public class DLButton extends DLGuiComponent {
     public void renderMainLayer(DLGuiGraphics graphics, double mouseX, double mouseY, Rectangle renderBounds) {
         super.renderMainLayer(graphics, mouseX, mouseY, renderBounds);
 
-        RenderSystem.enableBlend();
+        // 26.2: blending comes with the GUI pipeline (1.21: RenderSystem.enableBlend()).
         DLWindowManager manager = getWindowManager();
 
         // Hintergrund rendern

@@ -15,7 +15,7 @@ public abstract class RotatableBlockEntityRenderer<T extends BlockEntity> extend
 
     public RotatableBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
         super(context);
-        this.font = context.getFont();
+        this.font = context.font();
     }
 
     @Override

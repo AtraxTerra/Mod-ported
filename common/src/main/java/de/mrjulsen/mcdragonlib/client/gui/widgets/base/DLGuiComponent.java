@@ -30,7 +30,7 @@ import de.mrjulsen.mcdragonlib.util.properties.BooleanProperty;
 import de.mrjulsen.mcdragonlib.util.properties.NumberProperty;
 import de.mrjulsen.mcdragonlib.util.properties.Property;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderPipelines;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -1849,9 +1849,9 @@ public abstract class DLGuiComponent implements IEventDispatcher<DLGuiComponent>
      * @param h height
      */
     public static void renderBoundingBox(DLGuiGraphics graphics, int x, int y, int w, int h) {
-        graphics.graphics().fill(RenderType.guiTextHighlight(), x + 0, y + 0, x + w, y + 1, 0xFF0000FF);
-        graphics.graphics().fill(RenderType.guiTextHighlight(), x + 0, y + h - 1, x + w, y + h, 0xFF0000FF);
-        graphics.graphics().fill(RenderType.guiTextHighlight(), x + 0, y + 1, x + 1, y + h - 1, 0xFF0000FF);
-        graphics.graphics().fill(RenderType.guiTextHighlight(), x + w - 1, y + 1, x + w, y + h - 1, 0xFF0000FF);
+        graphics.graphics().fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, x + 0, y + 0, x + w, y + 1, 0xFF0000FF);
+        graphics.graphics().fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, x + 0, y + h - 1, x + w, y + h, 0xFF0000FF);
+        graphics.graphics().fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, x + 0, y + 1, x + 1, y + h - 1, 0xFF0000FF);
+        graphics.graphics().fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, x + w - 1, y + 1, x + w, y + h - 1, 0xFF0000FF);
     }
 }

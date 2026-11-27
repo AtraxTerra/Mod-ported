@@ -175,10 +175,10 @@ public class DLColorPicker extends DLGuiComponent {
                     float vY = 1f - ((float)k / (int)quadArea.get().height());
                     DLColor color = HSVSlot.colorOf(Pair.of(hsvSlots.get().quadX(), vX), Pair.of(hsvSlots.get().quadY(), vY), Pair.of(hsvSlots.get().slider(), hsvSlots.get().slider().get(this)));
                     color = color.swapChannels(ColorChannel.R, ColorChannel.B);
-                    img.setPixelRGBA(i, k, color.getAsARGB());
+                    img.setPixelABGR(i, k, color.getAsARGB());
                 }
             }
-            DynamicTexture tex = new DynamicTexture(img);
+            DynamicTexture tex = new DynamicTexture(() -> "dragonlib color picker quad", img);
             return tex;
         });
 
@@ -190,7 +190,7 @@ public class DLColorPicker extends DLGuiComponent {
                     DLColor color = HSVSlot.colorOf(this, hsvSlots.get().slider(), val);
                     color = color.swapChannels(ColorChannel.R, ColorChannel.B);
                     for (int i = 0; i < (int)colorSliderArea.get().width(); i++) {
-                        img.setPixelRGBA(i, k, color.getAsARGB());
+                        img.setPixelABGR(i, k, color.getAsARGB());
                     }
                 }
             } else {
@@ -199,11 +199,11 @@ public class DLColorPicker extends DLGuiComponent {
                     DLColor color = HSVSlot.colorOf(this, hsvSlots.get().slider(), val);
                     color = color.swapChannels(ColorChannel.R, ColorChannel.B);
                     for (int i = 0; i < (int)colorSliderArea.get().height(); i++) {
-                        img.setPixelRGBA(k, i, color.getAsARGB());
+                        img.setPixelABGR(k, i, color.getAsARGB());
                     }
                 }
             }
-            return new DynamicTexture(img);
+            return new DynamicTexture(() -> "dragonlib color picker slider", img);
         });
 
         addEventListener(DLGuiStandardEvents.DragEvent.class, (s, e) -> {
@@ -322,13 +322,13 @@ public class DLColorPicker extends DLGuiComponent {
         DLTextureSheet.DRAGONLIB_UI.getSprite("slot").render(graphics, (int)quadArea.get().x() - 1, (int)quadArea.get().y() - 1, (int)quadArea.get().width() + 2, (int)quadArea.get().height() + 2);
         int w = quadTexture.get().getPixels().getWidth();
         int h = quadTexture.get().getPixels().getHeight();
-        GuiUtils.drawTexture(quadTexture.get().getId(), graphics, (int)quadArea.get().x(), (int)quadArea.get().y(), w, h, 0, 0, w, h, TextureFillMode.STRETCH, w, h);
+        GuiUtils.drawTexture(quadTexture.get(), graphics, (int)quadArea.get().x(), (int)quadArea.get().y(), w, h, 0, 0, w, h, TextureFillMode.STRETCH, w, h);
 
         if (showColorSlider.get()) {
             DLTextureSheet.DRAGONLIB_UI.getSprite("slot").render(graphics, (int)colorSliderArea.get().x() - 1, (int)colorSliderArea.get().y() - 1, (int)colorSliderArea.get().width() + 2, (int)colorSliderArea.get().height() + 2);
             w = colorSliderTexture.get().getPixels().getWidth();
             h = colorSliderTexture.get().getPixels().getHeight();
-            GuiUtils.drawTexture(colorSliderTexture.get().getId(), graphics, (int)colorSliderArea.get().x(), (int)colorSliderArea.get().y(), w, h, 0, 0, w, h, TextureFillMode.STRETCH, w, h);
+            GuiUtils.drawTexture(colorSliderTexture.get(), graphics, (int)colorSliderArea.get().x(), (int)colorSliderArea.get().y(), w, h, 0, 0, w, h, TextureFillMode.STRETCH, w, h);
         }
         
         if (showAlphaSlider.get()) {

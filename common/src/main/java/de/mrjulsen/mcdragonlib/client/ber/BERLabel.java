@@ -11,7 +11,6 @@ import de.mrjulsen.mcdragonlib.client.util.DLGraphics;
 import de.mrjulsen.mcdragonlib.client.util.FontUtils;
 import de.mrjulsen.mcdragonlib.client.util.RenderUtils;
 import de.mrjulsen.mcdragonlib.data.ETextAlignment;
-import de.mrjulsen.mcdragonlib.mixin.BakedGlyphAccessor;
 import de.mrjulsen.mcdragonlib.util.DLColor;
 import de.mrjulsen.mcdragonlib.util.Pair;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
@@ -24,7 +23,15 @@ import de.mrjulsen.mcdragonlib.util.properties.NumberProperty;
 import de.mrjulsen.mcdragonlib.util.properties.Property;
 import de.mrjulsen.mcdragonlib.util.properties.VirtualProperty;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.gui.GlyphSource;
+import net.minecraft.client.gui.font.TextRenderable;
+import net.minecraft.client.gui.font.glyphs.BakedGlyph;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.util.RandomSource;
+import org.joml.Matrix4f;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -41,15 +48,18 @@ public class BERLabel {
         float unscaledAdvance
     ) {}
 
+    // NeoForge 26.2 port: 1.21 kept the glyph here to shift its texture coordinates while drawing a
+    // clipped character. 26.2 glyphs are immutable and drawn later, so the character quad itself is
+    // clipped instead (ClippedGlyphConsumer); only the metrics are cached.
     protected static record CharData(
         int charCode,
         String charString,
         boolean isBold,
-        GlyphInfo glyphInfo,
-        BakedGlyphAccessor glyph,
-        float glyphUWidth,
-        float glyphVHeight
+        GlyphInfo glyphInfo
     ) {}
+
+    private static final Matrix4f IDENTITY = new Matrix4f();
+    private static final RandomSource RANDOM = RandomSource.create();
 
     protected static final Map<Integer, CharData> charDataCache = new ConcurrentHashMap<>();
 
@@ -112,7 +122,7 @@ public class BERLabel {
     public final Property<EScrollMode> horizontalScrollMode = new Property<>(EScrollMode.NEVER);
     public final Property<EScrollMode> verticalScrollMode = new Property<>(EScrollMode.NEVER);
 
-    private final FontUtils fontUtils = new FontUtils(Style.DEFAULT_FONT);
+    private final FontUtils fontUtils = new FontUtils(FontDescription.DEFAULT);
 
     private long lastRenderTime = 0;
     private float horizontalScrollOffset = 0.0f;
@@ -142,11 +152,8 @@ public class BERLabel {
 
         return charDataCache.computeIfAbsent(key, c -> {
             boolean isBold = (c & (1 << 24)) != 0;
-            GlyphInfo info = fontUtils.fontSet.getGlyphInfo(codePoint, isBold);
-            BakedGlyphAccessor glyph = fontUtils.getGlyphAccessor(codePoint);
-            float glyphUVWidth = glyph.dragonlib$getU1() - glyph.dragonlib$getU0();
-            float glyphUVHeight = glyph.dragonlib$getV1() - glyph.dragonlib$getV0();
-            return new CharData(codePoint, String.valueOf(Character.toChars(codePoint)), isBold, info, glyph, glyphUVWidth, glyphUVHeight);
+            GlyphInfo info = fontUtils.getGlyphInfo(codePoint);
+            return new CharData(codePoint, String.valueOf(Character.toChars(codePoint)), isBold, info);
         });
     }
 
@@ -223,7 +230,7 @@ public class BERLabel {
     }
 
     public void render(DLGraphics graphics) {
-        render(graphics, glowing.get() ? LightTexture.FULL_BRIGHT : graphics.packedLight());
+        render(graphics, glowing.get() ? LightCoordsUtil.FULL_BRIGHT : graphics.packedLight());
     }
 
     public void render(DLGraphics graphics, int light) {
@@ -398,49 +405,48 @@ public class BERLabel {
                 continue;
             }
 
-            float u0Offset = 0f, u1Offset = 0f, v0Offset = 0f, v1Offset = 0f;
-            float clipXLeft = 0f, clipXRight = 0f, clipYTop = 0f, clipYBottom = 0f;
-
-            float glyphUWidth = charData.glyphUWidth();
-            float glyphVHeight = charData.glyphVHeight();
-
-            if (quadWorldX < finalClipBounds.left()) { clipXLeft = (float)(finalClipBounds.left() - quadWorldX) / quadWidth; u0Offset = glyphUWidth * clipXLeft; }
-            if (quadWorldX + quadWidth > finalClipBounds.right()) { clipXRight = (float)(quadWorldX + quadWidth - finalClipBounds.right()) / quadWidth; u1Offset = glyphUWidth * clipXRight; }
-            if (quadWorldY < finalClipBounds.top()) { clipYTop = (float)(finalClipBounds.top() - quadWorldY) / quadHeight; v0Offset = glyphVHeight * clipYTop; }
-            if (quadWorldY + quadHeight > finalClipBounds.bottom()) { clipYBottom = (float)(quadWorldY + quadHeight - finalClipBounds.bottom()) / quadHeight; v1Offset = glyphVHeight * clipYBottom; }
-
-            fontUtils.pushUV(charData.charCode());
-            BakedGlyphAccessor glyph = charData.glyph();
-            glyph.dragonlib$setU0(glyph.dragonlib$getU0() + u0Offset);
-            glyph.dragonlib$setU1(glyph.dragonlib$getU1() - u1Offset);
-            glyph.dragonlib$setV0(glyph.dragonlib$getV0() + v0Offset);
-            glyph.dragonlib$setV1(glyph.dragonlib$getV1() - v1Offset);
-
-            graphics.poseStack().pushPose();
-            graphics.poseStack().scale(finalHScale, finalVScale, 1.0f);
-            graphics.poseStack().translate(currentUnscaledX, 0, 0);
-
-            graphics.poseStack().translate(charQuadSize * clipXLeft, charQuadSize * clipYTop, 0);
-            graphics.poseStack().scale(1.0f - clipXLeft - clipXRight, 1.0f - clipYTop - clipYBottom, 1.0f);
-
             int finalColor = color.get().getAsARGB();
             if (style.getColor() != null) {
                 finalColor = style.getColor().getValue() | 0xFF000000;
             }
 
-            Font.StringRenderOutput sro = fontUtils.font.new StringRenderOutput(
-                graphics.multiBufferSource(),
-                0, 0,
-                finalColor,
-                style.isObfuscated(),
-                graphics.poseStack().last().pose(),
-                Font.DisplayMode.NORMAL,
-                light
-            );
-            StringDecomposer.iterateFormatted(charData.charString(), style, sro);
+            graphics.poseStack().pushPose();
+            graphics.poseStack().scale(finalHScale, finalVScale, 1.0f);
+            graphics.poseStack().translate(currentUnscaledX, 0, 0);
+
+            // The visible part of the label, in this character's own coordinates (1.21 scaled the quad
+            // and shifted the glyph's texture coordinates by the same fractions).
+            float clipLeft = (float)((finalClipBounds.left() - finalX) / finalHScale - currentUnscaledX);
+            float clipRight = (float)((finalClipBounds.right() - finalX) / finalHScale - currentUnscaledX);
+            float clipTop = (float)((finalClipBounds.top() - finalY) / finalVScale);
+            float clipBottom = (float)((finalClipBounds.bottom() - finalY) / finalVScale);
+
+            GlyphSource glyphs = fontUtils.glyphs(style.getFont());
+            BakedGlyph baked = glyphs.getGlyph(charData.charCode());
+            if (style.isObfuscated() && charData.charCode() != 32) {
+                baked = glyphs.getRandomGlyph(RANDOM, (int) Math.ceil(baked.info().getAdvance(false)));
+            }
+            // 1.21 created the render output with dropShadow = style.isObfuscated(); kept as it was.
+            int shadowColor = style.isObfuscated() ? ARGB.scaleRGB(finalColor, 0.25F) : 0;
+            float boldOffset = style.isBold() ? baked.info().getBoldOffset() : 0.0F;
+            TextRenderable.Styled glyph = baked.createGlyph(0, 0, finalColor, shadowColor, style, boldOffset, baked.info().getShadowOffset());
+            Matrix4f pose = graphics.poseStack().last().pose();
+            if (glyph != null) {
+                VertexConsumer target = graphics.multiBufferSource().getBuffer(glyph.renderType(Font.DisplayMode.NORMAL));
+                glyph.render(IDENTITY, new ClippedGlyphConsumer(target, pose, clipLeft, clipTop, clipRight, clipBottom), light, false);
+            }
+            if (style.isUnderlined() || style.isStrikethrough()) {
+                VertexConsumer target = graphics.vertexConsumer(RenderUtils.BLANK_TEXTURE_LOCATION);
+                ClippedGlyphConsumer effect = new ClippedGlyphConsumer(target, pose, clipLeft, clipTop, clipRight, clipBottom);
+                if (style.isStrikethrough()) {
+                    addEffect(effect, -1.0F, 3.5F, glyphAdvance, 4.5F, finalColor, light);
+                }
+                if (style.isUnderlined()) {
+                    addEffect(effect, -1.0F, 8.0F, glyphAdvance, 9.0F, finalColor, light);
+                }
+            }
 
             graphics.poseStack().popPose();
-            fontUtils.popUV(charData.charCode());
 
             currentUnscaledX += glyphAdvance;
         }
@@ -458,6 +464,130 @@ public class BERLabel {
         RenderUtils.drawDebugLine(graphics, new Vector3f((float)finalClipBounds.right(), (float)finalClipBounds.y(), 0), new Vector3f((float)finalClipBounds.right(), (float)finalClipBounds.bottom(), 0), DLColor.YELLOW);
         RenderUtils.drawDebugLine(graphics, new Vector3f((float)finalClipBounds.x(), (float)finalClipBounds.bottom(), 0), new Vector3f((float)finalClipBounds.right(), (float)finalClipBounds.bottom(), 0), DLColor.YELLOW);
         */
+    }
+
+    private static void addEffect(VertexConsumer consumer, float x0, float y0, float x1, float y1, int color, int light) {
+        consumer.addVertex(x0, y0, 0.01F).setColor(color).setUv(0, 0).setLight(light);
+        consumer.addVertex(x0, y1, 0.01F).setColor(color).setUv(0, 1).setLight(light);
+        consumer.addVertex(x1, y1, 0.01F).setColor(color).setUv(1, 1).setLight(light);
+        consumer.addVertex(x1, y0, 0.01F).setColor(color).setUv(1, 0).setLight(light);
+    }
+
+    /**
+     * NeoForge 26.2 port: takes a character's quads in its own coordinates, keeps the part inside the
+     * clip rectangle (texture coordinates cut in proportion, as 1.21 did by shifting the glyph's), and
+     * writes the result transformed by {@code pose}. Quads arrive as top-left, bottom-left,
+     * bottom-right, top-right, the order glyphs are drawn in.
+     */
+    private static final class ClippedGlyphConsumer implements VertexConsumer {
+        private final VertexConsumer target;
+        private final Matrix4f pose;
+        private final float left, top, right, bottom;
+        private final float[] x = new float[4], y = new float[4], z = new float[4], u = new float[4], v = new float[4];
+        private final int[] color = new int[4], light = new int[4];
+        private int n = -1;
+
+        ClippedGlyphConsumer(VertexConsumer target, Matrix4f pose, float left, float top, float right, float bottom) {
+            this.target = target;
+            this.pose = pose;
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+        }
+
+        @Override
+        public VertexConsumer addVertex(float px, float py, float pz) {
+            if (n == 3) {
+                flush();
+            }
+            n++;
+            x[n] = px;
+            y[n] = py;
+            z[n] = pz;
+            u[n] = 0;
+            v[n] = 0;
+            color[n] = 0xFFFFFFFF;
+            light[n] = 0;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int r, int g, int b, int a) {
+            return setColor(ARGB.color(a, r, g, b));
+        }
+
+        @Override
+        public VertexConsumer setColor(int c) {
+            if (n >= 0) color[n] = c;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float pu, float pv) {
+            if (n >= 0) {
+                u[n] = pu;
+                v[n] = pv;
+            }
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int pu, int pv) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int pu, int pv) {
+            if (n >= 0) light[n] = (pu & 0xFFFF) | (pv & 0xFFFF) << 16;
+            if (n == 3) flush();
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float nx, float ny, float nz) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setLineWidth(float width) {
+            return this;
+        }
+
+        private void flush() {
+            if (n != 3) {
+                n = -1;
+                return;
+            }
+            n = -1;
+            float xl = (x[0] + x[1]) / 2, xr = (x[2] + x[3]) / 2;
+            float yt = (y[0] + y[3]) / 2, yb = (y[1] + y[2]) / 2;
+            if (xr <= left || xl >= right || yb <= top || yt >= bottom) {
+                return;
+            }
+            float s0 = xr > xl ? Math.max(0, (left - xl) / (xr - xl)) : 0;
+            float s1 = xr > xl ? Math.min(1, (right - xl) / (xr - xl)) : 1;
+            float t0 = yb > yt ? Math.max(0, (top - yt) / (yb - yt)) : 0;
+            float t1 = yb > yt ? Math.min(1, (bottom - yt) / (yb - yt)) : 1;
+            emit(s0, t0);
+            emit(s0, t1);
+            emit(s1, t1);
+            emit(s1, t0);
+        }
+
+        /** Bilinear point (s along the top/bottom edges, t down the left/right edges) of the quad. */
+        private void emit(float s, float t) {
+            float px = lerp(lerp(x[0], x[3], s), lerp(x[1], x[2], s), t);
+            float py = lerp(lerp(y[0], y[3], s), lerp(y[1], y[2], s), t);
+            float pz = lerp(lerp(z[0], z[3], s), lerp(z[1], z[2], s), t);
+            float pu = lerp(lerp(u[0], u[3], s), lerp(u[1], u[2], s), t);
+            float pv = lerp(lerp(v[0], v[3], s), lerp(v[1], v[2], s), t);
+            target.addVertex(pose, px, py, pz).setColor(color[0]).setUv(pu, pv).setLight(light[0]);
+        }
+
+        private static float lerp(float a, float b, float t) {
+            return a + (b - a) * t;
+        }
     }
 
     public float getRenderedWidth() {

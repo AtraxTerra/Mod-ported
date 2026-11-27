@@ -3,7 +3,6 @@ package de.mrjulsen.mcdragonlib.client.gui.widgets.components;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
 import de.mrjulsen.mcdragonlib.client.gui.events.DLGuiStandardEvents;
@@ -123,7 +122,7 @@ public class DLItemPicker<T> extends DLCycleButton<T> {
 
     @Override
     public void renderMainLayer(DLGuiGraphics graphics, double mouseX, double mouseY, Rectangle renderBounds) {
-        RenderSystem.enableBlend();
+        // 26.2: blending comes with the GUI pipeline (1.21: RenderSystem.enableBlend()).
         GuiUtils.setTint(backgroundTint.get());
 
         if (!enabled.get()) {

@@ -1,15 +1,12 @@
 package de.mrjulsen.mcdragonlib.client.util;
 
-import java.util.BitSet;
 import java.util.List;
 
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.mrjulsen.mcdragonlib.DragonLib;
@@ -18,37 +15,33 @@ import de.mrjulsen.mcdragonlib.data.ETextAlignment;
 import de.mrjulsen.mcdragonlib.util.DLColor;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.math.MathUtils;
-import de.mrjulsen.mcdragonlib.util.math.Rectangle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Font.DisplayMode;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.block.ModelBlockRenderer.AmbientOcclusionFace;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.BlockAndTintGetter;
 
 public final class RenderUtils {
 
     private static boolean aoRenderingErrorKnown = false;
 
-    public static final Identifier BLANK_TEXTURE_LOCATION;
+    public static final Identifier BLANK_TEXTURE_LOCATION = Identifier.fromNamespaceAndPath(DragonLib.MODID, "dynamic/blank_texture");
     static {
         NativeImage img = new NativeImage(1, 1, false);
-        img.setPixelRGBA(0, 0, 0xFFFFFFFF);
-        BLANK_TEXTURE_LOCATION = Minecraft.getInstance().getTextureManager().register(DragonLib.MODID + "_blank_texture", new DynamicTexture(img));
+        img.setPixel(0, 0, 0xFFFFFFFF);
+        Minecraft.getInstance().getTextureManager().register(BLANK_TEXTURE_LOCATION, new DynamicTexture(() -> DragonLib.MODID + " blank texture", img));
     }
 
+    /**
+     * 1.21 set blending and depth testing here before drawing. In 26.2 every render type carries its own
+     * pipeline state, so there is nothing left to set up; the method stays for the renderers calling it.
+     */
     public static void initRenderEngine() {
-        RenderSystem.enableBlend();
-        RenderSystem.enableDepthTest();
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
     }
 
     public static void setTint(DLColor color) {
@@ -71,16 +64,14 @@ public final class RenderUtils {
     }
 
     private static void renderWithAO(Direction direction, VertexConsumer builder, BERGraphics<?> graphics, float x0, float y0, float z0, float x1, float y1, float z1, float u0, float v0, float u1, float v1, float r, float g, float b, float a, int packedLight) {
-        float[] afloat = new float[Direction.values().length * 2];
-        BitSet bitset = new BitSet(3);
-        ModelBlockRenderer.AmbientOcclusionFace ao = new AmbientOcclusionFace();
-        BlockAndTintGetter batg = Minecraft.getInstance().level;
-        ao.calculate(batg, graphics.blockEntity().getBlockState(), graphics.blockEntity().getBlockPos(), direction, afloat, bitset, true);
-        
-        addVert(builder, graphics, x0, y0, z0, u0, v0, r * ao.brightness[0], g * ao.brightness[0], b * ao.brightness[0], a, ao.lightmap[0] & 0xFFFF, (ao.lightmap[0] >> 16) & 0xFFFF);
-        addVert(builder, graphics, x0, y1, z0, u0, v1, r * ao.brightness[1], g * ao.brightness[1], b * ao.brightness[1], a, ao.lightmap[1] & 0xFFFF, (ao.lightmap[1] >> 16) & 0xFFFF);
-        addVert(builder, graphics, x1, y1, z1, u1, v1, r * ao.brightness[2], g * ao.brightness[2], b * ao.brightness[2], a, ao.lightmap[2] & 0xFFFF, (ao.lightmap[2] >> 16) & 0xFFFF);
-        addVert(builder, graphics, x1, y0, z1, u1, v0, r * ao.brightness[3], g * ao.brightness[3], b * ao.brightness[3], a, ao.lightmap[3] & 0xFFFF, (ao.lightmap[3] >> 16) & 0xFFFF);
+        float[] brightness = new float[4];
+        int[] lightmap = new int[4];
+        AmbientOcclusion.calculate(Minecraft.getInstance().level, graphics.blockEntity().getBlockState(), graphics.blockEntity().getBlockPos(), direction, brightness, lightmap);
+
+        addVert(builder, graphics, x0, y0, z0, u0, v0, r * brightness[0], g * brightness[0], b * brightness[0], a, lightmap[0] & 0xFFFF, (lightmap[0] >> 16) & 0xFFFF);
+        addVert(builder, graphics, x0, y1, z0, u0, v1, r * brightness[1], g * brightness[1], b * brightness[1], a, lightmap[1] & 0xFFFF, (lightmap[1] >> 16) & 0xFFFF);
+        addVert(builder, graphics, x1, y1, z1, u1, v1, r * brightness[2], g * brightness[2], b * brightness[2], a, lightmap[2] & 0xFFFF, (lightmap[2] >> 16) & 0xFFFF);
+        addVert(builder, graphics, x1, y0, z1, u1, v0, r * brightness[3], g * brightness[3], b * brightness[3], a, lightmap[3] & 0xFFFF, (lightmap[3] >> 16) & 0xFFFF);
     }
     
     @SuppressWarnings("resources")
@@ -111,7 +102,6 @@ public final class RenderUtils {
     }
     
     public static void renderTexture(Identifier texture, DLGraphics graphics, Vector3f pos, float w, float h, float u, float v, float uW, float vH, Direction facing, DLColor tint, int light, boolean ambiebtOcclusion) {
-        graphics.multiBufferSource().getBuffer(RenderType.text(texture));
         VertexConsumer vertexconsumer = graphics.vertexConsumer(texture);
         addQuadSide(facing, vertexconsumer, graphics,
             pos.x(), pos.y(), pos.z(),
@@ -134,8 +124,8 @@ public final class RenderUtils {
 
     // RenderStateShard$TextureStateShard for textureId
     public static void renderTexture(DLTexture texture, DLGraphics graphics, Vector3f pos, float w, float h, float u, float v, float uW, float vH, Direction facing, DLColor tint, int light, boolean ambientOcclusion) {
-        if (texture.usesTextureId() || texture.getTexture().isEmpty()) {
-            throw new IllegalArgumentException("TextureIds are not supported in BlockEntityRenderers.");
+        if (texture.getTexture().isEmpty()) {
+            throw new IllegalArgumentException("Textures without a location are not supported in BlockEntityRenderers.");
         }
         renderTexture(
             texture.getTexture().get(),
@@ -180,7 +170,8 @@ public final class RenderUtils {
             default:
                 break;
         }        
-        font.drawInBatch(text, dx, y, color.getAsARGB(), dropShadow, graphics.poseStack().last().pose(), graphics.multiBufferSource(), transparent ? DisplayMode.SEE_THROUGH : DisplayMode.NORMAL, backgroundColor.getAsARGB(), packedLight);
+        // 26.2: no Font#drawInBatch; text goes to the frame's collector (always the default font there).
+        graphics.collector().submitText(graphics.poseStack(), dx, y, text.getVisualOrderText(), dropShadow, transparent ? DisplayMode.SEE_THROUGH : DisplayMode.NORMAL, packedLight, color.getAsARGB(), backgroundColor.getAsARGB(), 0);
     }
 
     public static void drawString(DLGraphics graphics, Font font, float x, float y, Component text, DLColor color, ETextAlignment alignment, boolean dropShadow, int packedLight) {        
@@ -221,8 +212,9 @@ public final class RenderUtils {
             dz /= length;
         }
 
-        consumer.addVertex(matrix4f, (float) from.x(), (float) from.y(), (float) from.z()).setColor(colorA.getRedF(), colorA.getGreenF(), colorA.getBlueF(), colorA.getAlphaF()).setNormal(lastPose, dx, dy, dz);
-        consumer.addVertex(matrix4f, (float) to.x(), (float) to.y(), (float) to.z()).setColor(colorB.getRedF(), colorB.getGreenF(), colorB.getBlueF(), colorB.getAlphaF()).setNormal(lastPose, dx, dy, dz);
+        // 26.2 line vertices also carry a width.
+        consumer.addVertex(matrix4f, (float) from.x(), (float) from.y(), (float) from.z()).setColor(colorA.getRedF(), colorA.getGreenF(), colorA.getBlueF(), colorA.getAlphaF()).setNormal(lastPose, dx, dy, dz).setLineWidth(1.0F);
+        consumer.addVertex(matrix4f, (float) to.x(), (float) to.y(), (float) to.z()).setColor(colorB.getRedF(), colorB.getGreenF(), colorB.getBlueF(), colorB.getAlphaF()).setNormal(lastPose, dx, dy, dz).setLineWidth(1.0F);
     }
 
     public static void drawDebugLine(PoseStack poseStack, VertexConsumer consumer, Vector3f from, Vector3f to, DLColor color) {
@@ -230,14 +222,14 @@ public final class RenderUtils {
     }
     
     public static void drawDebugLineGradient(DLGraphics graphics, Vector3f from, Vector3f to, DLColor colorA, DLColor colorB) {
-        drawDebugLine(graphics.poseStack(), graphics.multiBufferSource().getBuffer(RenderType.lines()), from, to, colorB);
+        drawDebugLine(graphics.poseStack(), graphics.multiBufferSource().getBuffer(RenderTypes.lines()), from, to, colorB);
     }
 
     public static void drawDebugLine(DLGraphics graphics, Vector3f from, Vector3f to, DLColor color) {
         drawDebugLineGradient(graphics, from, to, color, color);
     }
 
-    protected static void renderNameTag(PoseStack poseStack, MultiBufferSource buffer, Vector3f pos, float yOffset, List<Component> text, int packedLight) {
+    protected static void renderNameTag(PoseStack poseStack, SubmitNodeCollector collector, Vector3f pos, float yOffset, List<Component> text, int packedLight) {
         if (Minecraft.getInstance().getCameraEntity().position().toVector3f().distance(pos) > 64) {
             return;
         }
@@ -257,14 +249,14 @@ public final class RenderUtils {
             Font font = Minecraft.getInstance().font;
             float x = (float)(-font.width(txt) / 2);
 
-            font.drawInBatch(txt, x, -(lineHeight * text.size()) + y, 553648127, false, matrix4f, buffer, Font.DisplayMode.SEE_THROUGH, backgroundColor, packedLight);
-            font.drawInBatch(txt, x, -(lineHeight * text.size()) + y, -1, false, matrix4f, buffer, Font.DisplayMode.NORMAL, 0, packedLight);
+            collector.submitText(poseStack, x, -(lineHeight * text.size()) + y, txt.getVisualOrderText(), false, Font.DisplayMode.SEE_THROUGH, packedLight, 553648127, backgroundColor, 0);
+            collector.submitText(poseStack, x, -(lineHeight * text.size()) + y, txt.getVisualOrderText(), false, Font.DisplayMode.NORMAL, packedLight, -1, 0, 0);
         }
 
         poseStack.popPose();
     }
 
     protected static void renderNameTag(DLGraphics graphics, Vector3f pos, float yOffset, List<Component> text, int packedLight) {
-        renderNameTag(graphics.poseStack(), graphics.multiBufferSource(), pos, yOffset, text, packedLight);
+        renderNameTag(graphics.poseStack(), graphics.collector(), pos, yOffset, text, packedLight);
     }
 }

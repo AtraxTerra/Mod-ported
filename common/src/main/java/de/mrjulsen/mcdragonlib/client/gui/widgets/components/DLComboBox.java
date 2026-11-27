@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.lwjgl.glfw.GLFW;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
 import de.mrjulsen.mcdragonlib.client.gui.events.DLGuiStandardEvents;
@@ -88,7 +87,7 @@ public class DLComboBox<T> extends DLCycleButton<T> {
 
     @Override
     public void renderMainLayer(DLGuiGraphics graphics, double mouseX, double mouseY, Rectangle renderBounds) {
-        RenderSystem.enableBlend();
+        // 26.2: blending comes with the GUI pipeline (1.21: RenderSystem.enableBlend()).
         DLWindowManager manager = getWindowManager();
         GuiUtils.setTint(backgroundTint.get());
         ButtonState backgroundState = ButtonState.DISABLED;

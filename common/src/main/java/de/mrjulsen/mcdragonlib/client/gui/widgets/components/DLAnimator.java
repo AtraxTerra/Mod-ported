@@ -1,6 +1,6 @@
 package de.mrjulsen.mcdragonlib.client.gui.widgets.components;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import de.mrjulsen.mcdragonlib.client.util.GuiPoseStack;
 
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLGuiComponent;
 import de.mrjulsen.mcdragonlib.client.util.DLGuiGraphics;
@@ -60,7 +60,7 @@ public class DLAnimator extends DLGuiComponent {
     @Override
     public void renderMainLayer(DLGuiGraphics graphics, double mouseX, double mouseY, Rectangle renderBounds) {
         if (running) {
-            float frameTime = Minecraft.getInstance().getTimer().getGameTimeDeltaTicks();
+            float frameTime = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks();
             currentTicksSmooth += frameTime;
             DLUtils.doIfNotNull(onAnimateRender, x -> x.execute(graphics.poseStack(), getCurrentTicks(), getTotalTicks(), getPercentage()));
             if (currentTicks >= maxTicks) {
@@ -103,7 +103,8 @@ public class DLAnimator extends DLGuiComponent {
     
     @FunctionalInterface
     public static interface IAnimatorRenderCallback {
-        void execute(PoseStack poseStack, int currentTicks, int totalTicks, double percentage);
+        // NeoForge 26.2 port: the GUI pose is a GuiPoseStack (2D) now.
+        void execute(GuiPoseStack poseStack, int currentTicks, int totalTicks, double percentage);
     }
     
     @FunctionalInterface
