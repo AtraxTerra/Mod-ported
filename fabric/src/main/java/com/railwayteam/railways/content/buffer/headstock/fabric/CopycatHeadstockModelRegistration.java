@@ -28,17 +28,26 @@ import com.railwayteam.railways.content.buffer.single_deco.LinkPinBlock;
 import com.railwayteam.railways.content.custom_tracks.generic_crossing.GenericCrossingBlock;
 import com.railwayteam.railways.content.custom_tracks.generic_crossing.fabric.GenericCrossingModel;
 import com.zurrtum.create.client.AllModels;
+import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
+import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.client.resources.model.ClientItemInfoLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Port: upstream wraps these blocks' models through Fabric API's model loading plugin, before baking.
  * Create Fly does the same for its own blocks through {@link AllModels#register}, a block -> wrapper
  * map applied at the same point by its loader-independent model loading, so the wrappers go there.
  *
- * <p>Not ported yet: the matching item model wrappers (upstream's {@code modifyItemModelBeforeBake},
- * which shows the copied material on the headstock and buffer items). Those items render with their
- * plain models until NeoForge offers a hook for unbaked item models.
+ * <p>The matching item model wrappers (upstream's {@code modifyItemModelBeforeBake}, which show the
+ * copied material and colour of a headstock or buffer item) are applied by {@link #wrapItemModels},
+ * called by the NeoForge {@code ClientItemInfoLoaderMixin} on every model reload.
  */
 public class CopycatHeadstockModelRegistration {
 	private static boolean registered;
@@ -58,6 +67,33 @@ public class CopycatHeadstockModelRegistration {
 			else if (isBufferBlock(block))
 				AllModels.register(block, BufferModel::new);
 		}
+	}
+
+	/**
+	 * Port: upstream's {@code modifyItemModelBeforeBake} callback, run over the loaded item definitions.
+	 */
+	public static ClientItemInfoLoader.LoadedClientInfos wrapItemModels(ClientItemInfoLoader.LoadedClientInfos infos) {
+		Map<Identifier, ClientItem> contents = new HashMap<>(infos.contents());
+		boolean changed = false;
+		for (Map.Entry<Identifier, ClientItem> entry : contents.entrySet()) {
+			ClientItem item = entry.getValue();
+			ItemModel.Unbaked model = wrapItemModel(entry.getKey(), item.model());
+			if (model != item.model()) {
+				entry.setValue(new ClientItem(model, item.properties(), item.registrySwapper()));
+				changed = true;
+			}
+		}
+		return changed ? new ClientItemInfoLoader.LoadedClientInfos(contents) : infos;
+	}
+
+	private static ItemModel.Unbaked wrapItemModel(Identifier itemId, ItemModel.Unbaked model) {
+		if (!(model instanceof CuboidItemModelWrapper.Unbaked cuboid))
+			return model;
+		if (!(BuiltInRegistries.ITEM.getValue(itemId) instanceof BlockItem blockItem))
+			return model;
+		if (blockItem.getBlock() instanceof CopycatHeadstockBlock)
+			return new CopycatHeadstockBlockStateModel.UnbakedItemModel(cuboid);
+		return isBufferBlock(blockItem.getBlock()) ? new BufferModel.UnbakedItemModel(cuboid) : model;
 	}
 
 	private static boolean isBufferBlock(Block block) {
