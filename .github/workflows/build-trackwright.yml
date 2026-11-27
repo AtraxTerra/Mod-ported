@@ -162,7 +162,7 @@ jobs:
             echo "## Server class probe"
             echo '```'
             grep -E "PROBE done" probe-summary.txt || echo "(probe did not run)"
-            grep -E "^PROBE (LOAD|LINK) " probe-summary.txt | head -150
+            grep -E "^PROBE (LOAD|LINK) " probe-summary.txt | head -150 || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
