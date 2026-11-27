@@ -126,7 +126,20 @@ jobs:
           mc=$(find build/moddev/artifacts -name 'minecraft-patched-*.jar' | head -1)
           dl=$(ls build/libs/dragonlib-neoforge-*.jar | grep -v sources | head -1)
           echo "auditing against $mc and $dl"
-          python3 -I deps/create-fly/tools/audit_mixin_targets.py --src common/src/main/java --resources common/src/main/resources \
+          # The audit reads annotations with regular expressions and does not skip comments, so it
+          # reads a copy of the sources with the comments blanked out (upstream keeps disabled
+          # injectors in block comments).
+          python3 -I - <<'PY'
+          import pathlib, re
+          src, dst = pathlib.Path('common/src/main/java'), pathlib.Path('build/audit-src')
+          token = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])\'|/\*.*?\*/|//[^\n]*', re.S)
+          for f in src.rglob('*.java'):
+              text = token.sub(lambda m: m.group(0) if m.group(0)[0] in '"\'' else '\n' * m.group(0).count('\n'), f.read_text(encoding='utf-8'))
+              out = dst / f.relative_to(src)
+              out.parent.mkdir(parents=True, exist_ok=True)
+              out.write_text(text, encoding='utf-8')
+          PY
+          python3 -I deps/create-fly/tools/audit_mixin_targets.py --src build/audit-src --resources common/src/main/resources \
             --classes build/classes/java/main --jar "$mc" --jar "$dl" | tee mixin-audit.log || true
 
       - name: Upload jars
@@ -170,6 +183,28 @@ jobs:
           chmod +x tools-boot-test.sh
           ./tools-boot-test.sh 600
 
+      - name: Server log (errors)
+        if: always()
+        shell: bash
+        run: |
+          # The boot logs cannot be downloaded from here, so show what matters in the job log: every
+          # error line, then each distinct stack trace (its first 40 lines, Gradle frames left out).
+          for f in run/logs/latest.log boot-test.log; do
+            [ -f "$f" ] || continue
+            echo "::group::$f: errors"
+            grep -nE '\[(main|Server thread|Render thread|modloading-worker-[0-9]+)/(ERROR|FATAL)\]|^Caused by|Exception( in|:)' "$f" \
+              | grep -vE 'org\.gradle\.' | head -80
+            echo "::endgroup::"
+            echo "::group::$f: stack traces"
+            awk '/(Exception|Error)(:|$)/ && !/org\.gradle\./ { if (!seen[$0]++) { n = 40 } } n > 0 && !/at org\.gradle\./ { print; n-- }' "$f" | head -200
+            echo "::endgroup::"
+          done
+          for c in run/crash-reports/*.txt; do
+            [ -f "$c" ] || continue
+            echo "::group::$c"; head -100 "$c"; echo "::endgroup::"
+          done
+          true
+
       - name: Client boot (headless)
         id: client
         continue-on-error: true
@@ -184,6 +219,28 @@ jobs:
           xvfb-run -a -s "-screen 0 1280x720x24" bash tools-client-boot-test.sh 1500 60
           echo "## Client boot" >> "$GITHUB_STEP_SUMMARY"
           tail -25 client-boot-test.log >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Client log (errors)
+        if: always()
+        shell: bash
+        run: |
+          # The boot logs cannot be downloaded from here, so show what matters in the job log: every
+          # error line, then each distinct stack trace (its first 40 lines, Gradle frames left out).
+          for f in run/logs/latest.log client-boot-test.log; do
+            [ -f "$f" ] || continue
+            echo "::group::$f: errors"
+            grep -nE '\[(main|Server thread|Render thread|modloading-worker-[0-9]+)/(ERROR|FATAL)\]|^Caused by|Exception( in|:)' "$f" \
+              | grep -vE 'org\.gradle\.' | head -80
+            echo "::endgroup::"
+            echo "::group::$f: stack traces"
+            awk '/(Exception|Error)(:|$)/ && !/org\.gradle\./ { if (!seen[$0]++) { n = 40 } } n > 0 && !/at org\.gradle\./ { print; n-- }' "$f" | head -200
+            echo "::endgroup::"
+          done
+          for c in run/crash-reports/*.txt; do
+            [ -f "$c" ] || continue
+            echo "::group::$c"; head -100 "$c"; echo "::endgroup::"
+          done
+          true
 
       - name: Upload the boot logs
         if: always()
