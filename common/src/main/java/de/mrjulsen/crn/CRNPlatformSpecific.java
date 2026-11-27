@@ -1,0 +1,54 @@
+package de.mrjulsen.crn;
+
+import dev.architectury.injectables.annotations.ExpectPlatform;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import java.nio.file.Path;
+
+import com.simibubi.create.content.logistics.filter.FilterItemStack;
+import com.simibubi.create.content.trains.entity.Train;
+import com.simibubi.create.content.trains.station.GlobalStation;
+
+import net.minecraft.world.level.Level;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+public abstract class CRNPlatformSpecific {
+    
+    @ExpectPlatform
+    public static Path getConfigDirectory() {
+        throw new AssertionError();
+    }
+
+    @ExpectPlatform
+    public static MinecraftServer getServer() {
+        throw new AssertionError();
+    }
+
+    @ExpectPlatform
+    public static void registerConfig() {
+        throw new AssertionError();
+    }
+
+    @ExpectPlatform
+    public static GlobalStation getStationFromBlockEntity(BlockEntity be) {
+        throw new AssertionError();
+    }
+    @ExpectPlatform
+    public static Optional<String> getLastKnownPlayerName(UUID uuid) {
+        throw new AssertionError();
+    }
+
+    @ExpectPlatform
+    public static Map<UUID, String> getAllKnownPlayers() {
+        throw new AssertionError();
+    }
+
+    @ExpectPlatform
+    public static boolean trainCarriesFilteredCargo(Level level, FilterItemStack filter, Train train) {
+        throw new AssertionError();
+    }
+}

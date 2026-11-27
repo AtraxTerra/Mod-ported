@@ -1,0 +1,247 @@
+package de.mrjulsen.crn.util;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.UnaryOperator;
+
+import com.google.common.collect.ImmutableSet;
+
+import de.mrjulsen.crn.CreateRailwaysNavigator;
+import de.mrjulsen.crn.client.ClientWrapper;
+import de.mrjulsen.crn.client.gui.ModGuiIcons;
+import de.mrjulsen.crn.config.ModServerConfig;
+import de.mrjulsen.crn.exceptions.RuntimeSideException;
+import de.mrjulsen.mcdragonlib.DragonLib;
+import de.mrjulsen.mcdragonlib.client.util.DLSprite;
+import de.mrjulsen.mcdragonlib.data.IIterableEnum;
+import de.mrjulsen.mcdragonlib.data.ITranslatableEnum;
+import de.mrjulsen.mcdragonlib.util.TextUtils;
+import dev.architectury.platform.Platform;
+import dev.architectury.utils.Env;
+import dev.architectury.utils.GameInstance;
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerPlayer;
+
+public class Lock {
+
+    public static enum LockState implements ITranslatableEnum, IIterableEnum<LockState> {
+        UNLOCKED("unlocked", (byte)0, ModGuiIcons.UNLOCKED, (key) -> key.withStyle(ChatFormatting.GREEN)),
+        LOCKED("locked", Byte.MAX_VALUE, ModGuiIcons.LOCKED, (key) -> key.withStyle(ChatFormatting.RED));
+
+        private final String name;
+        private final byte index;
+        private final ModGuiIcons icon;
+        private final UnaryOperator<MutableComponent> text;
+
+        private LockState(String name, byte index, ModGuiIcons icon, UnaryOperator<MutableComponent> text) {
+            this.name = name;
+            this.index = index;
+            this.icon = icon;
+            this.text = text;
+        }
+
+        public byte getIndex() {
+            return index;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Component getFormattedText() {
+            return text.apply(getValueTranslation());
+        }
+
+        public DLSprite getIcon() {
+            return icon.getAsSprite(16, 16);
+        }
+
+        public static LockState getByIndex(int i) {
+			for (LockState ls : values()) if (ls.getIndex() == i) return ls;
+			return UNLOCKED;
+        }
+
+        @Override
+        public LockState[] getValues() {
+            return values();
+        }
+
+        @Override
+        public Data getTranslationData() {
+            return new Data(CreateRailwaysNavigator.MOD_ID, "lock_state", name);
+        }
+    }
+
+    private static final String NBT_STATE = "State";
+    private static final String NBT_TRUSTED = "Trusted";
+
+    public static final String TRANSLATION_KEY_TRUSTED_PLAYERS = "gui." + CreateRailwaysNavigator.MOD_ID + ".lock.trusted_players";
+    public static final String TRANSLATION_KEY_TRANSFER_OWNERSHIP = "gui." + CreateRailwaysNavigator.MOD_ID + ".lock.transfer_ownership";
+
+    private transient final MutableComponent charAllowed = TextUtils.text("\u2714").withStyle(ChatFormatting.GREEN);
+    private transient final MutableComponent charTrusted = TextUtils.text("\u2714").withStyle(ChatFormatting.GOLD);
+    private transient final MutableComponent charLocked = TextUtils.text("\u274C").withStyle(ChatFormatting.RED);
+    private transient final MutableComponent txtPermissions = TextUtils.translate("gui." + CreateRailwaysNavigator.MOD_ID + ".lock.permissions");
+    private transient final MutableComponent txtRightClickOptions = TextUtils.translate("gui." + CreateRailwaysNavigator.MOD_ID + ".lock.right_click_options").withStyle(ChatFormatting.DARK_GRAY).withStyle(ChatFormatting.ITALIC);
+    private transient final MutableComponent txtNoOwner = TextUtils.translate("gui." + CreateRailwaysNavigator.MOD_ID + ".lock.no_owner");
+    private transient final String keyStatus = "gui." + CreateRailwaysNavigator.MOD_ID + ".lock.state";
+    private transient final String keyOwner = "gui." + CreateRailwaysNavigator.MOD_ID + ".lock.owner";
+
+    private Owner owner;
+    private LockState state;
+    private final Set<Owner> trusted = new HashSet<>();
+
+
+    private Lock(LockState status, Owner owner, Set<Owner> trusted) {
+        this.state = status;
+        this.owner = owner;
+        this.trusted.addAll(trusted);
+    }
+
+    public Lock(Owner owner) {
+        this(LockState.UNLOCKED, owner, new HashSet<>());
+    }
+
+    public Lock() {
+        this(LockState.UNLOCKED, null, new HashSet<>());
+    }
+
+    public void set(LockState state) {
+        this.state = state;
+    }
+
+    public LockState get() {
+        return state;
+    }
+
+    public boolean isAllowed(Owner target) throws RuntimeSideException {
+        if (!DragonLib.hasServer()) {
+            throw new RuntimeSideException(false);
+        }
+        if (isAdmin(target)) {
+            return true;
+        }
+        return switch (state) {
+            case LOCKED -> (this.owner != null && this.owner.equals(target)) || isTrusted(target);
+            default -> true;
+        };
+    }
+
+    public boolean isAdmin(Owner target) throws RuntimeSideException {
+        if (!DragonLib.hasServer()) {
+            throw new RuntimeSideException(false);
+        }
+        if (this.owner != null && this.owner.equals(target)) {
+            return true;
+        }
+        return hasAdminPermission(target);
+    }
+
+    private static boolean hasAdminPermission(Owner target) {
+        int level = ModServerConfig.GLOBAL_SETTINGS_ADMIN_PERMISSION_LEVEL.get();
+        if (level < 0 || target == null) {
+            return false;
+        }
+        ServerPlayer player = GameInstance.getServer().getPlayerList().getPlayer(target.uuid());
+        return player != null && player.hasPermissions(level);
+    }
+
+    public boolean isAllowed() throws RuntimeSideException {
+        if (Platform.getEnvironment() != Env.CLIENT) {
+            throw new RuntimeSideException(true);
+        }
+        if (isAdmin()) {
+            return true;
+        }
+        Owner self = ClientWrapper.getMe();
+        return switch (state) {
+            case LOCKED -> (this.owner != null && this.owner.equals(self)) || isTrusted(self);
+            default -> true;
+        };
+    }
+
+    public boolean isAdmin() throws RuntimeSideException {
+        if (Platform.getEnvironment() != Env.CLIENT) {
+            throw new RuntimeSideException(true);
+        }
+        Owner self = ClientWrapper.getMe();
+        if (this.owner != null && this.owner.equals(self)) {
+            return true;
+        }
+        int level = ModServerConfig.GLOBAL_SETTINGS_ADMIN_PERMISSION_LEVEL.get();
+        return level >= 0 && ClientWrapper.getClientPlayer().hasPermissions(level);
+    }
+
+    public Set<Owner> getTrusted() {
+        return ImmutableSet.copyOf(this.trusted);
+    }
+
+    public void addTrusted(Owner target) {
+        this.trusted.add(target);
+    }
+
+    public void updateTrusted(Set<Owner> targets) {
+        this.trusted.clear();
+        this.trusted.addAll(targets);
+    }
+
+    public boolean isTrusted(Owner target) {
+        return this.trusted.contains(target);
+    }
+
+    public void removeTrusted(Owner target) {
+        this.trusted.remove(target);
+    }
+
+    public Optional<Owner> getOwner() {
+        return Optional.ofNullable(owner);
+    }
+
+    public void setOwner(Owner newOwner) {
+        this.owner = newOwner;
+    }
+
+    public List<FormattedText> asText(Owner target) {
+        List<FormattedText> texts = new ArrayList<>(4);
+        texts.add(TextUtils.empty().append(txtPermissions).append(" ").append(isTrusted(target) ? charTrusted : (isAllowed() ? charAllowed : charLocked)));
+        texts.add(TextUtils.translate(keyStatus, get().getFormattedText()).withStyle(ChatFormatting.GRAY));
+        texts.add(TextUtils.translate(keyOwner, getOwner().map(x -> x.name().isBlank() ? txtNoOwner : TextUtils.text(x.name()).withStyle(ChatFormatting.GREEN)).orElse(txtNoOwner)).withStyle(ChatFormatting.GRAY));
+        if (isAdmin()) {
+            texts.add(txtRightClickOptions);
+        }
+        return texts;
+    }
+
+    public CompoundTag toNbt() {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putByte(NBT_STATE, state.getIndex());
+        if (owner != null) owner.toNbt(nbt);
+        ListTag list = new ListTag();
+        for (Owner t : trusted) {
+            list.add(t.toNbt());
+        }
+        nbt.put(NBT_TRUSTED, list);
+        return nbt;
+    }
+
+    public static Lock fromNbt(CompoundTag nbt) {
+        Set<Owner> owners = new HashSet<>();
+		for (Tag tag : nbt.getList(NBT_TRUSTED, Tag.TAG_COMPOUND))
+			owners.add(Owner.fromNbt((CompoundTag) tag));
+
+		return new Lock(
+            LockState.getByIndex(nbt.getByte(NBT_STATE)),
+            Owner.fromNbt(nbt),
+            owners
+        );
+    }
+}

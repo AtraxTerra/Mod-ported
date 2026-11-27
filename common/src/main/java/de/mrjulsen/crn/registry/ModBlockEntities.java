@@ -1,0 +1,59 @@
+package de.mrjulsen.crn.registry;
+
+import com.tterrag.registrate.util.entry.BlockEntityEntry;
+
+import de.mrjulsen.crn.CreateRailwaysNavigator;
+import de.mrjulsen.crn.block.blockentity.AdvancedDisplayBlockEntity;
+import de.mrjulsen.crn.block.blockentity.NavigatorLecternBlockEntity;
+import de.mrjulsen.crn.block.blockentity.TrainStationClockBlockEntity;
+import de.mrjulsen.crn.block.penalty.PenaltyAnchorBlockEntity;
+import de.mrjulsen.crn.client.ClientWrapper;
+import de.mrjulsen.crn.client.ber.NavigatorLecternBlockEntityRenderer;
+import de.mrjulsen.crn.client.ber.PenaltyAnchorRenderer;
+import de.mrjulsen.crn.client.ber.PenaltyAnchorVisual;
+import de.mrjulsen.mcdragonlib.client.ber.StaticBlockEntityRenderer;
+
+public class ModBlockEntities {
+	
+    public static final BlockEntityEntry<AdvancedDisplayBlockEntity> ADVANCED_DISPLAY_BLOCK_ENTITY = CreateRailwaysNavigator.REGISTRATE
+		.blockEntity("advanced_display_block_entity", AdvancedDisplayBlockEntity::new)
+		.validBlocks(
+			ModBlocks.ADVANCED_DISPLAY,
+			ModBlocks.ADVANCED_DISPLAY_BLOCK,	
+			ModBlocks.ADVANCED_DISPLAY_PANEL,
+			ModBlocks.ADVANCED_DISPLAY_HALF_PANEL,
+			ModBlocks.ADVANCED_DISPLAY_SMALL,
+			ModBlocks.ADVANCED_DISPLAY_SLOPED,
+			ModBlocks.ADVANCED_DISPLAY_SLAB
+		)
+		.renderer(() -> ClientWrapper::createAdvancedDisplayBlockEntityRenderer)
+		.register();
+
+	public static final BlockEntityEntry<TrainStationClockBlockEntity> TRAIN_STATION_CLOCK_BLOCK_ENTITY = CreateRailwaysNavigator.REGISTRATE
+		.blockEntity("train_station_clock_block_entity", TrainStationClockBlockEntity::new)
+		.validBlocks(
+			ModBlocks.TRAIN_STATION_CLOCK
+		)
+		.renderer(() -> StaticBlockEntityRenderer::new)
+		.register();
+
+	public static final BlockEntityEntry<NavigatorLecternBlockEntity> NAVIGATOR_LECTERN_BLOCK_ENTITY = CreateRailwaysNavigator.REGISTRATE
+			.blockEntity("navigator_lectern_block_entity", NavigatorLecternBlockEntity::new)
+			.validBlocks(
+					ModBlocks.NAVIGATOR_LECTERN
+			)
+			.renderer(() -> NavigatorLecternBlockEntityRenderer::new)
+			.register();
+
+	public static final BlockEntityEntry<PenaltyAnchorBlockEntity> PENALTY_ANCHOR_BLOCK_ENTITY = CreateRailwaysNavigator.REGISTRATE
+			.blockEntity("penalty_anchor_block_entity", PenaltyAnchorBlockEntity::new)
+			.visual(() -> PenaltyAnchorVisual::new)
+			.renderer(() -> PenaltyAnchorRenderer::new)
+			.validBlocks(
+					ModBlocks.PENALTY_BLOCK
+			)
+			.register();
+
+    public static void init() {
+    } 
+}

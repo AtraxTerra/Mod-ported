@@ -1,0 +1,36 @@
+package de.mrjulsen.crn.client.gui.windows;
+
+import de.mrjulsen.crn.CreateRailwaysNavigator;
+import de.mrjulsen.crn.client.gui.CreateDynamicWidgets.BarColor;
+import de.mrjulsen.crn.client.gui.CreateDynamicWidgets.ContainerColor;
+import de.mrjulsen.crn.client.gui.CreateDynamicWidgets.FooterSize;
+import de.mrjulsen.crn.client.gui.widgets.SavedRouteData;
+import de.mrjulsen.crn.client.gui.widgets.SavedRoutesViewer;
+import de.mrjulsen.crn.core.navigator.route.RouteJourney;
+import de.mrjulsen.crn.data.settings.SavedRoutesManager;
+import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLWindowManager;
+import de.mrjulsen.mcdragonlib.util.TextUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class SavedRoutesWindow extends AbstractNavigatorScreen {
+
+    private final SavedRoutesViewer viewer;
+
+    public SavedRoutesWindow(DLWindowManager manager) {
+        super(manager, TextUtils.translate("gui." + CreateRailwaysNavigator.MOD_ID + ".saved_routes.title"), ContainerColor.PURPLE, BarColor.GOLD);
+        
+        int wY = FooterSize.DEFAULT.size() - 1;
+        int wH = GUI_HEIGHT - wY - FooterSize.SMALL.size();
+        this.viewer = new SavedRoutesViewer(3, wY + 2, width() - 6, wH - 3);
+
+		List<SavedRouteData> routeData = new ArrayList<>();
+		for (RouteJourney journey : SavedRoutesManager.getAllSavedRoutes())
+			routeData.add(new SavedRouteData(journey));
+
+        this.viewer.displaySavedRoutes(routeData);
+        
+        addComponent(viewer);
+    }
+}

@@ -1,0 +1,161 @@
+package de.mrjulsen.crn.block;
+
+import com.simibubi.create.content.equipment.wrench.IWrenchable;
+import com.simibubi.create.foundation.block.IBE;
+
+import de.mrjulsen.crn.CreateRailwaysNavigator;
+import de.mrjulsen.crn.block.blockentity.TrainStationClockBlockEntity;
+import de.mrjulsen.crn.config.ModClientConfig;
+import de.mrjulsen.crn.registry.ModBlockEntities;
+import de.mrjulsen.mcdragonlib.util.DLColor;
+import de.mrjulsen.mcdragonlib.util.TextUtils;
+import de.mrjulsen.mcdragonlib.util.time.DLTime;
+import de.mrjulsen.mcdragonlib.util.time.TimeContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.DyeItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition.Builder;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+
+public class TrainStationClockBlock extends Block implements IWrenchable, IBE<TrainStationClockBlockEntity> {
+
+	public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final BooleanProperty DOUBLE = BooleanProperty.create("double");
+	
+    private static final VoxelShape SHAPE_SN = Block.box(0, 0, 4, 16, 16, 12);
+    private static final VoxelShape SHAPE_EW = Block.box(4, 0, 0, 12, 16, 16);
+
+    public TrainStationClockBlock(Properties properties) {
+        super(properties
+            .noOcclusion()
+        );
+
+        this.registerDefaultState(this.stateDefinition.any()
+            .setValue(FACING, Direction.NORTH)
+            .setValue(DOUBLE, false)
+        );
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (level.isClientSide()) {
+            player.displayClientMessage(TextUtils.translate("gui." + CreateRailwaysNavigator.MOD_ID + ".time", new DLTime(level, DLTime.defaultTimeSystem()).format(ModClientConfig.TIME_FORMAT.get().getFormat(), TimeContext.INGAME, DLTime.defaultTimeSystem())), true);
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+        TrainStationClockBlockEntity blockEntity = ((TrainStationClockBlockEntity)level.getBlockEntity(pos));
+        if (stack.getItem() instanceof DyeItem dyeItem) {
+            DyeColor dye = dyeItem.getDyeColor();
+            if (dye != null) {
+                level.playSound(null, pos, SoundEvents.DYE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                blockEntity.setColor(DLColor.fromInt(dye == DyeColor.ORANGE ? 0xFFFF9900 : dye.getMapColor().col));
+
+                if (level.isClientSide) {
+                    blockEntity.getRenderer().update(level, pos, state, blockEntity, null);
+                }
+
+                return ItemInteractionResult.SUCCESS;
+            }
+        }
+
+        if (stack.is(Items.GLOW_INK_SAC)) {
+            level.playSound(null, pos, SoundEvents.GLOW_INK_SAC_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+            blockEntity.setGlowing(true);
+
+            if (level.isClientSide) {
+                blockEntity.getRenderer().update(level, pos, state, blockEntity, null);
+            }
+
+            return ItemInteractionResult.SUCCESS;
+		}
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+	@Override
+    public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos pPos, CollisionContext pContext) {
+        if (pState.getValue(DOUBLE)) {
+            return Shapes.block();
+        }
+        return pState.getValue(FACING) == Direction.NORTH || pState.getValue(FACING) == Direction.SOUTH ? SHAPE_SN : SHAPE_EW;
+    }
+
+    @Override
+    public BlockState rotate(BlockState pState, Rotation pRotation) {
+        return pState.setValue(FACING, pRotation.rotate(pState.getValue(FACING)));
+    }    
+
+    @Override
+    public BlockState mirror(BlockState pState, Mirror pMirror) {
+        return pState.rotate(pMirror.getRotation(pState.getValue(FACING)));
+    }
+    
+    @Override
+    protected void createBlockStateDefinition(Builder<Block, BlockState> pBuilder) {
+        super.createBlockStateDefinition(pBuilder);
+        pBuilder.add(FACING, DOUBLE);
+    }
+
+    @Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockState blockState = context.getLevel().getBlockState(context.getClickedPos());
+		if (blockState.is(this)) {
+			return blockState.setValue(DOUBLE, true);
+		}
+		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+    public boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
+		if (useContext.getItemInHand().is(this.asItem()) && !state.getValue(DOUBLE)) {
+            return true;
+		} 
+        return false;
+	}
+
+    @Override
+    public RenderShape getRenderShape(BlockState pState) {
+        return RenderShape.MODEL;
+    }
+
+    @Override
+    public Class<TrainStationClockBlockEntity> getBlockEntityClass() {
+        return TrainStationClockBlockEntity.class;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new TrainStationClockBlockEntity(getBlockEntityType(), pos, state);
+    }
+
+    @Override
+    public BlockEntityType<? extends TrainStationClockBlockEntity> getBlockEntityType() {
+       return ModBlockEntities.TRAIN_STATION_CLOCK_BLOCK_ENTITY.get();
+    }
+}

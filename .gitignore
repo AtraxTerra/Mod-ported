@@ -1,0 +1,24 @@
+build/
+*.ipr
+run/
+*.iws
+out/
+*.iml
+../CRN 1.21.1/.gradle/
+.vscode/
+output/
+bin/
+libs/
+doc/
+
+.gradle/
+*/.gradle/
+.classpath
+.project
+.idea/
+classes/
+.metadata
+.settings
+*.launch
+.vscode/settings.json
+CLAUDE.md

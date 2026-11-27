@@ -1,0 +1,98 @@
+name: Snapshot Build
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Only run when the PR was actually merged, not just closed.
+    # Branch pattern check happens inside the steps since we need
+    # to read it from .mod-build-config.json first.
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check base branch matches main pattern
+        id: branchcheck
+        run: |
+          PATTERN=$(jq -r '.main_branch_pattern' .mod-build-config.json)
+          BASE="${{ github.event.pull_request.base.ref }}"
+          if [[ "$BASE" =~ $PATTERN ]]; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            echo "Base branch '$BASE' does not match pattern '$PATTERN' – skipping snapshot build."
+          fi
+
+      - name: Setup Java
+        if: steps.branchcheck.outputs.valid == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Gradle & Loom
+        if: steps.branchcheck.outputs.valid == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            **/.gradle/loom-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle.properties', '**/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Setup Gradle
+        if: steps.branchcheck.outputs.valid == 'true'
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+          gradle-version: wrapper
+
+      # SNAPSHOT_BUILD is picked up by the versioning plugin and produces a
+      # version string like "1.21.1-beta-2.0.0-SNAPSHOT+build.7890123456".
+      # Using run_id (not run_number) guarantees uniqueness across all branches.
+      - name: Build
+        if: steps.branchcheck.outputs.valid == 'true'
+        run: |
+          chmod +x gradlew
+          export SNAPSHOT_BUILD="${{ github.run_id }}"
+          echo "Using SNAPSHOT_BUILD=$SNAPSHOT_BUILD"
+          ./gradlew buildWithMetadata
+
+      - name: Collect JARs
+        if: steps.branchcheck.outputs.valid == 'true'
+        id: collect
+        run: |
+          {
+            echo "files<<EOF"
+            for STEM in $(jq -r '.artifacts[].filename' metadata.json); do
+              MAIN=$(find . -type f -name "${STEM}.jar" ! -path "*/.gradle/*" | head -n1)
+              if [ -z "$MAIN" ]; then
+                echo "ERROR: Artifact not found: ${STEM}.jar" >&2
+                exit 1
+              fi
+              echo "$MAIN"
+              DIR=$(dirname "$MAIN")
+              find "$DIR" -maxdepth 1 \
+                \( -name "*sources.jar" -o -name "*javadoc.jar" \) \
+                2>/dev/null || true
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload snapshot artifact
+        if: steps.branchcheck.outputs.valid == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-${{ github.run_id }}
+          path: ${{ steps.collect.outputs.files }}
+          retention-days: 30
