@@ -14,10 +14,9 @@ import com.railwayteam.railways.registry.CRBlockEntities;
 import com.railwayteam.railways.registry.fabric.CRBlockEntitiesImpl;
 import com.zurrtum.create.client.AllBlockEntityBehaviours;
 import com.zurrtum.create.client.foundation.blockEntity.behaviour.tooltip.FluidTankTooltipBehaviour;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
-@Environment(EnvType.CLIENT)
 public final class CRTooltipBehaviours {
     private CRTooltipBehaviours() {
     }

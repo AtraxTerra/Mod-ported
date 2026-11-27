@@ -19,20 +19,22 @@
 package com.railwayteam.railways.registry.fabric;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeClientEvents;
 import net.minecraft.client.KeyMapping;
 
+// Port: NeoForge registers key mappings in RegisterKeyMappingsEvent (RailwaysNeoForgeClientEvents),
+// and KeyMapping.getKey() (a NeoForge extension) is Fabric's KeyMappingHelper.getBoundKeyOf.
 public class CRKeysImpl {
     public static void registerKeyBinding(KeyMapping keyMapping) {
-        KeyMappingHelper.registerKeyMapping(keyMapping);
+        RailwaysNeoForgeClientEvents.KEYS.add(keyMapping);
     }
 
     public static int getBoundCode(KeyMapping keyMapping) {
-        InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(keyMapping);
+        InputConstants.Key key = keyMapping.getKey();
         return key.getType() == InputConstants.Type.KEYSYM ? key.getValue() : InputConstants.UNKNOWN.getValue();
     }
 
     public static boolean isMouseBound(KeyMapping keyMapping) {
-        return KeyMappingHelper.getBoundKeyOf(keyMapping).getType() == InputConstants.Type.MOUSE;
+        return keyMapping.getKey().getType() == InputConstants.Type.MOUSE;
     }
 }

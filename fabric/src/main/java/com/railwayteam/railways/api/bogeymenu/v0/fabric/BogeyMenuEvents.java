@@ -18,14 +18,31 @@
 
 package com.railwayteam.railways.api.bogeymenu.v0.fabric;
 
-import net.fabricmc.fabric.api.event.Event;
-import net.fabricmc.fabric.api.event.EventFactory;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+// Port: the same public API without Fabric API's event factory: listeners register on
+// ENTRY_REGISTRATION and invoker() calls each of them in turn.
 public class BogeyMenuEvents {
-    public static final Event<EntryRegistrationEvent> ENTRY_REGISTRATION = EventFactory.createArrayBacked(EntryRegistrationEvent.class, listeners -> () -> {});
+    public static final ListenerEvent ENTRY_REGISTRATION = new ListenerEvent();
 
     @FunctionalInterface
     public interface EntryRegistrationEvent {
         void onReadyForRegistration();
+    }
+
+    public static final class ListenerEvent {
+        private final List<EntryRegistrationEvent> listeners = new CopyOnWriteArrayList<>();
+
+        private ListenerEvent() {
+        }
+
+        public void register(EntryRegistrationEvent listener) {
+            listeners.add(listener);
+        }
+
+        public EntryRegistrationEvent invoker() {
+            return () -> listeners.forEach(EntryRegistrationEvent::onReadyForRegistration);
+        }
     }
 }

@@ -19,14 +19,16 @@
 package com.railwayteam.railways.content.palettes.painting.fabric;
 
 import com.railwayteam.railways.content.palettes.painting.EmptyPaintPitcherItem;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeEvents;
 import net.minecraft.world.item.Item;
+import net.neoforged.neoforge.capabilities.Capabilities;
 
 public class EmptyPaintPitcherItemImpl extends EmptyPaintPitcherItem {
     public EmptyPaintPitcherItemImpl(Properties properties) {
         super(properties);
-
-        FluidStorage.ITEM.registerForItems(($, context) -> new PaintPitcherFluidStorage(context), this);
+        // Port: NeoForge's item fluid capability, registered when NeoForge asks for capabilities.
+        RailwaysNeoForgeEvents.CAPABILITIES.add(event ->
+            event.registerItem(Capabilities.Fluid.ITEM, (stack, access) -> new PaintPitcherFluidStorage(access), this));
     }
 
     public static EmptyPaintPitcherItem create(Item.Properties properties) {

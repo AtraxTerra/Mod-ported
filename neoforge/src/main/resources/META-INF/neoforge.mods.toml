@@ -1,0 +1,53 @@
+# Interpolated by processResources in build.gradle.kts. Converted from fabric/src/main/resources/fabric.mod.json.
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "LGPL-3.0-only"
+issueTrackerURL = "https://github.com/AtraxTerra/Mod-ported/issues"
+
+[[mods]]
+modId = "railways"
+version = "${version}"
+displayName = "Create Fly: Steam 'n' Rails"
+authors = "The Railways Team, R2bEEaton, cat4blep, chaevsfe"
+credits = "Create: Steam 'n' Rails by The Railways Team; the Create Fly port by R2bEEaton, cat4blep and chaevsfe; NeoForge port in AtraxTerra/Mod-ported"
+displayURL = "https://github.com/chaevsfe/Create-Steam-n-Rails-Fly"
+logoFile = "assets/railways/icon_fly_port.png"
+description = '''
+Create: Steam 'n' Rails for Create Fly 26.2, on NeoForge. Custom tracks and gauges, semaphores,
+conductors, couplers, bogeys, palettes and other railway content for Create's trains.
+'''
+
+[[mixins]]
+config = "railways.mixins.json"
+
+[[mixins]]
+config = "railways-common.mixins.json"
+
+[[dependencies.railways]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neoforge_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.railways]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Create Fly (NeoForge). Loaded first: this mod registers through Create's plugin hooks.
+[[dependencies.railways]]
+modId = "create"
+type = "required"
+versionRange = "${create_fly_version_range}"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.railways]]
+modId = "jei"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"

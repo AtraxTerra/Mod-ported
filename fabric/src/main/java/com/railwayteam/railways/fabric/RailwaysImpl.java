@@ -27,10 +27,11 @@ import com.railwayteam.railways.registry.fabric.CRBlockEntitiesImpl;
 import com.railwayteam.railways.registry.fabric.CRBlocksImpl;
 import com.railwayteam.railways.registry.fabric.CRMountedStorageTypesImpl;
 import com.railwayteam.railways.registry.fabric.CRParticleTypesParticleEntryImpl;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeEvents;
 
-public class RailwaysImpl implements ModInitializer {
+// Port: the Fabric ModInitializer, called by Create Fly through RailwaysEntrypoints at the moment
+// Fabric would have called it.
+public class RailwaysImpl {
 	public void onInitialize() {
 		RailwaysCreateRegisterPlugin.verifyEarlyRegistrationComplete();
 		PlayerSelectionImpl.init();
@@ -46,7 +47,8 @@ public class RailwaysImpl implements ModInitializer {
 	}
 
 	public static void registerCommands(CommandRegistrar registrar) {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> registrar.register(dispatcher, environment.includeDedicated, registryAccess));
+		// Port: replayed on every RegisterCommandsEvent (see RailwaysNeoForgeEvents).
+		RailwaysNeoForgeEvents.COMMANDS.add(registrar);
 	}
 
 	public static void platformBasedRegistration() {

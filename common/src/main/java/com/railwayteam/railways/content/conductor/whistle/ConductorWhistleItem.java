@@ -18,8 +18,8 @@
 
 package com.railwayteam.railways.content.conductor.whistle;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.config.CRConfigs;
 import com.railwayteam.railways.content.conductor.ConductorEntity;
@@ -122,7 +122,7 @@ public class ConductorWhistleItem extends TrackTargetingBlockItem {
 			UUID trainId = selectedTrain.get();
 			UUID conductorId = selectedConductor.get();
 			String trainName = "NOT FOUND";
-			GlobalRailwayManager railways = FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT ? Create.RAILWAYS.sided(null) : Create.RAILWAYS;
+			GlobalRailwayManager railways = FMLEnvironment.getDist() == Dist.CLIENT ? Create.RAILWAYS.sided(null) : Create.RAILWAYS;
 			if (railways != null && railways.trains.containsKey(trainId))
 				trainName = railways.trains.get(trainId).name.getString();
 

@@ -19,12 +19,16 @@
 package com.railwayteam.railways.multiloader.fluid.fabric;
 
 import com.railwayteam.railways.annotation.multiloader.ImplClass;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;
 
 @ImplClass
 public class FluidUnitsImpl {
-    @SuppressWarnings("UnstableApiUsage")
+    /**
+     * Port: Create Fly keeps counting fluid in droplets (81000 a bucket) on NeoForge too, and Steam
+     * 'n' Rails' fluids live in Create Fly's inventories, recipes and tanks, so the unit stays
+     * upstream's. Amounts crossing into a NeoForge capability are converted where that happens
+     * ({@code PaintPitcherFluidStorage}, Create Fly's own adapters).
+     */
     public static long bucket() {
-        return FluidConstants.BUCKET;
+        return com.zurrtum.create.platform.FluidUnits.DROPLETS_PER_BUCKET;
     }
 }

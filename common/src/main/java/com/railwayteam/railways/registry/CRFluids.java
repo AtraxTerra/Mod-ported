@@ -20,8 +20,8 @@ package com.railwayteam.railways.registry;
 
 import com.railwayteam.railways.shim.create.content.fluids.VirtualFluid;
 import com.railwayteam.railways.shim.registrate.util.entry.FluidEntry;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 public class CRFluids {
     public static final FluidEntry<VirtualFluid> PAINT = registerPaint();
@@ -32,7 +32,6 @@ public class CRFluids {
         return com.railwayteam.railways.registry.fabric.CRFluidsImpl.registerPaint();
     }
 
-    @Environment(EnvType.CLIENT)
     public static void initRendering() {
         com.railwayteam.railways.registry.fabric.CRFluidsImpl.initRendering();
     }

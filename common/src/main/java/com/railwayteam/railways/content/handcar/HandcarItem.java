@@ -48,8 +48,8 @@ import com.zurrtum.create.content.trains.track.ITrackBlock;
 import com.zurrtum.create.content.trains.track.TrackTargetingBlockItem.OverlapResult;
 import com.zurrtum.create.infrastructure.component.BezierTrackPointLocation;
 import com.zurrtum.create.infrastructure.packet.s2c.AddTrainPacket;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -173,7 +173,6 @@ public class HandcarItem extends BlockItem implements IDeployAnywayBlockItem {
         return true;
     }
 
-    @Environment(EnvType.CLIENT)
     public boolean useOnCurve(TrackBlockOutline.BezierPointSelection selection, ItemStack stack) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;

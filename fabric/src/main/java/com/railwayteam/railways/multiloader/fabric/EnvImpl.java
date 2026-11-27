@@ -18,12 +18,12 @@
 
 package com.railwayteam.railways.multiloader.fabric;
 
+import net.neoforged.fml.loading.FMLEnvironment;
 import com.railwayteam.railways.multiloader.Env;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.api.distmarker.Dist;
 
 public class EnvImpl {
 	public static Env getCurrent() {
-		return FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT ? Env.CLIENT : Env.SERVER;
+		return FMLEnvironment.getDist() == Dist.CLIENT ? Env.CLIENT : Env.SERVER;
 	}
 }

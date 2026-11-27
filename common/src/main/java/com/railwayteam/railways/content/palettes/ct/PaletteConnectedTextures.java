@@ -30,13 +30,12 @@ import com.zurrtum.create.client.foundation.block.connected.CTSpriteShiftEntry;
 import com.zurrtum.create.client.foundation.block.connected.ConnectedTextureBehaviour;
 import com.zurrtum.create.client.foundation.block.connected.SimpleCTBehaviour;
 import com.zurrtum.create.client.infrastructure.model.CTModel;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.EnumMap;
 import java.util.function.Function;
 
-@Environment(EnvType.CLIENT)
 public class PaletteConnectedTextures {
 
     private static final int STYLES_PER_COLOR = 19;

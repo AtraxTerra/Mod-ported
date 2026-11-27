@@ -31,8 +31,8 @@ import com.zurrtum.create.content.decoration.copycat.WaterloggedCopycatBlock;
 import com.zurrtum.create.content.equipment.wrench.IWrenchable;
 import com.zurrtum.create.content.kinetics.base.GeneratingKineticBlockEntity;
 import com.zurrtum.create.content.kinetics.base.KineticBlockEntity;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.railwayteam.railways.shim.minecraft.MethodsReturnNonnullByDefault;
 import com.railwayteam.railways.shim.minecraft.client.color.item.ItemColor;
 import net.minecraft.core.BlockPos;
@@ -310,12 +310,10 @@ public class CopycatHeadstockBlock extends WaterloggedCopycatBlock implements Bl
         return super.useItemOn(held, pState, pLevel, pPos, pPlayer, pHand, pHit);
     }
 
-    @Environment(EnvType.CLIENT)
     public static ItemColor wrappedItemColor() {
         return new WrappedItemColor();
     }
 
-    @Environment(EnvType.CLIENT)
     public static class WrappedItemColor implements ItemColor {
         public int getColor(ItemStack itemStack, int i) {
             return GrassColor.get(0.5D, 1.0D);

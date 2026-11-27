@@ -21,8 +21,8 @@ package com.railwayteam.railways.content.coupling.coupler;
 import com.zurrtum.create.api.behaviour.BlockEntityBehaviour;
 import com.zurrtum.create.client.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
 import com.zurrtum.create.foundation.blockEntity.behaviour.scrollValue.ServerScrollValueBehaviour;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -32,7 +32,6 @@ import net.minecraft.network.chat.Component;
  * (and their referenced types resolved) the moment the class loads, regardless of any runtime
  * Env guard around the call site that would construct one.
  */
-@Environment(EnvType.CLIENT)
 public class TrackCouplerBlockEntityClientBehaviours {
     public static BlockEntityBehaviour<?> createEdgeSpacingScroll(TrackCouplerBlockEntity be) {
         return new ScrollValueBehaviour<TrackCouplerBlockEntity, ServerScrollValueBehaviour>(

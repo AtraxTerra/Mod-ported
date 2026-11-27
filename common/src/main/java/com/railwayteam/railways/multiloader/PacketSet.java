@@ -23,8 +23,8 @@ import com.railwayteam.railways.registry.CRPackets;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -79,7 +79,6 @@ public abstract class PacketSet {
 	/**
 	 * Send the given C2S packet to the server.
 	 */
-	@Environment(EnvType.CLIENT)
 	public void send(C2SPacket packet) {
 		int i = idOfC2S(packet);
 		if (i != -1) {
@@ -92,7 +91,6 @@ public abstract class PacketSet {
 		}
 	}
 
-	@Environment(EnvType.CLIENT)
 	public abstract void send(Packet<? super ServerGamePacketListener> packet);
 
 	/**
@@ -121,11 +119,9 @@ public abstract class PacketSet {
 
 	public abstract void sendTo(PlayerSelection selection, Packet<? super ClientGamePacketListener> packet);
 
-	@Environment(EnvType.CLIENT)
 	public abstract void registerS2CListener();
 	public abstract void registerC2SListener();
 
-	@Environment(EnvType.CLIENT)
 	protected abstract void doSendC2S(FriendlyByteBuf buf);
 
 	protected int idOfC2S(C2SPacket packet) {
@@ -136,7 +132,6 @@ public abstract class PacketSet {
 		return s2cTypes.getOrDefault(packet.getClass(), -1);
 	}
 
-	@Environment(EnvType.CLIENT)
 	@Internal
 	public void handleS2CPacket(Minecraft mc, FriendlyByteBuf buf) {
 		int i = buf.readVarInt();

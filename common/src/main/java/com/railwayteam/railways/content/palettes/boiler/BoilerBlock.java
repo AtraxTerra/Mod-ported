@@ -31,8 +31,8 @@ import com.zurrtum.create.catnip.data.Iterate;
 import com.zurrtum.create.catnip.placement.IPlacementHelper;
 import com.zurrtum.create.catnip.placement.PlacementHelpers;
 import com.zurrtum.create.catnip.placement.PlacementOffset;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.railwayteam.railways.shim.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -166,7 +166,6 @@ public class BoilerBlock extends Block implements IWrenchable, IHasCustomOutline
             return CRShapes.BOILER_RAISED.get(state.getValue(HORIZONTAL_AXIS));
         return CRShapes.BOILER.get(state.getValue(HORIZONTAL_AXIS));
     }
-    @Environment(EnvType.CLIENT)
     public void customOutline(PoseStack poseStack, VertexConsumer consumer, BlockState state) {
         double offset = state.getValue(RAISED) ? 8 : 0;
 
@@ -201,7 +200,6 @@ public class BoilerBlock extends Block implements IWrenchable, IHasCustomOutline
         drawLineWithAxisOffset(consumer, poseStack, 24, 1.37258, 0, 24, 1.37258, 16, offset, Axis.Y);
         drawLineWithAxisOffset(consumer, poseStack, 14.6274, -8, 0, 14.6274, -8, 16, offset, Axis.Y);
     }
-    @Environment(EnvType.CLIENT)
     public void matrixRotation(PoseStack poseStack, BlockState state) {
         if (state.getValue(HORIZONTAL_AXIS) == Axis.X)
             poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90));

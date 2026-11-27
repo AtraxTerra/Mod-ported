@@ -26,8 +26,8 @@ import com.zurrtum.create.client.flywheel.lib.model.baked.ItemModelRenderHelper;
 import com.zurrtum.create.client.foundation.model.BakedModelHelper;
 import com.zurrtum.create.client.infrastructure.model.WrapperBlockStateModel;
 import it.unimi.dsi.fastutil.ints.IntList;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
@@ -79,7 +79,6 @@ import java.util.function.UnaryOperator;
 import static com.railwayteam.railways.content.buffer.BufferModelUtils.combineSwappers;
 import static com.railwayteam.railways.content.buffer.BufferModelUtils.getSwapper;
 
-@Environment(EnvType.CLIENT)
 public class BufferModel extends WrapperBlockStateModel {
     private static final Matrix3f DIAGONAL_TRANSFORM = Axis.YP.rotationDegrees(45).get(new Matrix3f());
 

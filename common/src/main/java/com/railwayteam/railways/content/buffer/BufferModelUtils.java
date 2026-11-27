@@ -18,8 +18,8 @@ package com.railwayteam.railways.content.buffer;
 import com.railwayteam.railways.Railways;
 import com.zurrtum.create.catnip.registry.RegisteredObjectsHelper;
 import com.zurrtum.create.client.catnip.render.StitchedSprite;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
@@ -38,7 +38,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
-@Environment(EnvType.CLIENT)
 public class BufferModelUtils {
     public static final StitchedSprite SPRUCE_PLANKS_TEMPLATE =
         new StitchedSprite(Identifier.withDefaultNamespace("block/spruce_planks"));

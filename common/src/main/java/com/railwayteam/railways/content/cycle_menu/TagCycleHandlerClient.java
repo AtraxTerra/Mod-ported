@@ -27,8 +27,8 @@ import com.railwayteam.railways.registry.CRPalettes;
 import com.railwayteam.railways.util.EntityUtils;
 import com.railwayteam.railways.util.packet.TagCycleSelectionPacket;
 import com.zurrtum.create.client.catnip.gui.ScreenOpener;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -40,7 +40,6 @@ import net.minecraft.world.level.GameType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
-@Environment(EnvType.CLIENT)
 public class TagCycleHandlerClient {
     public static final TagCycleTracker CYCLE_TRACKER = new TagCycleTracker();
     private static final boolean DEBUG = Boolean.getBoolean("railways.debugCycleMenu");

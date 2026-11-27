@@ -19,8 +19,8 @@
 package com.railwayteam.railways.content.smokestack.particles.chimneypush;
 
 import com.railwayteam.railways.content.smokestack.particles.CustomAnimatedTextureSheetParticle;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
@@ -36,7 +36,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 
-@Environment(EnvType.CLIENT)
 public class ChimneyPushParticle extends CustomAnimatedTextureSheetParticle {
     protected final boolean leadOnly;
     protected final RandomSource random;
@@ -132,7 +131,6 @@ public class ChimneyPushParticle extends CustomAnimatedTextureSheetParticle {
         }
     }
 
-    @Environment(EnvType.CLIENT)
     public static class Factory<T extends ChimneyPushParticleData<T>> implements ParticleProvider<T> {
         private final SpriteSet spriteSet;
 

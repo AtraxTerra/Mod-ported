@@ -19,8 +19,8 @@
 package com.railwayteam.railways.content.smokestack.particles.puffs;
 
 import com.railwayteam.railways.content.smokestack.particles.CustomAnimatedTextureSheetParticle;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
@@ -31,7 +31,6 @@ import net.minecraft.util.RandomSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Environment(EnvType.CLIENT)
 public class PuffSmokeParticle extends CustomAnimatedTextureSheetParticle {
     public static final double DOUBLE_SPEED_SENTINEL = 42;
 
@@ -79,7 +78,6 @@ public class PuffSmokeParticle extends CustomAnimatedTextureSheetParticle {
         return SingleQuadParticle.Layer.OPAQUE;
     }
 
-    @Environment(EnvType.CLIENT)
     public static class Factory<T extends PuffSmokeParticleData<T>> implements ParticleProvider<T> {
         private final SpriteSet spriteSet;
 

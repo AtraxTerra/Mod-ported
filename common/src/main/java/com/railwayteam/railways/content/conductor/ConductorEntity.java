@@ -48,8 +48,8 @@ import com.zurrtum.create.content.trains.entity.CarriageContraption;
 import com.zurrtum.create.content.trains.entity.CarriageContraptionEntity;
 import com.zurrtum.create.content.trains.entity.Train;
 import com.zurrtum.create.content.trains.schedule.ScheduleRuntime;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -387,14 +387,12 @@ public class ConductorEntity extends AbstractGolem {
     }
 
     @Override
-    @Environment(EnvType.CLIENT)
     public float getViewXRot(float partialTicks) {
         if (ClientHandler.isPossessed(this)) return this.getXRot();
         return super.getViewXRot(partialTicks);
     }
 
     @Override
-    @Environment(EnvType.CLIENT)
     public float getViewYRot(float partialTick) {
         return this.isPassenger() || !isPossessed() ? super.getViewYRot(partialTick) : this.getYRot();
     }
@@ -436,7 +434,6 @@ public class ConductorEntity extends AbstractGolem {
         return input ? 1.0f : -1.0f;
     }
 
-    @Environment(EnvType.CLIENT)
     private void _updatePossessionInputs() {
         this.setSpeed((float) this.getAttributeValue(Attributes.MOVEMENT_SPEED));
         this.zza = calculateImpulse(wasUpPressed(), wasDownPressed());

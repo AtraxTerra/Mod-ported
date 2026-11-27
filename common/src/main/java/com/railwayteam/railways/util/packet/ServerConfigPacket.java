@@ -23,8 +23,8 @@ import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.config.CRConfigs;
 import com.railwayteam.railways.multiloader.S2CPacket;
 import com.zurrtum.create.catnip.config.Builder;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 
@@ -43,7 +43,6 @@ public record ServerConfigPacket(byte[] values) implements S2CPacket {
     buffer.writeByteArray(this.values);
   }
 
-  @Environment(EnvType.CLIENT)
   public void handle(Minecraft mc) {
     if (mc.hasSingleplayerServer())
       return;

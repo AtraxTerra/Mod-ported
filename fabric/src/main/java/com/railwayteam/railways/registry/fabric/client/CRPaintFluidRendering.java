@@ -11,74 +11,35 @@
 package com.railwayteam.railways.registry.fabric.client;
 
 import com.railwayteam.railways.Railways;
-import com.railwayteam.railways.content.palettes.PalettesColor;
-import com.railwayteam.railways.content.palettes.painting.PaintFluid;
+import com.railwayteam.railways.neoforge.RailwaysNeoForgeClientEvents;
 import com.railwayteam.railways.registry.CRFluids;
-import com.railwayteam.railways.registry.fabric.CRFluidsImpl;
-import com.railwayteam.railways.util.Utils;
 import com.railwayteam.railways.shim.create.content.fluids.VirtualFluid;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
-import net.fabricmc.fabric.api.transfer.v1.client.fluid.FluidVariantRenderHandler;
-import net.fabricmc.fabric.api.transfer.v1.client.fluid.FluidVariantRendering;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.resources.model.sprite.Material;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.component.CustomData;
-import org.jetbrains.annotations.Nullable;
 
-@Environment(EnvType.CLIENT)
+/**
+ * Port: paint's fluid model goes to NeoForge's RegisterFluidModelsEvent, which fires after this.
+ *
+ * <p>Upstream also registers a Fabric {@code FluidVariantRenderHandler} that tints paint by the
+ * colour in its custom data. NeoForge 26.2 has no per-stack fluid tint hook (see Create Fly's
+ * {@code platform/FluidRendering}, which returns white for the same reason), so paint shows its
+ * white texture in tanks, pipes and basins until that exists. Paint's colour itself is untouched:
+ * names, recipes, pitchers and painting all read the custom data.
+ */
 public final class CRPaintFluidRendering {
     private CRPaintFluidRendering() {
     }
 
     public static void register() {
         VirtualFluid paint = CRFluids.PAINT.get();
-        FluidRenderingRegistry.register(
-            paint,
+        RailwaysNeoForgeClientEvents.FLUID_MODELS.add(event -> event.register(
             new FluidModel.Unbaked(
                 new Material(Railways.asResource("fluid/paint_still/white")),
                 new Material(Railways.asResource("fluid/paint_flow/white")),
                 null,
                 null
-            )
-        );
-        FluidVariantRendering.register(paint, new PaintFluidVariantRenderHandler());
-
-        if (Utils.isDevEnv()) {
-            FluidVariant redPaint = FluidVariant.of(
-                paint,
-                DataComponentPatch.builder()
-                    .set(
-                        DataComponents.CUSTOM_DATA,
-                        CustomData.of(PaintFluid.setColor(new CompoundTag(), PalettesColor.RED))
-                    )
-                    .build()
-            );
-            int expectedColor = 0xff000000 | PalettesColor.RED.getDiffuseColor();
-            if (FluidVariantRendering.getColor(redPaint) != expectedColor) {
-                throw new IllegalStateException("Paint fluid component tint runtime check failed");
-            }
-            Railways.LOGGER.info("Paint fluid model and component-aware tint runtime check passed");
-        }
-    }
-
-    private static class PaintFluidVariantRenderHandler implements FluidVariantRenderHandler {
-        @Override
-        public int getColor(
-            FluidVariant variant,
-            @Nullable BlockAndTintGetter level,
-            @Nullable BlockPos pos
-        ) {
-            return 0xff000000 | CRFluidsImpl.getPaintColor(variant)
-                .orElse(PalettesColor.NETHERITE)
-                .getDiffuseColor();
-        }
+            ),
+            paint
+        ));
     }
 }

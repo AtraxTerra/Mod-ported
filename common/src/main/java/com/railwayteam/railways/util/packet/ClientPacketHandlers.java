@@ -31,8 +31,8 @@ import com.railwayteam.railways.shim.create.client.CreateClient;
 import com.zurrtum.create.content.trains.entity.CarriageContraptionEntity;
 import com.zurrtum.create.content.trains.entity.Train;
 import com.zurrtum.create.content.trains.signal.SignalBlockEntity;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -54,7 +54,6 @@ import java.util.UUID;
  * (and their referenced types resolved) the instant the class loads, on either side, regardless
  * of any @Environment annotation on that one method or any runtime guard around invoking it.
  */
-@Environment(EnvType.CLIENT)
 public class ClientPacketHandlers {
     private static final int MAX_CAMERA_LOOKUP_TICKS = 100;
     private static int pendingCameraEntityId = -1;

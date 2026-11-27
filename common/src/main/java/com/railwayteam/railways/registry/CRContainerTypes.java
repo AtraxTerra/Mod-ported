@@ -25,8 +25,8 @@ import com.zurrtum.create.api.registry.CreateRegistries;
 import com.zurrtum.create.client.AllMenuScreens;
 import com.zurrtum.create.content.equipment.toolbox.ToolboxBlockEntity;
 import com.zurrtum.create.foundation.gui.menu.MenuType;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.core.Registry;
 
 public class CRContainerTypes {
@@ -40,7 +40,6 @@ public class CRContainerTypes {
     public static void register() {
     }
 
-    @Environment(EnvType.CLIENT)
     public static void registerScreens() {
         AllMenuScreens.register(MOUNTED_TOOLBOX, MountedToolboxScreen::create);
     }

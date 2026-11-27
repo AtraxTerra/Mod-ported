@@ -21,8 +21,8 @@ package com.railwayteam.railways.content.minecarts;
 import com.railwayteam.railways.registry.CREntities;
 import com.railwayteam.railways.registry.CRItems;
 import com.railwayteam.railways.util.packet.PacketSender;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -54,7 +54,6 @@ public class MinecartJukebox extends MinecartBlock {
 
     private int cooldownCount = 0;
     private ItemStack disc = ItemStack.EMPTY;
-    @Environment(EnvType.CLIENT)
     private JukeboxCartSoundInstance sound;
 
     public MinecartJukebox(EntityType<?> type, Level level) {
@@ -158,7 +157,6 @@ public class MinecartJukebox extends MinecartBlock {
         insertRecord(ItemStack.EMPTY);
     }
 
-    @Environment(EnvType.CLIENT)
     private void updateClientSound() {
         if (disc.isEmpty()) {
             if (sound != null)
@@ -174,13 +172,11 @@ public class MinecartJukebox extends MinecartBlock {
             .ifPresent(this::startPlaying);
     }
 
-    @Environment(EnvType.CLIENT)
     private void startPlaying(JukeboxSong song) {
         sound = new JukeboxCartSoundInstance(song);
         Minecraft.getInstance().getSoundManager().play(sound);
     }
 
-    @Environment(EnvType.CLIENT)
     public class JukeboxCartSoundInstance extends AbstractTickableSoundInstance {
         public JukeboxCartSoundInstance(JukeboxSong song) {
             super(song.soundEvent().value(), SoundSource.RECORDS, SoundInstance.createUnseededRandom());

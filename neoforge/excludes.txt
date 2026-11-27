@@ -1,0 +1,6 @@
+# Java sources excluded from the NeoForge build, on top of upstream's own list in build.gradle.kts.
+# Ant-style patterns, relative to the Java source roots. Each entry says why.
+
+# Fabric's datagen entrypoint. The port ships upstream's committed common/src/generated/resources
+# (as upstream's own build does) instead of running datagen.
+com/railwayteam/railways/fabric/RailwaysDataFabric.java

@@ -1,0 +1,193 @@
+name: Build (Steam 'n' Rails, NeoForge)
+
+# Builds the NeoForge port of Create Fly: Steam 'n' Rails against the NeoForge port of Create Fly,
+# which lives on another branch of this repository (port/neoforge-26.2). That branch is built first,
+# in deps/create-fly, and its jar is what this mod compiles against and runs with. Same layout as
+# the Diesel Generators port (port/cdg-neoforge-26.2).
+
+on:
+  push:
+    branches: ['port/snr-neoforge-26.2', 'feat/snr-neoforge']
+  pull_request:
+    branches: ['port/snr-neoforge-26.2']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snr-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only used by the release step
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the Create Fly NeoForge port
+        uses: actions/checkout@v4
+        with:
+          ref: port/neoforge-26.2
+          path: deps/create-fly
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Create Fly (NeoForge)
+        shell: bash
+        working-directory: deps/create-fly
+        run: |
+          chmod +x ./gradlew
+          ./gradlew jar --console=plain
+          ls -l build/libs
+
+      # Datapack syntax never fails a build: a leftover fabric: key is a "Couldn't parse data file"
+      # at server start, or a compat recipe that loads when its mod is absent.
+      - name: No Fabric data left (load conditions, custom ingredients)
+        run: |
+          for dir in common/src/main/resources common/src/generated/resources fabric/src/main/resources neoforge/src/main/resources; do
+            python3 -I deps/create-fly/tools/convert_fabric_data.py "$dir" --check
+          done
+
+      - name: Compile
+        id: compile
+        shell: bash
+        continue-on-error: true
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean compileJava -Pcreate_fly_libs=deps/create-fly/build/libs --console=plain 2>&1 | tee compile.log
+
+      - name: Summarise compile errors
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Compile"
+            if [ "${{ steps.compile.outcome }}" = "success" ]; then
+              echo ":white_check_mark: \`compileJava\` succeeded."
+            else
+              total=$(grep -cE '^/.*\.java:[0-9]+: error:' compile.log || true)
+              echo ":x: \`compileJava\` failed with **${total:-0}** error(s)."
+              echo
+              echo '```'
+              if [ "${total:-0}" -eq 0 ]; then
+                sed -n '/What went wrong/,/^\* Get more help/p' compile.log | head -40
+              else
+                grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" | head -200
+              fi
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" | head -400 || true
+
+      - name: Fail if compilation failed
+        if: steps.compile.outcome != 'success'
+        run: exit 1
+
+      - name: Build jar
+        run: ./gradlew build -Pcreate_fly_libs=deps/create-fly/build/libs --console=plain
+
+      # Same audit as the Create Fly port: every injector, accessor and shadow of every active mixin,
+      # read against the bytecode NeoForge actually runs (client mixins included, which a server boot
+      # never applies). This mod's own jar is on the list too: some mixins target its own classes.
+      - name: Mixin target audit (bytecode)
+        id: mixin-audit
+        shell: bash
+        continue-on-error: true
+        run: |
+          mc=$(find build/moddev/artifacts -name 'minecraft-patched-*.jar' | head -1)
+          fly=$(ls deps/create-fly/build/libs/create-fly-*.jar | grep -v sources | head -1)
+          snr=$(ls build/libs/Steam_Rails-*.jar | grep -v sources | head -1)
+          echo "auditing against $mc, $fly and $snr"
+          python3 -I deps/create-fly/tools/audit_mixin_targets.py --src fabric/src/main/java --resources fabric/src/main/resources \
+            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee mixin-audit.log
+          python3 -I deps/create-fly/tools/audit_mixin_targets.py --src common/src/main/java --resources common/src/main/resources \
+            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee -a mixin-audit.log
+
+      - name: Upload jars
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: steam-rails-neoforge-${{ github.sha }}
+          path: |
+            build/libs/*.jar
+            deps/create-fly/build/libs/*.jar
+            mixin-audit.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Every push replaces the "snr-latest" pre-release with the jar just built and the Create Fly
+      # it was built against, so its download links always give the current pair.
+      - name: Publish the snr-latest pre-release
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jars=$(ls build/libs/Steam_Rails-*.jar deps/create-fly/build/libs/create-fly-*.jar | grep -v -- '-sources')
+          cat > notes.md <<'NOTES'
+          **Create Fly: Steam 'n' Rails** sur NeoForge 26.2 (26.2.0.93 ou plus récent), avec le Create Fly NeoForge contre lequel il est construit.
+
+          - `Steam_Rails-…+neoforge-mc26.2.jar` : Steam 'n' Rails ;
+          - `create-fly-…-neoforge-….jar` : le même Create Fly que la pré-version `server-latest` (à garder s'il est déjà sur le serveur).
+
+          À mettre sur le serveur **et** sur chaque client. Pré-version : vérifiée en CI (compilation, mixins, démarrage du serveur et du client), pas encore en jeu réel.
+          NOTES
+          sed -i 's/^          //' notes.md
+          echo "" >> notes.md
+          echo "Construit depuis \`${GITHUB_SHA:0:8}\` (${GITHUB_REF_NAME}) et \`$(git -C deps/create-fly rev-parse --short=8 HEAD)\` (Create Fly)." >> notes.md
+          gh release delete snr-latest --repo "$GITHUB_REPOSITORY" --cleanup-tag -y 2>/dev/null || true
+          gh release create snr-latest $jars --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "Create Fly: Steam 'n' Rails, NeoForge 26.2 (dernière version)" --notes-file notes.md
+
+      - name: Boot a dedicated server with Create Fly + Steam 'n' Rails
+        id: boot
+        continue-on-error: true
+        shell: bash
+        run: |
+          cp deps/create-fly/tools/boot-test.sh tools-boot-test.sh
+          chmod +x tools-boot-test.sh
+          echo "create_fly_libs=deps/create-fly/build/libs" >> gradle.properties
+          ./tools-boot-test.sh 600
+
+      - name: Client boot (headless)
+        id: client
+        continue-on-error: true
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils
+          rm -rf run/crash-reports run/logs
+          cp deps/create-fly/tools/client-boot-test.sh tools-client-boot-test.sh
+          xvfb-run -a -s "-screen 0 1280x720x24" bash tools-client-boot-test.sh 1500 60
+          echo "## Client boot" >> "$GITHUB_STEP_SUMMARY"
+          tail -25 client-boot-test.log >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload the boot logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snr-boot-log-${{ github.sha }}
+          path: |
+            boot-test.log
+            client-boot-test.log
+            run/logs/*.log
+            run/crash-reports/*.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Fail if a boot failed
+        if: steps.boot.outcome != 'success' || steps.client.outcome != 'success'
+        run: |
+          echo "server boot: ${{ steps.boot.outcome }}, client boot: ${{ steps.client.outcome }}"
+          exit 1

@@ -28,8 +28,8 @@ import com.zurrtum.create.catnip.animation.LerpedFloat;
 import com.zurrtum.create.content.contraptions.TranslatingContraption;
 import com.zurrtum.create.content.contraptions.behaviour.MovementContext;
 import com.zurrtum.create.content.trains.entity.CarriageContraption;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.util.Mth;
@@ -69,10 +69,8 @@ public class SmokeStackMovementBehaviour extends MovementBehaviour {
             return context.world.getGameTime() - movementStartTick;
         }
 
-        @Environment(EnvType.CLIENT)
         private List<ChimneyPushParticle> pushParticles;
 
-        @Environment(EnvType.CLIENT)
         void moveParticles(MovementContext context) {
             if (pushParticles == null) {
                 return;
@@ -92,12 +90,10 @@ public class SmokeStackMovementBehaviour extends MovementBehaviour {
             }
         }
 
-        @Environment(EnvType.CLIENT)
         List<ChimneyPushParticle> getPushParticles() {
             return pushParticles == null ? Collections.emptyList() : pushParticles;
         }
 
-        @Environment(EnvType.CLIENT)
         void addAndTrackParticle(ChimneyPushParticleData<?> particleType, boolean force, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             if (pushParticles == null) {
                 pushParticles = new ArrayList<>();

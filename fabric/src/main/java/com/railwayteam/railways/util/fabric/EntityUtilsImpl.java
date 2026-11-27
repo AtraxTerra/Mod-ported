@@ -20,7 +20,7 @@ package com.railwayteam.railways.util.fabric;
 
 import com.railwayteam.railways.content.conductor.ConductorEntity;
 import com.railwayteam.railways.fabric.ConductorFakePlayerFabric;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.neoforged.neoforge.common.CommonHooks;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,10 +35,10 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public class EntityUtilsImpl {
-    private static final Map<Entity, CompoundTag> PERSISTENT_DATA = new WeakHashMap<>();
-
+    // Port: NeoForge entities carry persistent data themselves (saved with the entity); upstream kept
+    // a weak in-memory map because Fabric has none.
     public static CompoundTag getPersistentData(Entity entity) {
-        return PERSISTENT_DATA.computeIfAbsent(entity, $ -> new CompoundTag());
+        return entity.getPersistentData();
     }
 
     public static void givePlayerItem(Player player, ItemStack stack) {
@@ -54,7 +54,7 @@ public class EntityUtilsImpl {
     }
 
     public static boolean handleUseEvent(Player player, InteractionHand hand, BlockHitResult hit) {
-        InteractionResult result = UseBlockCallback.EVENT.invoker().interact(player, player.level, hand, hit);
-        return result != InteractionResult.FAIL;
+        // Port: NeoForge's right-click-block event, where Fabric API fires UseBlockCallback.
+        return !CommonHooks.onRightClickBlock(player, hand, hit.getBlockPos(), hit).isCanceled();
     }
 }

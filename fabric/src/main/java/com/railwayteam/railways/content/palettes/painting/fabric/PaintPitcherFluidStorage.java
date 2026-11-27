@@ -23,61 +23,69 @@ import com.railwayteam.railways.content.palettes.painting.PaintFluid;
 import com.railwayteam.railways.content.palettes.painting.PaintPitcherItem;
 import com.railwayteam.railways.content.palettes.painting.PitcherColor;
 import com.railwayteam.railways.registry.CRFluids;
-import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
-import net.fabricmc.fabric.api.transfer.v1.storage.StoragePreconditions;
-import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
-import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import com.zurrtum.create.platform.FluidUnits;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.material.Fluids;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.TransferPreconditions;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.jetbrains.annotations.Nullable;
 
 import static com.railwayteam.railways.content.palettes.painting.PaintPitcherItem.FLUID_PER_LEVEL;
 import static com.railwayteam.railways.content.palettes.painting.PaintPitcherItem.MAX_LEVELS;
 
-@SuppressWarnings("UnstableApiUsage")
-class PaintPitcherFluidStorage implements SingleSlotStorage<FluidVariant> {
-    private final ContainerItemContext context;
+/**
+ * Port: upstream's Fabric {@code SingleSlotStorage<FluidVariant>} as NeoForge's one-slot
+ * {@code ResourceHandler<FluidResource>}, with the same rules: paint of the pitcher's colour (or
+ * sandy water) goes in and out a level at a time, a level being {@link PaintPitcherItem#FLUID_PER_LEVEL}.
+ *
+ * <p>NeoForge capabilities count millibuckets while Create Fly, and so the pitcher's own constants,
+ * count droplets. A level is 125 mB either way; amounts are converted here and nowhere else.
+ */
+class PaintPitcherFluidStorage implements ResourceHandler<FluidResource> {
+    /** One level of the pitcher in millibuckets (FLUID_PER_LEVEL droplets, an eighth of a bucket). */
+    private static final int MB_PER_LEVEL = FluidUnits.toMillibuckets(FLUID_PER_LEVEL);
 
-    public PaintPitcherFluidStorage(ContainerItemContext context) {
+    private final ItemAccess context;
+
+    public PaintPitcherFluidStorage(ItemAccess context) {
         this.context = context;
     }
 
     private @Nullable PitcherColor getColor() {
-        if (context.getItemVariant().getItem() instanceof PaintPitcherItem item) {
+        if (context.getResource().getItem() instanceof PaintPitcherItem item) {
             return new PitcherColor(item.getColor());
         }
         return null;
     }
 
     private int getLevels() {
-        ItemStack stack = context.getItemVariant().toStack();
+        ItemStack stack = context.getResource().toStack();
         if (!(stack.getItem() instanceof PaintPitcherItem item)) return 0;
         return item.getLevels(stack);
     }
 
-    private static @Nullable PitcherColor getVariantColor(FluidVariant resource) {
+    private static @Nullable PitcherColor getVariantColor(FluidResource resource) {
         if (Fluids.WATER.isSame(resource.getFluid()))
             return PitcherColor.SANDY_WATER;
-
         if (!CRFluids.PAINT.get().isSame(resource.getFluid()))
             return null;
-
         CustomData data = resource.get(DataComponents.CUSTOM_DATA);
         PalettesColor fluidColor = data == null ? null : PaintFluid.getColor(data.copyTag()).orElse(null);
         if (fluidColor == null)
             return null;
-
         return new PitcherColor(fluidColor);
     }
 
     @Nullable
-    private PitcherColor getColorIfValid(FluidVariant resource) {
+    private PitcherColor getColorIfValid(FluidResource resource) {
         PitcherColor color = getColor();
         PitcherColor fluidColor = getVariantColor(resource);
         if (fluidColor == null) return null;
@@ -90,58 +98,23 @@ class PaintPitcherFluidStorage implements SingleSlotStorage<FluidVariant> {
         return color == null ? fluidColor : color;
     }
 
-    private ItemVariant makeFilledVariant(PitcherColor color, int levels) {
-        return ItemVariant.of(color.getItemEntry().get()
-            .copyAsFilledStack(context.getItemVariant().toStack(), levels));
+    private ItemResource makeFilledVariant(PitcherColor color, int levels) {
+        return ItemResource.of(color.getItemEntry().get()
+            .copyAsFilledStack(context.getResource().toStack(), levels));
     }
-    public long insert(FluidVariant resource, long maxAmount, TransactionContext transaction) {
-        StoragePreconditions.notBlankNotNegative(resource, maxAmount);
 
-        PitcherColor color = getColorIfValid(resource);
-        if (color == null) return 0;
-
-        int currentLevels = getLevels();
-        int levelCapacity = MAX_LEVELS - currentLevels;
-        if (levelCapacity <= 0) return 0;
-        int filledLevels = (int) Math.min(maxAmount / FLUID_PER_LEVEL, levelCapacity);
-        if (filledLevels <= 0) return 0;
-
-        ItemVariant newVariant = makeFilledVariant(color, currentLevels + filledLevels);
-
-        if (context.exchange(newVariant, 1, transaction) == 1) {
-            return filledLevels * FLUID_PER_LEVEL;
-        }
-
-        return 0;
+    @Override
+    public int size() {
+        return 1;
     }
-    public long extract(FluidVariant resource, long maxAmount, TransactionContext transaction) {
-        StoragePreconditions.notBlankNotNegative(resource, maxAmount);
 
-        PitcherColor color = getColorIfValid(resource);
-        if (color == null) return 0;
-
-        int currentLevels = getLevels();
-        int drainedLevels = (int) Math.min(maxAmount / FLUID_PER_LEVEL, currentLevels);
-        if (drainedLevels <= 0) return 0;
-
-        ItemVariant newVariant = makeFilledVariant(color, currentLevels - drainedLevels);
-
-        if (context.exchange(newVariant, 1, transaction) == 1) {
-            return drainedLevels * FLUID_PER_LEVEL;
-        }
-
-        return 0;
-    }
-    public boolean isResourceBlank() {
-        return getLevels() == 0;
-    }
-    public FluidVariant getResource() {
-        ItemStack stack = context.getItemVariant().toStack();
-        if (!(stack.getItem() instanceof PaintPitcherItem item)) return FluidVariant.blank();
-        if (item.getLevels(stack) == 0) return FluidVariant.blank();
-
+    @Override
+    public FluidResource getResource(int index) {
+        ItemStack stack = context.getResource().toStack();
+        if (!(stack.getItem() instanceof PaintPitcherItem item)) return FluidResource.EMPTY;
+        if (item.getLevels(stack) == 0) return FluidResource.EMPTY;
         PalettesColor color = item.getColor();
-        return color == null ? FluidVariant.of(Fluids.WATER) : FluidVariant.of(
+        return color == null ? FluidResource.of(Fluids.WATER) : FluidResource.of(
             CRFluids.PAINT.get(),
             DataComponentPatch.builder()
                 .set(
@@ -151,12 +124,60 @@ class PaintPitcherFluidStorage implements SingleSlotStorage<FluidVariant> {
                 .build()
         );
     }
-    public long getAmount() {
-        return getLevels() * FLUID_PER_LEVEL;
+
+    @Override
+    public long getAmountAsLong(int index) {
+        return (long) getLevels() * MB_PER_LEVEL;
     }
-    public long getCapacity() {
-        return MAX_LEVELS * FLUID_PER_LEVEL;
+
+    @Override
+    public long getCapacityAsLong(int index, FluidResource resource) {
+        return (long) MAX_LEVELS * MB_PER_LEVEL;
     }
+
+    @Override
+    public boolean isValid(int index, FluidResource resource) {
+        return getColorIfValid(resource) != null;
+    }
+
+    @Override
+    public int insert(int index, FluidResource resource, int maxAmount, TransactionContext transaction) {
+        TransferPreconditions.checkNonEmptyNonNegative(resource, maxAmount);
+        PitcherColor color = getColorIfValid(resource);
+        if (color == null) return 0;
+
+        int currentLevels = getLevels();
+        int levelCapacity = MAX_LEVELS - currentLevels;
+        if (levelCapacity <= 0) return 0;
+
+        int filledLevels = Math.min(maxAmount / MB_PER_LEVEL, levelCapacity);
+        if (filledLevels <= 0) return 0;
+
+        ItemResource newVariant = makeFilledVariant(color, currentLevels + filledLevels);
+        if (context.exchange(newVariant, 1, transaction) == 1) {
+            return filledLevels * MB_PER_LEVEL;
+        }
+        return 0;
+    }
+
+    @Override
+    public int extract(int index, FluidResource resource, int maxAmount, TransactionContext transaction) {
+        TransferPreconditions.checkNonEmptyNonNegative(resource, maxAmount);
+        PitcherColor color = getColorIfValid(resource);
+        if (color == null) return 0;
+
+        int currentLevels = getLevels();
+        int drainedLevels = Math.min(maxAmount / MB_PER_LEVEL, currentLevels);
+        if (drainedLevels <= 0) return 0;
+
+        ItemResource newVariant = makeFilledVariant(color, currentLevels - drainedLevels);
+        if (context.exchange(newVariant, 1, transaction) == 1) {
+            return drainedLevels * MB_PER_LEVEL;
+        }
+        return 0;
+    }
+
+    @Override
     public String toString() {
         return "PaintPitcherFluidStorage[" + context + "]";
     }

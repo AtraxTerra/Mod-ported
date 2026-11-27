@@ -5,12 +5,13 @@ import javax.imageio.ImageIO
 import java.util.zip.ZipFile
 
 plugins {
-    id("net.fabricmc.fabric-loom") version "1.16-SNAPSHOT"
+    // Same ModDevGradle as the Create Fly NeoForge port (gradle.properties: moddev_version).
+    id("net.neoforged.moddev") version "2.0.148"
     `maven-publish`
 }
 
 group = property("maven_group") as String
-version = "${property("mod_version")}+fly-mc${property("mc_line")}"
+version = "${property("mod_version")}+neoforge-mc${property("mc_line")}"
 
 base {
     archivesName.set(property("archives_base_name") as String)
@@ -18,35 +19,46 @@ base {
 
 repositories {
     mavenCentral()
-    maven("https://maven.fabricmc.net/")
-    maven("https://maven.blamejared.com/")
     maven("https://maven.maxhenkel.de/repository/public")
-    maven("https://jitpack.io/") {
-        content { includeGroupByRegex("com\\.github.*") }
-    }
-    maven("https://api.modrinth.com/maven") {
-        content { includeGroup("maven.modrinth") }
-    }
-    flatDir {
-        dirs("libs", "../../create-rei/CreateReiViewer-Fly/build/libs")
+    exclusiveContent {
+        forRepository { maven("https://maven.blamejared.com/") }
+        filter { includeGroup("mezz.jei") }
     }
 }
 
-val recipeViewer = ":CreateReiViewer:${property("createreiviewer_version")}"
+// The NeoForge build of Create Fly, as a plain jar: compiled against, and loaded as a mod in runs.
+val createFlyLibs = file(property("create_fly_libs") as String)
+val createFly = fileTree(createFlyLibs) {
+    include("create-fly-*.jar")
+    exclude("*-sources.jar", "*-javadoc.jar")
+}
 
-loom {
-    accessWidenerPath.set(file("common/src/main/resources/railways.accesswidener"))
+neoForge {
+    version = property("neoforge_version") as String
+    // Converted from common/src/main/resources/railways.accesswidener by tools/aw2at.py of the
+    // Create Fly port. Regenerate after an upstream change to the access widener.
+    accessTransformers.from(file("neoforge/src/main/resources/META-INF/accesstransformer.cfg"))
+    // Create Fly's Container -> ContainerExtension injections, so its inventory API resolves here too.
+    interfaceInjectionData.from(file("create-fly-interface-injection.json"))
+    validateAccessTransformers = true
+
+    runs {
+        register("client") { client() }
+        register("server") { server() }
+    }
+
     mods {
-        create("railways") {
+        register("railways") {
             sourceSet(sourceSets.main.get())
         }
     }
 }
 
-sourceSets {
-    main {
-        java.setSrcDirs(listOf("common/src/main/java", "fabric/src/main/java"))
-        java.exclude(
+val localRuntime: Configuration by configurations.creating
+configurations.runtimeClasspath { extendsFrom(localRuntime) }
+
+// Upstream's own exclusions (unchanged, see upstream/snr-fabric-26.2) ...
+val upstreamExcludes = listOf(
             "com/railwayteam/railways/base/data/lang/**",
             "com/railwayteam/railways/base/data/RailwaysHatOffsetGenerator.java",
             "com/railwayteam/railways/base/data/recipe/EnumRecipeList.java",
@@ -96,36 +108,44 @@ sourceSets {
             "com/railwayteam/railways/content/palettes/boiler/fabric/ObjModelBuilder.java",
             "com/railwayteam/railways/fabric/events/ClientEventsFabric.java",
             "com/railwayteam/railways/fabric/mixin/**",
-        )
+)
+
+// ... and the NeoForge port's: Fabric-only entrypoints and tooling with no counterpart here.
+// Excluded rather than deleted so upstream syncs still show upstream's changes to them.
+val portExcludes = file("neoforge/excludes.txt").readLines()
+    .map { it.trim() }
+    .filter { it.isNotEmpty() && !it.startsWith("#") }
+
+sourceSets {
+    main {
+        java.setSrcDirs(listOf("common/src/main/java", "fabric/src/main/java", "neoforge/src/main/java"))
+        java.exclude(upstreamExcludes + portExcludes)
         resources.setSrcDirs(
             listOf(
                 "common/src/main/resources",
                 "common/src/generated/resources",
                 "fabric/src/main/resources",
+                "neoforge/src/main/resources",
             )
         )
     }
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    implementation("net.fabricmc:fabric-loader:${property("fabric_loader_version")}")
-    implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
-    implementation("maven.modrinth:create-fly:${property("create_fabric_version")}")
+    compileOnly(createFly)
+    localRuntime(createFly)
 
     compileOnly("com.google.code.findbugs:jsr305:3.0.2")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:${property("voicechat_api_version")}")
-    compileOnly("mezz.jei:jei-${property("jei_fabric_version")}")
-
-    annotationProcessor("io.github.llamalad7:mixinextras-common:${property("mixin_extras_version")}")
-    implementation(include("io.github.llamalad7:mixinextras-fabric:${property("mixin_extras_version")}")!!)
-    include(recipeViewer)
+    compileOnly("mezz.jei:jei-${property("jei_neoforge_version")}")
+    // MixinExtras ships with NeoForge; upstream bundled mixinextras-fabric.
 }
 
 val connectedTextureResourceRoots = listOf(
     file("common/src/main/resources"),
     file("common/src/generated/resources"),
     file("fabric/src/main/resources"),
+    file("neoforge/src/main/resources"),
 )
 val generatedConnectedTextureResources = layout.buildDirectory.dir("generated/connected-texture-resources")
 
@@ -363,23 +383,20 @@ tasks.processResources {
 
     val properties = mapOf(
         "version" to project.version,
-        "minecraft_version" to project.property("minecraft_version"),
-        "minecraft_dependency_version" to project.property("minecraft_dependency_version"),
-        "fabric_api_version" to project.property("fabric_api_version"),
-        "fabric_loader_version" to project.property("fabric_loader_version"),
-        "create_fabric_version" to project.property("create_fabric_version"),
-        "create_fabric_version_range" to project.property("create_fabric_version_range"),
+        "minecraft_version_range" to project.property("minecraft_version_range"),
+        "neoforge_version_range" to project.property("neoforge_version_range"),
+        "create_fly_version_range" to project.property("create_fly_version_range"),
     )
     inputs.properties(properties)
     inputs.property("railwayFabricConventionTagSchema", "fabric-convention-tags-v2-26.2-v1")
     inputs.property("railwayAdvancementSchema", "minecraft-26.2-v1")
     inputs.property("railwayPaintFluidComponents", "minecraft-26.2-custom-data-v1")
     inputs.property("railwayPaintProjectileRegistryPath", "create-fly-26.2-v1")
-    inputs.property("railwayCompatTrackLootConditions", "fabric-resource-conditions-6.1-v1")
+    inputs.property("railwayCompatTrackLootConditions", "neoforge-conditions-26.2-v1")
     inputs.property("railwayCompatTrackLootConditionMapping", compatTrackLootTableModIds)
     inputs.property("railwayInternalNoDropLootTables", internalNoDropBlockLootTables.sorted())
 
-    filesMatching("fabric.mod.json") {
+    filesMatching("META-INF/neoforge.mods.toml") {
         expand(properties)
     }
     eachFile {
@@ -777,13 +794,13 @@ tasks.processResources {
             @Suppress("UNCHECKED_CAST")
             val lootTable = JsonSlurper().parse(lootTableFile) as? MutableMap<String, Any?>
                 ?: throw GradleException("Loot-table root must be a JSON object: $lootTableFile")
-            if (lootTable.containsKey("fabric:load_conditions")) {
-                throw GradleException("Compat loot table already has a Fabric load condition: $lootTableFile")
+            if (lootTable.containsKey("neoforge:conditions") || lootTable.containsKey("fabric:load_conditions")) {
+                throw GradleException("Compat loot table already has a load condition: $lootTableFile")
             }
 
-            lootTable["fabric:load_conditions"] = linkedMapOf(
-                "condition" to "fabric:all_mods_loaded",
-                "values" to listOf(modId),
+            // Port: NeoForge's condition list in place of Fabric's resource condition.
+            lootTable["neoforge:conditions"] = listOf(
+                linkedMapOf("type" to "neoforge:mod_loaded", "modid" to modId),
             )
             lootTableFile.writeText(
                 JsonOutput.prettyPrint(JsonOutput.toJson(lootTable)) + "\n",
@@ -808,11 +825,9 @@ tasks.processResources {
             @Suppress("UNCHECKED_CAST")
             val lootTable = JsonSlurper().parse(lootTableFile) as? Map<String, Any?>
                 ?: return@mapNotNull lootTableFile.path
-            @Suppress("UNCHECKED_CAST")
-            val condition = lootTable["fabric:load_conditions"] as? Map<String, Any?>
-            if (condition?.get("condition") != "fabric:all_mods_loaded" ||
-                condition["values"] != listOf(expectedModId)
-            ) {
+            val conditions = lootTable["neoforge:conditions"] as? List<*>
+            val condition = conditions?.singleOrNull() as? Map<*, *>
+            if (condition?.get("type") != "neoforge:mod_loaded" || condition["modid"] != expectedModId) {
                 lootTableFile.path
             } else {
                 null
@@ -820,7 +835,7 @@ tasks.processResources {
         }
         if (malformedCompatConditions.isNotEmpty()) {
             throw GradleException(
-                "Missing or malformed Fabric compat loot-table conditions:\n" +
+                "Missing or malformed compat loot-table conditions:\n" +
                     malformedCompatConditions.joinToString("\n"),
             )
         }
@@ -842,7 +857,7 @@ tasks.processResources {
         }
 
         logger.lifecycle(
-            "Added Fabric load conditions to $conditionedCompatLootTables compat track loot tables across " +
+            "Added NeoForge load conditions to $conditionedCompatLootTables compat track loot tables across " +
                 "${conditionedCompatFamilies.size} mod families; removed " +
                 "${internalNoDropBlockLootTables.size} internal no-drop loot tables",
         )
@@ -888,6 +903,8 @@ tasks.processResources {
     }
 
     exclude("architectury.common.json")
+    // Fabric-only metadata stays in the tree for upstream syncs but ships in neither jar.
+    exclude("fabric.mod.json", "railways.accesswidener")
     exclude("assets/create/**")
     exclude(".cache/**")
     exclude("**/*.bbmodel", "**/*.lnk", "**/*.xcf", "**/*.md", "**/*.txt", "**/*.blend", "**/*.blend1")
