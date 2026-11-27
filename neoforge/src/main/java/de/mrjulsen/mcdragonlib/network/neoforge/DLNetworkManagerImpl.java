@@ -17,7 +17,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 //@EventBusSubscriber(modid = DragonLib.MODID)
 public class DLNetworkManagerImpl {
 
-    public static <T extends CustomPacketPayload> void registerChannel(ResourceLocation channelId, String name, NetworkSide side, String protocolVersion) {
+    public static <T extends CustomPacketPayload> void registerChannel(Identifier channelId, String name, NetworkSide side, String protocolVersion) {
         CustomPacketPayload.Type<DLNetworkManager.BufCustomPacketPayload> type = new CustomPacketPayload.Type<>(DLUtils.resourceLocation(channelId.getNamespace(), channelId.getPath() + "/" + name));
         StreamCodec<? super RegistryFriendlyByteBuf, DLNetworkManager.BufCustomPacketPayload> codec = DLNetworkManager.BufCustomPacketPayload.streamCodec(type);
 
@@ -93,8 +93,8 @@ public class DLNetworkManagerImpl {
         };
     }
 
-    public static Packet<?> toPacket(ResourceLocation channelId, String name, NetworkSide side, FriendlyByteBuf buf) {
-        ResourceLocation id = DLUtils.resourceLocation(channelId.getNamespace(), channelId.getPath() + "/" + name);
+    public static Packet<?> toPacket(Identifier channelId, String name, NetworkSide side, FriendlyByteBuf buf) {
+        Identifier id = DLUtils.resourceLocation(channelId.getNamespace(), channelId.getPath() + "/" + name);
         if (side == NetworkSide.C2S) {
             return toC2SPacket(id, buf);
         } else if (side == NetworkSide.S2C) {
@@ -106,13 +106,13 @@ public class DLNetworkManagerImpl {
 
 
 
-    private static Packet<?> toC2SPacket(ResourceLocation id, FriendlyByteBuf buf) {
+    private static Packet<?> toC2SPacket(Identifier id, FriendlyByteBuf buf) {
         CustomPacketPayload.Type<DLNetworkManager.BufCustomPacketPayload> type = new CustomPacketPayload.Type<>(id);
         DLNetworkManager.BufCustomPacketPayload payload = new DLNetworkManager.BufCustomPacketPayload(type, ByteBufUtil.getBytes(buf));
         return new ServerboundCustomPayloadPacket(payload);
     }
 
-    private static Packet<?> toS2CPacket(ResourceLocation id, FriendlyByteBuf buf) {
+    private static Packet<?> toS2CPacket(Identifier id, FriendlyByteBuf buf) {
         CustomPacketPayload.Type<DLNetworkManager.BufCustomPacketPayload> type = new CustomPacketPayload.Type<>(id);
         DLNetworkManager.BufCustomPacketPayload payload = new DLNetworkManager.BufCustomPacketPayload(type, ByteBufUtil.getBytes(buf));
         return new ClientboundCustomPayloadPacket(payload);

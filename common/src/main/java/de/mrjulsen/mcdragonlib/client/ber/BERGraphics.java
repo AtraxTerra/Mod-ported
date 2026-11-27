@@ -7,7 +7,7 @@ import de.mrjulsen.mcdragonlib.client.util.DLGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class BERGraphics<B extends BlockEntity> extends DLGraphics { 
@@ -29,7 +29,7 @@ public class BERGraphics<B extends BlockEntity> extends DLGraphics {
         return berProviderContext;
     }
 
-    public VertexConsumer vertexConsumer(ResourceLocation textureLocation) {
+    public VertexConsumer vertexConsumer(Identifier textureLocation) {
         return multiBufferSource.getBuffer(RenderType.text(textureLocation));
     }
 }

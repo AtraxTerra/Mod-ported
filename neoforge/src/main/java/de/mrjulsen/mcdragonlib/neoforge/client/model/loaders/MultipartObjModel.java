@@ -17,7 +17,7 @@ import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -57,7 +57,7 @@ import java.util.stream.Stream;
  * Supports positions, texture coordinates, normals and colors. The
  * {@link ObjMaterialLibrary material library}
  * has support for numerous features, including support for
- * {@link ResourceLocation} textures (non-standard).
+ * {@link Identifier} textures (non-standard).
  */
 public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> {
     private static final Vector4f COLOR_WHITE = new Vector4f(1, 1, 1, 1);
@@ -84,7 +84,7 @@ public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> 
     @Nullable
     public final String mtlOverride;
 
-    public final ResourceLocation modelLocation;
+    public final Identifier modelLocation;
 
     private MultipartObjModel(ModelSettings settings) {
         this.modelLocation = settings.modelLocation;
@@ -519,7 +519,7 @@ public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> 
 
         public void addQuads(IGeometryBakingContext owner, IModelBuilder<?> modelBuilder, ModelBaker baker,
                 Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform,
-                ResourceLocation modelLocation) {
+                Identifier modelLocation) {
 
             for (ModelMesh mesh : meshes) {
                 mesh.addQuads(owner, modelBuilder, spriteGetter, modelTransform);
@@ -533,7 +533,7 @@ public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> 
         }
 
         public Collection<Material> getTextures(IGeometryBakingContext owner,
-                Function<ResourceLocation, UnbakedModel> modelGetter,
+                Function<Identifier, UnbakedModel> modelGetter,
                 Set<com.mojang.datafixers.util.Pair<String, String>> missingTextureErrors) {
 
             return meshes.stream()
@@ -569,7 +569,7 @@ public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> 
         @Override
         public void addQuads(IGeometryBakingContext owner, IModelBuilder<?> modelBuilder, ModelBaker baker,
                 Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform,
-                ResourceLocation modelLocation) {
+                Identifier modelLocation) {
             super.addQuads(owner, modelBuilder, baker, spriteGetter, modelTransform, modelLocation);
 
             getParts().stream().filter(part -> owner.isComponentVisible(part.name(), true))
@@ -590,7 +590,7 @@ public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> 
 
         @Override
         public Collection<Material> getTextures(IGeometryBakingContext owner,
-                Function<ResourceLocation, UnbakedModel> modelGetter,
+                Function<Identifier, UnbakedModel> modelGetter,
                 Set<com.mojang.datafixers.util.Pair<String, String>> missingTextureErrors) {
             Set<Material> combined = Sets.newHashSet();
             combined.addAll(super.getTextures(owner, modelGetter, missingTextureErrors));
@@ -664,16 +664,16 @@ public class MultipartObjModel extends SimpleUnbakedGeometry<MultipartObjModel> 
                 quads.add(pair.getLeft());
             }
 
-            ResourceLocation textureLocation = UnbakedGeometryHelper
+            Identifier textureLocation = UnbakedGeometryHelper
                     .resolveDirtyMaterial(mat.diffuseColorMap, configuration).texture();
-            ResourceLocation texturePath = DLUtils.resourceLocation(textureLocation.getNamespace(),
+            Identifier texturePath = DLUtils.resourceLocation(textureLocation.getNamespace(),
                     "textures/" + textureLocation.getPath() + ".png");
 
             builder.addMesh(texturePath, quads);
         }
     }
 
-    public record ModelSettings(@NotNull ResourceLocation modelLocation,
+    public record ModelSettings(@NotNull Identifier modelLocation,
             boolean automaticCulling, boolean shadeQuads, boolean flipV,
             boolean emissiveAmbient, @Nullable String mtlOverride,
             List<SubModelSettings> subSettings) {

@@ -6,19 +6,19 @@ import java.util.function.Supplier;
 
 import de.mrjulsen.mcdragonlib.data.INBTSerializable;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class DLRegistry<T extends INBTSerializable & IRegisterable<T>> {
-    private final Map<ResourceLocation, DLRegistryObject<? extends T>> TYPES = new HashMap<>();
+    private final Map<Identifier, DLRegistryObject<? extends T>> TYPES = new HashMap<>();
 
-    public <S extends T> DLRegistryObject<S> register(ResourceLocation id, Supplier<S> factory) {
+    public <S extends T> DLRegistryObject<S> register(Identifier id, Supplier<S> factory) {
         DLRegistryObject<S> type = new DLRegistryObject<>(id, factory);
         TYPES.put(id, type);
         return type;
     }
 
     @SuppressWarnings("unchecked")
-    private DLRegistryObject<T> get(ResourceLocation id) {
+    private DLRegistryObject<T> get(Identifier id) {
         return (DLRegistryObject<T>)TYPES.get(id);
     }
 

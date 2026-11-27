@@ -6,9 +6,9 @@ import com.google.common.base.Supplier;
 
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-public final record DLStaticRegistryObject<T>(ResourceLocation id, Supplier<T> factory) {
+public final record DLStaticRegistryObject<T>(Identifier id, Supplier<T> factory) {
 
     public static final String NBT_ID = "Id";
 
@@ -18,8 +18,8 @@ public final record DLStaticRegistryObject<T>(ResourceLocation id, Supplier<T> f
         return tag;
     }
     
-    public static <T> T load(CompoundTag tag, Function<ResourceLocation, DLStaticRegistryObject<T>> registryGetter) {
-        ResourceLocation typeId = DLUtils.resourceLocation(tag.getString(NBT_ID));
+    public static <T> T load(CompoundTag tag, Function<Identifier, DLStaticRegistryObject<T>> registryGetter) {
+        Identifier typeId = DLUtils.resourceLocation(tag.getString(NBT_ID));
         DLStaticRegistryObject<T> type = registryGetter.apply(typeId);
         if (type == null) return null;
         return type.get();

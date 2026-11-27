@@ -34,7 +34,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.BlockAndTintGetter;
 
@@ -44,7 +44,7 @@ public class Face implements ITransformable<Face> {
     private final List<Edge> edges = Arrays.asList(new Edge[EdgeType.values().length]);
 
     private TextureAtlasSprite sprite;
-    private ResourceLocation texture;
+    private Identifier texture;
 
     private DLColor color = DLColor.WHITE;
     private int tintIndex = -1;
@@ -400,7 +400,7 @@ public class Face implements ITransformable<Face> {
         return Optional.ofNullable(sprite);
     }
 
-    public ResourceLocation getTextureLocation() {
+    public Identifier getTextureLocation() {
         return getSprite().map(x -> x.contents().name()).orElse(texture);
     }
 
@@ -446,7 +446,7 @@ public class Face implements ITransformable<Face> {
         this.texture = null;
     }
 
-    public void setTexture(ResourceLocation texture) {
+    public void setTexture(Identifier texture) {
         Objects.requireNonNull(texture);
         this.texture = texture;
         this.sprite = null;

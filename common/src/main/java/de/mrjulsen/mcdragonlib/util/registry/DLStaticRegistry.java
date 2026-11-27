@@ -8,23 +8,23 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class DLStaticRegistry<T extends IStaticRegisterable<T>> {
-    private final LinkedHashMap<ResourceLocation, DLStaticRegistryObject<? extends T>> TYPES = new LinkedHashMap<>();
+    private final LinkedHashMap<Identifier, DLStaticRegistryObject<? extends T>> TYPES = new LinkedHashMap<>();
 
-    public <S extends T> DLStaticRegistryObject<S> register(ResourceLocation id, Supplier<S> factory) {
+    public <S extends T> DLStaticRegistryObject<S> register(Identifier id, Supplier<S> factory) {
         DLStaticRegistryObject<S> type = new DLStaticRegistryObject<>(id, Suppliers.memoize(factory));
         TYPES.put(id, type);
         return type;
     }
 
-    public boolean has(ResourceLocation id) {
+    public boolean has(Identifier id) {
         return TYPES.containsKey(id);
     }
 
     @SuppressWarnings("unchecked")
-    public DLStaticRegistryObject<T> get(ResourceLocation id) {
+    public DLStaticRegistryObject<T> get(Identifier id) {
         return (DLStaticRegistryObject<T>)TYPES.get(id);
     }
 

@@ -18,11 +18,10 @@ import de.mrjulsen.mcdragonlib.DragonLib;
 import de.mrjulsen.mcdragonlib.data.DLStatus;
 import de.mrjulsen.mcdragonlib.network.packet.NetworkPacker;
 import de.mrjulsen.mcdragonlib.network.packet.SegmentedPacketHeaderInfo;
-import dev.architectury.injectables.annotations.ExpectPlatform;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * Central manager for network channels and packet registration used by DragonLib.
@@ -34,7 +33,7 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>Usage:
  * <ul>
- *   <li>Create one manager per channel (ResourceLocation) with a protocol version.</li>
+ *   <li>Create one manager per channel (Identifier) with a protocol version.</li>
  *   <li>Register packets with {@code registerSendOnlyPacket}, {@code registerReceiveOnlyPacket},
  *       {@code registerSendAndReceivePacket} or {@code registerStreamPacket}.</li>
  * </ul>
@@ -45,19 +44,19 @@ import net.minecraft.resources.ResourceLocation;
 public final class DLNetworkManager {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(DragonLib.MOD_NAME + " Networking System");
-    private static final ConcurrentHashMap<ResourceLocation, DLNetworkManager> managers = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Identifier, DLNetworkManager> managers = new ConcurrentHashMap<>();
 
-    private final ResourceLocation channelId;
+    private final Identifier channelId;
     private final String protocolVersion;
     private final ConcurrentHashMap<String, NetworkPacketType<?, ?, ?>> packets = new ConcurrentHashMap<>();
 
     /**
      * Creates a network manager instance for the given channel identifier and protocol version.
      *
-     * @param channelId unique channel {@link ResourceLocation} used to separate message namespaces
+     * @param channelId unique channel {@link Identifier} used to separate message namespaces
      * @param protocolVersion string protocol version used for compatibility checks
      */
-    public DLNetworkManager(ResourceLocation channelId, String protocolVersion) {
+    public DLNetworkManager(Identifier channelId, String protocolVersion) {
         this.channelId = channelId;
         this.protocolVersion = protocolVersion;
     }
@@ -142,7 +141,7 @@ public final class DLNetworkManager {
     
     /**
      * Internal helper that performs registration and ensures the channel is registered
-     * once per {@link ResourceLocation}. Throws on duplicate packet names.
+     * once per {@link Identifier}. Throws on duplicate packet names.
      *
      * @param packet packet type to register
      * @param <T> concrete {@link NetworkPacketType} subtype
@@ -196,16 +195,16 @@ public final class DLNetworkManager {
      * Platform entry point to register the underlying network channel.
      *
      * <p>Platform-specific implementations must bind a listener such that inbound buffers
-     * are forwarded to {@link #receiveData(ResourceLocation, FriendlyByteBuf, NetworkSide, NetworkPacketContext)}.
+     * are forwarded to {@link #receiveData(Identifier, FriendlyByteBuf, NetworkSide, NetworkPacketContext)}.
      *
-     * @param channelId channel identifier (ResourceLocation)
+     * @param channelId channel identifier (Identifier)
      * @param protocolVersion textual protocol version used for compatibility checks
      * @throws AssertionError when called on non-platform implementation stub
      * @see dev.architectury.injectables.annotations.ExpectPlatform
      */
-    @ExpectPlatform
-    public static void registerChannel(ResourceLocation channelId, String name, NetworkSide side, String protocolVersion) {
-        throw new AssertionError();
+    // NeoForge-only build: the call Architectury's @ExpectPlatform transformer generated.
+    public static void registerChannel(Identifier channelId, String name, NetworkSide side, String protocolVersion) {
+        de.mrjulsen.mcdragonlib.network.neoforge.DLNetworkManagerImpl.registerChannel(channelId, name, side, protocolVersion);
     }
 
     /**
@@ -221,9 +220,9 @@ public final class DLNetworkManager {
      * @return a platform {@link Packet} ready to be sent
      * @throws AssertionError when called on non-platform implementation stub
      */
-    @ExpectPlatform
-    public static Packet<?> toPacket(ResourceLocation channelId, String name, NetworkSide side, FriendlyByteBuf buffer) {
-        throw new AssertionError();
+    // NeoForge-only build: the call Architectury's @ExpectPlatform transformer generated.
+    public static Packet<?> toPacket(Identifier channelId, String name, NetworkSide side, FriendlyByteBuf buffer) {
+        return de.mrjulsen.mcdragonlib.network.neoforge.DLNetworkManagerImpl.toPacket(channelId, name, side, buffer);
     }    
         
     /**
@@ -243,7 +242,7 @@ public final class DLNetworkManager {
      * @param side side the buffer was received from (client/server)
      * @param context contextual information provided by the platform when dispatching the buffer
      */
-    public static void receiveData(ResourceLocation channelId, FriendlyByteBuf buf, NetworkSide side, NetworkPacketContext context) {
+    public static void receiveData(Identifier channelId, FriendlyByteBuf buf, NetworkSide side, NetworkPacketContext context) {
         if (!managers.containsKey(channelId)) return;
 
         SegmentedPacketHeaderInfo header = SegmentedPacketHeaderInfo.readBufferHeader(buf);

@@ -1,10 +1,9 @@
 package de.mrjulsen.mcdragonlib;
 
-import dev.architectury.injectables.annotations.ExpectPlatform;
 
 public class DragonLibCrossPlatform {    
-    @ExpectPlatform
+    // NeoForge-only build: the call Architectury's @ExpectPlatform transformer generated.
     public static void registerConfig() {
-        throw new AssertionError();
+        de.mrjulsen.mcdragonlib.neoforge.DragonLibCrossPlatformImpl.registerConfig();
     }
 }

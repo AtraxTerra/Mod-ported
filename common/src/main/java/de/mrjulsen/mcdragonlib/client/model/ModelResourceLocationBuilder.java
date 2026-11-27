@@ -1,7 +1,7 @@
 package de.mrjulsen.mcdragonlib.client.model;
 
 import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.properties.Property;
 
 import java.util.LinkedList;
@@ -9,13 +9,13 @@ import java.util.List;
 
 public abstract class ModelResourceLocationBuilder {
 
-    private final ResourceLocation location;
+    private final Identifier location;
 
-    public ModelResourceLocationBuilder(ResourceLocation location) {
+    public ModelResourceLocationBuilder(Identifier location) {
         this.location = location;
     }
 
-    public ResourceLocation getLocation() {
+    public Identifier getLocation() {
         return location;
     }
 
@@ -24,7 +24,7 @@ public abstract class ModelResourceLocationBuilder {
 
     public static class Base extends ModelResourceLocationBuilder {
 
-        public Base(ResourceLocation location) {
+        public Base(Identifier location) {
             super(location);
         }
 
@@ -38,7 +38,7 @@ public abstract class ModelResourceLocationBuilder {
 
         private final List<String> properties = new LinkedList<>();
 
-        public BlockState(ResourceLocation location) {
+        public BlockState(Identifier location) {
             super(location);
         }
 
@@ -55,7 +55,7 @@ public abstract class ModelResourceLocationBuilder {
 
     public static class Inventory extends ModelResourceLocationBuilder {
 
-        public Inventory(ResourceLocation location) {
+        public Inventory(Identifier location) {
             super(location);
         }
 

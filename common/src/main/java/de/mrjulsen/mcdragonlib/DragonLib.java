@@ -27,9 +27,9 @@ import dev.architectury.registry.registries.Registrar;
 import dev.architectury.registry.registries.RegistrarManager;
 import dev.architectury.registry.registries.RegistrySupplier;
 import dev.architectury.utils.Env;
-import net.fabricmc.api.EnvType;
+import net.neoforged.api.distmarker.Dist;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.world.item.BlockItem;
@@ -65,8 +65,8 @@ public class DragonLib {
 
 	/** One block pixel */ public static final float BLOCK_PIXEL = 1.0F / 16.0F;
 
-    public static final ResourceLocation DRAGONLIB_UI = DLUtils.resourceLocation(MODID, "textures/gui/ui.png");
-    public static final ResourceLocation VANILLA_WIDGETS = DLUtils.resourceLocation("minecraft", "textures/gui/widgets.png");
+    public static final Identifier DRAGONLIB_UI = DLUtils.resourceLocation(MODID, "textures/gui/ui.png");
+    public static final Identifier VANILLA_WIDGETS = DLUtils.resourceLocation("minecraft", "textures/gui/widgets.png");
 
     public static final DLColor VANILLA_UI_FONT_COLOR = DLColor.fromInt(0xFF404040);
     public static final DLColor VANILLA_BUTTON_ACTIVE_FONT_COLOR = DLColor.WHITE;
@@ -132,7 +132,7 @@ public class DragonLib {
 
         
 
-        if (Platform.getEnv() == EnvType.CLIENT) {
+        if (Platform.getEnv() == Dist.CLIENT) {
             DLOverlayManager.init();
 
             ClientLifecycleEvent.CLIENT_SETUP.register(mc -> {

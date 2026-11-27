@@ -2,16 +2,16 @@ package de.mrjulsen.mcdragonlib.client.util;
 
 import java.util.Optional;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class DLTexture {
-    private final ResourceLocation texture;
+    private final Identifier texture;
     private final int textureId;
     private final boolean useTextureId;
     private final int textureWidth;
     private final int textureHeight;
 
-    public DLTexture(ResourceLocation texture, int textureId, boolean useTextureId, int textureWidth, int textureHeight) {
+    public DLTexture(Identifier texture, int textureId, boolean useTextureId, int textureWidth, int textureHeight) {
         this.texture = texture;
         this.textureId = textureId;
         this.useTextureId = useTextureId;
@@ -19,7 +19,7 @@ public class DLTexture {
         this.textureHeight = textureHeight;
     }
 
-    public DLTexture(ResourceLocation texture, int width, int height) {
+    public DLTexture(Identifier texture, int width, int height) {
         this(texture, 0, false, width, height);
     }
 
@@ -27,7 +27,7 @@ public class DLTexture {
         this(null, textureId, true, width, height);
     }
 
-    public Optional<ResourceLocation> getTexture() {
+    public Optional<Identifier> getTexture() {
         return Optional.ofNullable(texture);
     }
 

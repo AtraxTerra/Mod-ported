@@ -7,7 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record DLGuiGraphics(GuiGraphics graphics, PoseStack poseStack, Font defaultFont, float partialTick) {
 
@@ -15,7 +15,7 @@ public record DLGuiGraphics(GuiGraphics graphics, PoseStack poseStack, Font defa
         return  graphics().bufferSource();
     }
 
-    public VertexConsumer vertexConsumer(ResourceLocation textureLocation) {
+    public VertexConsumer vertexConsumer(Identifier textureLocation) {
         return graphics().bufferSource().getBuffer(RenderType.text(textureLocation));
     }
 

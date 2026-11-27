@@ -1,6 +1,5 @@
 package de.mrjulsen.mcdragonlib.util;
 
-import dev.architectury.injectables.annotations.ExpectPlatform;
 
 import java.util.Optional;
 
@@ -16,8 +15,8 @@ public class DependencyVersionChecker {
 
     public record DependencyKey(String mod, String dependency, String version) {}
 
-    @ExpectPlatform
+    // NeoForge-only build: the call Architectury's @ExpectPlatform transformer generated.
     public static Optional<VersionResult> checkDependencies(String targetModid, String dependencyModid, String versionString) {
-        throw new AssertionError();
+        return de.mrjulsen.mcdragonlib.util.neoforge.DependencyVersionCheckerImpl.checkDependencies(targetModid, dependencyModid, versionString);
     }
 }

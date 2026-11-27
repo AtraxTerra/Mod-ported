@@ -13,11 +13,11 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class NetworkPacker {
 
-    public static List<Packet<?>> pack(ResourceLocation channelId, String name, PacketHeaderInfo info, NetworkSide side, CompoundTag rawData) {
+    public static List<Packet<?>> pack(Identifier channelId, String name, PacketHeaderInfo info, NetworkSide side, CompoundTag rawData) {
         final int headerSize = SegmentedPacketHeaderInfo.getSize(info);
         
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());

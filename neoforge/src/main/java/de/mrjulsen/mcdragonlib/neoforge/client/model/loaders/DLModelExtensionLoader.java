@@ -10,7 +10,7 @@ import de.mrjulsen.mcdragonlib.client.model.extension.DLFaceKey;
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 import net.neoforged.neoforge.client.model.geometry.IGeometryLoader;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -21,7 +21,7 @@ import java.util.Map;
 
 public class DLModelExtensionLoader implements IGeometryLoader<DLUnbakedModelExtension> {
 
-    public static final ResourceLocation ID = DLUtils.resourceLocation(DragonLib.MODID, "advanced_json");
+    public static final Identifier ID = DLUtils.resourceLocation(DragonLib.MODID, "advanced_json");
     public static final DLModelExtensionLoader INSTANCE = new DLModelExtensionLoader();
 
     private record DirectionKey(Direction dir) {}

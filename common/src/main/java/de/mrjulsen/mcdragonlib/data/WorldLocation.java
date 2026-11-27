@@ -10,7 +10,7 @@ import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -23,10 +23,10 @@ public class WorldLocation {
     public final double x;
     public final double y;
     public final double z;
-    public final ResourceLocation dimension;
+    public final Identifier dimension;
     
 
-    public WorldLocation(double x, double y, double z, ResourceLocation dimension) {
+    public WorldLocation(double x, double y, double z, Identifier dimension) {
         this.x = x;
         this.y = y;
         this.z = z;

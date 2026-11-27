@@ -10,7 +10,7 @@ import de.mrjulsen.mcdragonlib.client.atlas.DLTextureSheetData;
 import de.mrjulsen.mcdragonlib.client.atlas.DLTextureSheetData.AbstractSprite;
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class DLTextureSheet {
 
@@ -21,7 +21,7 @@ public class DLTextureSheet {
 
     public static final String SPRITE_NAME_WINDOW_ROUNDED = "window_rounded";
     
-    private final ResourceLocation location;
+    private final Identifier location;
     private final Supplier<DLTextureSheetData> metadata = Suppliers.memoize(() -> {
         return Minecraft.getInstance().getResourceManager().getResource(location())
             .map(r -> {
@@ -37,11 +37,11 @@ public class DLTextureSheet {
             .orElse(DLTextureSheetData.EMPTY);
     });
 
-    public DLTextureSheet(ResourceLocation location) {
+    public DLTextureSheet(Identifier location) {
         this.location = location;
     }
 
-    public ResourceLocation location() {
+    public Identifier location() {
         return location;
     }
 

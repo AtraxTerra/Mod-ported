@@ -1,6 +1,5 @@
 package de.mrjulsen.mcdragonlib.client.model.extension;
 
-import dev.architectury.injectables.annotations.ExpectPlatform;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -40,8 +39,8 @@ public abstract class DLBakedQuad extends BakedQuad {
         return create(quad.getVertices(), quad.getTintIndex(), quad.getDirection(), quad.getSprite(), quad.isShade(), data.ambientOcclusion(), data.emissive(), data.tags());
     }
 
-    @ExpectPlatform
+    // NeoForge-only build: the call Architectury's @ExpectPlatform transformer generated.
     public static DLBakedQuad create(int[] vertices, int tintIndex, Direction direction, TextureAtlasSprite sprite, boolean shade, boolean ambientOcclusion, boolean emissive, List<String> tags) {
-        throw new AssertionError();
+        return de.mrjulsen.mcdragonlib.client.model.extension.neoforge.DLBakedQuadImpl.create(vertices, tintIndex, direction, sprite, shade, ambientOcclusion, emissive, tags);
     }
 }

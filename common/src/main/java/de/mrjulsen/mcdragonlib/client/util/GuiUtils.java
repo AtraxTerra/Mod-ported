@@ -46,7 +46,7 @@ import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.RandomSource;
@@ -257,11 +257,11 @@ public class GuiUtils {
 
 
     /**
-     * Binds the given ResourceLocation as the active texture for subsequent draw calls.
+     * Binds the given Identifier as the active texture for subsequent draw calls.
      *
      * @param texture the texture resource location to bind
      */
-    public static void setTexture(ResourceLocation texture) {
+    public static void setTexture(Identifier texture) {
         RenderSystem.setShaderTexture(0, texture);
     }
 
@@ -381,7 +381,7 @@ public class GuiUtils {
      * @param vH source height in texture pixels
      * @param mode fill mode (STRETCH or TILE)
      */
-    public static void drawTexture(ResourceLocation texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode) {
+    public static void drawTexture(Identifier texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode) {
         drawTexture(texture, graphics, x, y, w, h, u, v, uW, vH, mode, 256, 256);
     }
 
@@ -402,7 +402,7 @@ public class GuiUtils {
      * @param textureWidth full texture atlas width for UV calculation
      * @param textureHeight full texture atlas height for UV calculation
      */
-    public static void drawTexture(ResourceLocation texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode, int textureWidth, int textureHeight) {
+    public static void drawTexture(Identifier texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode, int textureWidth, int textureHeight) {
         switch (mode) {
             case TILE -> renderTiledTexture(graphics, () -> RenderSystem.setShaderTexture(0, texture), x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
             default -> graphics.graphics().blit(texture, x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
@@ -435,7 +435,7 @@ public class GuiUtils {
     }
 
     /**
-     * Draws a DLTexture wrapper which may either use a ResourceLocation or a texture id.
+     * Draws a DLTexture wrapper which may either use a Identifier or a texture id.
      *
      * @param texture DLTexture wrapper
      * @param graphics DLGuiGraphics wrapper used for rendering

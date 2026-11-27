@@ -23,7 +23,7 @@ import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.StringDecomposer;
@@ -35,7 +35,7 @@ public class FontUtils {
     protected static record UVData(float u0, float v0, float u1, float v1) {}
     protected static final Map<Integer, Deque<UVData>> uvStack = new HashMap<>();
 
-    public FontUtils(ResourceLocation fontStyle) {
+    public FontUtils(Identifier fontStyle) {
         this.font = Minecraft.getInstance().font;
         this.fontSet = ((FontAccessor)this.font).dragonlib$invokeGetFontSet(fontStyle);
     }    

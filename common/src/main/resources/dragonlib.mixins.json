@@ -14,8 +14,7 @@
     "MouseHandlerMixin",
     "ScreenAccessor",
     "ServerboundCustomPayloadPacketAccessor",
-    "StringSplitterAccessor",
-    "TextureManagerMixin"
+    "StringSplitterAccessor"
   ],
   "mixins": [
     "ItemMixin",

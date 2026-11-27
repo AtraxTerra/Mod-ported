@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
 import dev.architectury.platform.Platform;
-import net.fabricmc.api.EnvType;
+import net.neoforged.api.distmarker.Dist;
 
 public enum EnvSide {
     SERVER((byte)0, "server"),
@@ -33,7 +33,7 @@ public enum EnvSide {
 
     public static EnvSide current() {
         boolean hasServer = DragonLib.hasServer();
-        boolean env = Platform.getEnv() == EnvType.CLIENT;
+        boolean env = Platform.getEnv() == Dist.CLIENT;
         return hasServer && env ? BOTH : (hasServer ? SERVER : CLIENT);
     }
 }

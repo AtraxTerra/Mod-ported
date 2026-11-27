@@ -28,7 +28,7 @@ import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec2;
 import net.neoforged.neoforge.client.model.IModelBuilder;
@@ -65,7 +65,7 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
    public final boolean emissiveAmbient;
    @Nullable
    public final String mtlOverride;
-   public final ResourceLocation modelLocation;
+   public final Identifier modelLocation;
 
    private ObjModel(ObjModel.ModelSettings settings) {
       this.modelLocation = settings.modelLocation;
@@ -121,7 +121,7 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
    // -------------------------------------------------------------------------
 
    public static ObjModel parse(ObjTokenizer tokenizer, ObjModel.ModelSettings settings) throws IOException {
-      ResourceLocation modelLocation = settings.modelLocation;
+      Identifier modelLocation = settings.modelLocation;
       String materialLibraryOverrideLocation = settings.mtlOverride;
       ObjModel model = new ObjModel(settings);
       String modelDomain = modelLocation.getNamespace();
@@ -143,9 +143,9 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
 
       if (materialLibraryOverrideLocation != null) {
          if (materialLibraryOverrideLocation.contains(":")) {
-            mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(ResourceLocation.parse(materialLibraryOverrideLocation));
+            mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(Identifier.parse(materialLibraryOverrideLocation));
          } else {
-            mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(ResourceLocation.fromNamespaceAndPath(modelDomain, modelPath + materialLibraryOverrideLocation));
+            mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(Identifier.fromNamespaceAndPath(modelDomain, modelPath + materialLibraryOverrideLocation));
          }
       }
 
@@ -157,9 +157,9 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
                if (materialLibraryOverrideLocation == null) {
                   String lib = line[1];
                   if (lib.contains(":")) {
-                     mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(ResourceLocation.parse(lib));
+                     mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(Identifier.parse(lib));
                   } else {
-                     mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(ResourceLocation.fromNamespaceAndPath(modelDomain, modelPath + lib));
+                     mtllib = ObjLoader.INSTANCE.loadMaterialLibrary(Identifier.fromNamespaceAndPath(modelDomain, modelPath + lib));
                   }
                }
                break;
@@ -552,7 +552,7 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
 
       @Override
       public Collection<Material> getTextures(
-         IGeometryBakingContext owner, Function<ResourceLocation, UnbakedModel> modelGetter, Set<Pair<String, String>> missingTextureErrors
+         IGeometryBakingContext owner, Function<Identifier, UnbakedModel> modelGetter, Set<Pair<String, String>> missingTextureErrors
       ) {
          Set<Material> combined = Sets.newHashSet();
          combined.addAll(super.getTextures(owner, modelGetter, missingTextureErrors));
@@ -640,8 +640,8 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
                quads.add(pair.getLeft());
             }
 
-            ResourceLocation textureLocation = UnbakedGeometryHelper.resolveDirtyMaterial(mat.diffuseColorMap, configuration).texture();
-            ResourceLocation texturePath = ResourceLocation.fromNamespaceAndPath(
+            Identifier textureLocation = UnbakedGeometryHelper.resolveDirtyMaterial(mat.diffuseColorMap, configuration).texture();
+            Identifier texturePath = Identifier.fromNamespaceAndPath(
                textureLocation.getNamespace(), "textures/" + textureLocation.getPath() + ".png"
             );
             builder.addMesh(texturePath, quads);
@@ -699,7 +699,7 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
       }
 
       public Collection<Material> getTextures(
-         IGeometryBakingContext owner, Function<ResourceLocation, UnbakedModel> modelGetter, Set<Pair<String, String>> missingTextureErrors
+         IGeometryBakingContext owner, Function<Identifier, UnbakedModel> modelGetter, Set<Pair<String, String>> missingTextureErrors
       ) {
          return this.meshes
             .stream()
@@ -717,7 +717,7 @@ public class ObjModel extends SimpleUnbakedGeometry<ObjModel> {
    // -------------------------------------------------------------------------
 
    public record ModelSettings(
-      ResourceLocation modelLocation,
+      Identifier modelLocation,
       boolean automaticCulling,
       boolean shadeQuads,
       boolean flipV,

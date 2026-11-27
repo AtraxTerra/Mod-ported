@@ -29,7 +29,7 @@ import dev.architectury.utils.Env;
 import dev.architectury.utils.EnvExecutor;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -47,7 +47,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public abstract class NetworkPacketType<N extends NetworkDirection, I extends NetworkPacketData, O extends NetworkPacketData> {
 
-    private final ResourceLocation channelId;
+    private final Identifier channelId;
     private final String name;
     private final PacketType type;
     private final NetworkSide direction;
@@ -56,7 +56,7 @@ public abstract class NetworkPacketType<N extends NetworkDirection, I extends Ne
 
     final Cache<Boolean> shouldUseOldNetworkSystem;
 
-    public NetworkPacketType(ResourceLocation channelId, PacketType type, NetworkDirection direction, String name, Function<DLStatus, I> sendFactory, Function<DLStatus, O> responseFactory) {
+    public NetworkPacketType(Identifier channelId, PacketType type, NetworkDirection direction, String name, Function<DLStatus, I> sendFactory, Function<DLStatus, O> responseFactory) {
         this.channelId = channelId;
         this.type = type;
         this.name = name;
@@ -159,9 +159,9 @@ public abstract class NetworkPacketType<N extends NetworkDirection, I extends Ne
     /**
      * Returns the channel id this packet type belongs to.
      *
-     * @return the {@link ResourceLocation} channel id
+     * @return the {@link Identifier} channel id
      */
-    public final ResourceLocation getChannelId() {
+    public final Identifier getChannelId() {
         return channelId;
     }
 
@@ -319,7 +319,7 @@ public abstract class NetworkPacketType<N extends NetworkDirection, I extends Ne
          */
         protected final NetworkProcessor.Send<I> handler;
 
-        public Send(ResourceLocation channelId, String name, NetworkDirection direction, NetworkProcessor.Send<I> handler, Function<DLStatus, I> factory) {
+        public Send(Identifier channelId, String name, NetworkDirection direction, NetworkProcessor.Send<I> handler, Function<DLStatus, I> factory) {
             super(channelId, PacketType.SEND, direction, name, factory, NetworkPacketData.Empty::new);
             this.handler = handler;
         }
@@ -374,7 +374,7 @@ public abstract class NetworkPacketType<N extends NetworkDirection, I extends Ne
         protected static final Map<Long, CompletableFuture<?>> callbacks = new ConcurrentHashMap<>();
         private final NetworkProcessor.Receive<O> handler;
 
-        public Receive(ResourceLocation channelId, String name, NetworkDirection direction, NetworkProcessor.Receive<O> handler, Function<DLStatus, O> factory) {
+        public Receive(Identifier channelId, String name, NetworkDirection direction, NetworkProcessor.Receive<O> handler, Function<DLStatus, O> factory) {
             super(channelId, PacketType.RECEIVE, direction, name, NetworkPacketData.Empty::new, factory);
             this.handler = handler;
         }
@@ -482,7 +482,7 @@ public abstract class NetworkPacketType<N extends NetworkDirection, I extends Ne
         protected static final Map<Long, CompletableFuture<?>> callbacks = new ConcurrentHashMap<>();
         private final NetworkProcessor.SendAndReceive<I, O> handler;
 
-        public SendAndReceive(ResourceLocation channelId, String name, NetworkDirection direction, NetworkProcessor.SendAndReceive<I, O> handler, Function<DLStatus, I> inputFactory, Function<DLStatus, O> outputFactory) {
+        public SendAndReceive(Identifier channelId, String name, NetworkDirection direction, NetworkProcessor.SendAndReceive<I, O> handler, Function<DLStatus, I> inputFactory, Function<DLStatus, O> outputFactory) {
             super(channelId, PacketType.SEND_AND_RECEIVE, direction, name, inputFactory, outputFactory);
             this.handler = handler;
         }
@@ -620,7 +620,7 @@ public abstract class NetworkPacketType<N extends NetworkDirection, I extends Ne
         private final Supplier<StreamReceiver<I, O>> receiverFactory;
 
 
-        public Stream(ResourceLocation channelId, String name, NetworkDirection direction, Supplier<StreamReceiver<I, O>> receiverFactory, Function<DLStatus, I> inputFactory, Function<DLStatus, O> outputFactory) {
+        public Stream(Identifier channelId, String name, NetworkDirection direction, Supplier<StreamReceiver<I, O>> receiverFactory, Function<DLStatus, I> inputFactory, Function<DLStatus, O> outputFactory) {
             super(channelId, PacketType.STREAM, direction, name, inputFactory, outputFactory);
             this.receiverFactory = receiverFactory;
         }

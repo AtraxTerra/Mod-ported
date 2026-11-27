@@ -31,14 +31,14 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.BlockAndTintGetter;
 
 public final class RenderUtils {
 
     private static boolean aoRenderingErrorKnown = false;
 
-    public static final ResourceLocation BLANK_TEXTURE_LOCATION;
+    public static final Identifier BLANK_TEXTURE_LOCATION;
     static {
         NativeImage img = new NativeImage(1, 1, false);
         img.setPixelRGBA(0, 0, 0xFFFFFFFF);
@@ -110,7 +110,7 @@ public final class RenderUtils {
         }
     }
     
-    public static void renderTexture(ResourceLocation texture, DLGraphics graphics, Vector3f pos, float w, float h, float u, float v, float uW, float vH, Direction facing, DLColor tint, int light, boolean ambiebtOcclusion) {
+    public static void renderTexture(Identifier texture, DLGraphics graphics, Vector3f pos, float w, float h, float u, float v, float uW, float vH, Direction facing, DLColor tint, int light, boolean ambiebtOcclusion) {
         graphics.multiBufferSource().getBuffer(RenderType.text(texture));
         VertexConsumer vertexconsumer = graphics.vertexConsumer(texture);
         addQuadSide(facing, vertexconsumer, graphics,
@@ -124,11 +124,11 @@ public final class RenderUtils {
         );
     }
 
-    public static void renderTexture(ResourceLocation texture, DLGraphics graphics, Vector3f pos, float w, float h, float u, float v, float uW, float vH, Direction facing, DLColor tint, boolean ambientOcclusion) {
+    public static void renderTexture(Identifier texture, DLGraphics graphics, Vector3f pos, float w, float h, float u, float v, float uW, float vH, Direction facing, DLColor tint, boolean ambientOcclusion) {
         renderTexture(texture, graphics, pos, w, h, u, v, uW, vH, facing, tint, graphics.packedLight(), ambientOcclusion);        
     }
 
-    public static void renderTexture(ResourceLocation texture, DLGraphics graphics, Vector3f pos, float w, float h, Direction facing, boolean ambientOcclusion) {
+    public static void renderTexture(Identifier texture, DLGraphics graphics, Vector3f pos, float w, float h, Direction facing, boolean ambientOcclusion) {
         renderTexture(texture, graphics, pos, w, h, 0, 0, 1, 1, facing, DLColor.WHITE, graphics.packedLight(), ambientOcclusion);        
     }    
 

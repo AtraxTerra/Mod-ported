@@ -21,7 +21,7 @@ import net.minecraft.advancements.Advancement;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -31,16 +31,16 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public final class DLUtils {
 
-    public static ResourceLocation resourceLocation(String namespace, String path) {
-        return ResourceLocation.fromNamespaceAndPath(namespace, path);
+    public static Identifier resourceLocation(String namespace, String path) {
+        return Identifier.fromNamespaceAndPath(namespace, path);
     }
 
-    public static ResourceLocation resourceLocation(String path) {
-        return ResourceLocation.parse(path);
+    public static Identifier resourceLocation(String path) {
+        return Identifier.parse(path);
     }
 
     public static void giveAdvancement(ServerPlayer player, String modid, String name, String criteriaKey) {
-        ResourceLocation location = ResourceLocation.fromNamespaceAndPath(modid, name);
+        Identifier location = Identifier.fromNamespaceAndPath(modid, name);
         AdvancementHolder adv = player.getServer().getAdvancements().get(location);
         if (adv == null) {
             DragonLib.LOGGER.warn("Advancement does not exist: " + location);

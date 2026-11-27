@@ -14,7 +14,7 @@ import de.mrjulsen.mcdragonlib.util.TextUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider.Context;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.joml.Vector3f;
 
 public class DragonLibBlockEntityRenderer extends BasicBlockEntityRenderer<DragonLibBlockEntity> {
@@ -40,7 +40,7 @@ public class DragonLibBlockEntityRenderer extends BasicBlockEntityRenderer<Drago
         model = new CubeMesh(new Vector3f(), new Vector3f(1, 1, 1));
         model.getFacesOfDirection(Direction.NORTH).forEach(f -> {
             f.getCorner(CornerType.TOP_RIGHT).setU(0.5f);
-            f.setTexture(new ResourceLocation("textures/block/grass_block_side.png"));
+            f.setTexture(new Identifier("textures/block/grass_block_side.png"));
         });
          */
     }

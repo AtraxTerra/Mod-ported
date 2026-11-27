@@ -13,7 +13,7 @@ import de.mrjulsen.mcdragonlib.neoforge.client.model.loaders.MultipartObjModel.M
 import de.mrjulsen.mcdragonlib.neoforge.client.model.loaders.MultipartObjModel.SubModelSettings;
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -39,10 +39,10 @@ import java.util.Map;
  */
 public class MultipartObjLoader implements IGeometryLoader<MultipartObjModel>, ResourceManagerReloadListener {
     public static final MultipartObjLoader INSTANCE = new MultipartObjLoader();
-    public static final ResourceLocation ID = DLUtils.resourceLocation(DragonLib.MODID, "multipart_obj");
+    public static final Identifier ID = DLUtils.resourceLocation(DragonLib.MODID, "multipart_obj");
 
     private final Map<MultipartObjModel.ModelSettings, MultipartObjModel> modelCache = Maps.newConcurrentMap();
-    private final Map<ResourceLocation, ObjMaterialLibrary> materialCache = Maps.newConcurrentMap();
+    private final Map<Identifier, ObjMaterialLibrary> materialCache = Maps.newConcurrentMap();
 
     private ResourceManager manager = Minecraft.getInstance().getResourceManager();
 
@@ -109,7 +109,7 @@ public class MultipartObjLoader implements IGeometryLoader<MultipartObjModel>, R
         return model;
     }
 
-    private MultipartObjModel readSubModel(ResourceLocation location) {        
+    private MultipartObjModel readSubModel(Identifier location) {        
         try {
             Resource resource = manager.getResource(location).orElseThrow();
             InputStreamReader reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8);
@@ -135,7 +135,7 @@ public class MultipartObjLoader implements IGeometryLoader<MultipartObjModel>, R
         });
     }
 
-    public ObjMaterialLibrary loadMaterialLibrary(ResourceLocation materialLocation) {
+    public ObjMaterialLibrary loadMaterialLibrary(Identifier materialLocation) {
         return materialCache.computeIfAbsent(materialLocation, (location) -> {
             Resource resource = manager.getResource(location).orElseThrow();
             try (ObjTokenizer rdr = new ObjTokenizer(resource.open())) {

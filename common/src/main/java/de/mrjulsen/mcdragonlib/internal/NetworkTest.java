@@ -8,7 +8,7 @@ import de.mrjulsen.mcdragonlib.network.NetworkPacketData;
 import de.mrjulsen.mcdragonlib.network.NetworkPacketType;
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class NetworkTest {
 

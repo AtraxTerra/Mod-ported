@@ -10,7 +10,7 @@ import de.mrjulsen.mcdragonlib.client.util.DLGuiGraphics;
 import de.mrjulsen.mcdragonlib.client.util.GuiUtils;
 import de.mrjulsen.mcdragonlib.client.util.GuiUtils.TextureFillMode;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class DLTextureSheetData {
     public static final AbstractSprite EMPTY_SPRITE = new StretchedSprite(new int[] {0, 0}, new int[] {0, 0});
@@ -193,7 +193,7 @@ public class DLTextureSheetData {
 
     private final Map<String, AbstractSprite> sprites;
     private final int[] textureSize;
-    private ResourceLocation location;
+    private Identifier location;
 
     public DLTextureSheetData(Map<String, AbstractSprite> sprites, int[] textureSize) {
         this.sprites = sprites;
@@ -223,11 +223,11 @@ public class DLTextureSheetData {
         return textureSize[1];
     }
 
-    public void setTextureLocation(ResourceLocation location) {
+    public void setTextureLocation(Identifier location) {
         this.location = location;
     }
 
-    public ResourceLocation location() {
+    public Identifier location() {
         return location;
     }
 }

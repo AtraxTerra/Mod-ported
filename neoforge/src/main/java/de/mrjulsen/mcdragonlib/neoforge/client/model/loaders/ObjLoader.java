@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -25,7 +25,7 @@ public class ObjLoader implements IGeometryLoader<ObjModel>, ResourceManagerRelo
    public static ObjLoader INSTANCE = new ObjLoader();
 
    private final Map<ObjModel.ModelSettings, ObjModel> modelCache = Maps.newConcurrentMap();
-   private final Map<ResourceLocation, ObjMaterialLibrary> materialCache = Maps.newConcurrentMap();
+   private final Map<Identifier, ObjMaterialLibrary> materialCache = Maps.newConcurrentMap();
 
    @Override
    public void onResourceManagerReload(ResourceManager resourceManager) {
@@ -68,7 +68,7 @@ public class ObjLoader implements IGeometryLoader<ObjModel>, ResourceManagerRelo
       }
 
       ObjModel.ModelSettings settings = new ObjModel.ModelSettings(
-         ResourceLocation.parse(modelLocation),
+         Identifier.parse(modelLocation),
          automaticCulling, shadeQuads, flipV, emissiveAmbient, mtlOverride
       );
 
@@ -88,9 +88,9 @@ public class ObjLoader implements IGeometryLoader<ObjModel>, ResourceManagerRelo
       for (ObjModel.SubModelSettings subModelSettings : subSettingsList) {
          subIndex++;
          ObjModel subModel = subModelSettings.isJson()
-            ? readSubModel(ResourceLocation.parse(subModelSettings.model()))
+            ? readSubModel(Identifier.parse(subModelSettings.model()))
             : loadModel(new ObjModel.ModelSettings(
-                  ResourceLocation.parse(subModelSettings.model()),
+                  Identifier.parse(subModelSettings.model()),
                   automaticCulling, shadeQuads, flipV, emissiveAmbient, mtlOverride
                ));
 
@@ -119,7 +119,7 @@ public class ObjLoader implements IGeometryLoader<ObjModel>, ResourceManagerRelo
     * Loads and parses a JSON-based sub-model (i.e. another model JSON that itself
     * uses this loader). Used for nested ".json" entries in the "add" array.
     */
-   private ObjModel readSubModel(ResourceLocation location) {
+   private ObjModel readSubModel(Identifier location) {
       try {
          Resource resource = getResourceManager().getResource(location).orElseThrow();
          InputStreamReader reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8);
@@ -150,7 +150,7 @@ public class ObjLoader implements IGeometryLoader<ObjModel>, ResourceManagerRelo
    /**
     * Loads (or returns from cache) a material library at {@code materialLocation}.
     */
-   public ObjMaterialLibrary loadMaterialLibrary(ResourceLocation materialLocation) {
+   public ObjMaterialLibrary loadMaterialLibrary(Identifier materialLocation) {
       return this.materialCache.computeIfAbsent(materialLocation, location -> {
          Resource resource = getResourceManager().getResource(location).orElseThrow();
          try (ObjTokenizer rdr = new ObjTokenizer(resource.open())) {

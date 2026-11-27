@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -83,12 +83,12 @@ public class BasicMesh extends Mesh {
         face.updateEdges(x -> x.copy(y -> replaceFunc(replacements, y)));
     }
 
-    public void swapTextures(ResourceLocation current, ResourceLocation newLocation) {
+    public void swapTextures(Identifier current, Identifier newLocation) {
         for (Face face : faces) {
             if (face.getTextureLocation() == null) {
                 continue;
             }
-            ResourceLocation loc = face.getTextureLocation();
+            Identifier loc = face.getTextureLocation();
             if (!loc.equals(current)) {
                 continue;
             }

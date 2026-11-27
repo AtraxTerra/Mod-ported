@@ -10,13 +10,13 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.font.FontSet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 @Mixin(Font.class)
 public interface FontAccessor {
 
     @Invoker("getFontSet")
-    public FontSet dragonlib$invokeGetFontSet(ResourceLocation pFontLocation);
+    public FontSet dragonlib$invokeGetFontSet(Identifier pFontLocation);
 
     @Accessor("splitter")
     StringSplitter dragonlib$getSplitter();

@@ -6,9 +6,9 @@ import java.util.function.Supplier;
 import de.mrjulsen.mcdragonlib.data.INBTSerializable;
 import de.mrjulsen.mcdragonlib.util.DLUtils;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-public final record DLRegistryObject<T extends INBTSerializable>(ResourceLocation id, Supplier<T> factory) {
+public final record DLRegistryObject<T extends INBTSerializable>(Identifier id, Supplier<T> factory) {
 
     public static final String NBT_ID = "Id";
     public static final String NBT_DATA = "Content";
@@ -27,8 +27,8 @@ public final record DLRegistryObject<T extends INBTSerializable>(ResourceLocatio
         return instance;
     }
     
-    public static <T extends INBTSerializable> T load(CompoundTag tag, Function<ResourceLocation, DLRegistryObject<T>> registryGetter) {
-        ResourceLocation typeId = DLUtils.resourceLocation(tag.getString(NBT_ID));
+    public static <T extends INBTSerializable> T load(CompoundTag tag, Function<Identifier, DLRegistryObject<T>> registryGetter) {
+        Identifier typeId = DLUtils.resourceLocation(tag.getString(NBT_ID));
         DLRegistryObject<T> type = registryGetter.apply(typeId);
         if (type == null) return null;
         return type.unwrap(tag);
