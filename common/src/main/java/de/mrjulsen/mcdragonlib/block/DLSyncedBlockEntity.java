@@ -1,5 +1,8 @@
 package de.mrjulsen.mcdragonlib.block;
 
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
@@ -28,14 +31,21 @@ public abstract class DLSyncedBlockEntity extends BlockEntity {
 	}
 
 	// Special handling for client update packets
+	// NeoForge 26.2 port: block entities load from a ValueInput and save to a ValueOutput; these
+	// CompoundTag entry points wrap the tag in the tag-backed implementations.
 	public void readClient(CompoundTag tag) {
-		loadAdditional(tag, RegistryAccess.EMPTY);
+		loadAdditional(TagValueInput.create(ProblemReporter.DISCARDING, registries(), tag));
 	}
 
 	// Special handling for client update packets
 	public CompoundTag writeClient(CompoundTag tag) {
-		saveAdditional(tag, RegistryAccess.EMPTY);
-		return tag;
+		TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries());
+		saveAdditional(output);
+		return tag.merge(output.buildResult());
+	}
+
+	private HolderLookup.Provider registries() {
+		return level != null ? level.registryAccess() : RegistryAccess.EMPTY;
 	}
 
 	public void sendData() {

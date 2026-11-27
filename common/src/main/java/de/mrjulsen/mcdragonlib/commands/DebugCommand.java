@@ -19,7 +19,7 @@ public class DebugCommand {
         
         LiteralArgumentBuilder<CommandSourceStack> builder = Commands.literal(CMD_NAME)
             .then(Commands.literal(SUB_DEBUG)
-                .requires(x -> x.hasPermission(4))
+                .requires(Commands.hasPermission(Commands.LEVEL_OWNERS))
                 .then(Commands.literal(SUB_NETWORK)
                 )
             )

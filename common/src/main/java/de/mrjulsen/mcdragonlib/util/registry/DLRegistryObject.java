@@ -23,12 +23,12 @@ public final record DLRegistryObject<T extends INBTSerializable>(Identifier id, 
 
     public T unwrap(CompoundTag tag) {
         T instance = create();
-        instance.deserializeNbt(tag.contains(NBT_DATA) ? tag.getCompound(NBT_DATA) : new CompoundTag());
+        instance.deserializeNbt(tag.getCompoundOrEmpty(NBT_DATA));
         return instance;
     }
     
     public static <T extends INBTSerializable> T load(CompoundTag tag, Function<Identifier, DLRegistryObject<T>> registryGetter) {
-        Identifier typeId = DLUtils.resourceLocation(tag.getString(NBT_ID));
+        Identifier typeId = DLUtils.resourceLocation(tag.getStringOr(NBT_ID, ""));
         DLRegistryObject<T> type = registryGetter.apply(typeId);
         if (type == null) return null;
         return type.unwrap(tag);

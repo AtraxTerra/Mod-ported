@@ -1,6 +1,7 @@
 package de.mrjulsen.mcdragonlib.client.gui.widgets.base;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiGraphics;
+import de.mrjulsen.mcdragonlib.client.util.GuiPoseStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-public record Graphics(GuiGraphics graphics, PoseStack poseStack, float partialTick) {}
+/** NeoForge 26.2 port: GuiGraphics is GuiGraphicsExtractor, and the 2D pose is a {@link GuiPoseStack}. */
+public record Graphics(GuiGraphicsExtractor graphics, GuiPoseStack poseStack, float partialTick) {}

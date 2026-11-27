@@ -85,64 +85,64 @@ public final class NbtUtils {
      * Read a BlockPos previously stored under {@code name}.
      */
     public static BlockPos getNbtBlockPos(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new BlockPos(nbt.getInt(NBT_X), nbt.getInt(NBT_Y), nbt.getInt(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new BlockPos(nbt.getIntOr(NBT_X, 0), nbt.getIntOr(NBT_Y, 0), nbt.getIntOr(NBT_Z, 0));
     }
 
     /**
      * Read a SectionPos previously stored under {@code name}.
      */
     public static SectionPos getNbtSectionPos(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return SectionPos.of(nbt.getInt(NBT_X), nbt.getInt(NBT_Y), nbt.getInt(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return SectionPos.of(nbt.getIntOr(NBT_X, 0), nbt.getIntOr(NBT_Y, 0), nbt.getIntOr(NBT_Z, 0));
     }
 
     /**
      * Read a Vec3i from NBT.
      */
     public static Vec3i getNbtVec3i(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new Vec3i(nbt.getInt(NBT_X), nbt.getInt(NBT_Y), nbt.getInt(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new Vec3i(nbt.getIntOr(NBT_X, 0), nbt.getIntOr(NBT_Y, 0), nbt.getIntOr(NBT_Z, 0));
     }
 
     /**
      * Read a JOML Vector3i from NBT.
      */
     public static Vector3i getNbtVector3i(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new Vector3i(nbt.getInt(NBT_X), nbt.getInt(NBT_Y), nbt.getInt(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new Vector3i(nbt.getIntOr(NBT_X, 0), nbt.getIntOr(NBT_Y, 0), nbt.getIntOr(NBT_Z, 0));
     }
 
     /**
      * Read a Vec3 (double) from NBT.
      */
     public static Vec3 getNbtVec3(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new Vec3(nbt.getDouble(NBT_X), nbt.getDouble(NBT_Y), nbt.getDouble(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new Vec3(nbt.getDoubleOr(NBT_X, 0.0D), nbt.getDoubleOr(NBT_Y, 0.0D), nbt.getDoubleOr(NBT_Z, 0.0D));
     }
 
     /**
      * Read a JOML Vector3f from NBT.
      */
     public static Vector3f getNbtVector3f(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new Vector3f((float)nbt.getDouble(NBT_X), (float)nbt.getDouble(NBT_Y), (float)nbt.getDouble(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new Vector3f((float)nbt.getDoubleOr(NBT_X, 0.0D), (float)nbt.getDoubleOr(NBT_Y, 0.0D), (float)nbt.getDoubleOr(NBT_Z, 0.0D));
     }
 
     /**
      * Read a JOML Vector3d from NBT.
      */
     public static Vector3d getNbtVector3d(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new Vector3d(nbt.getDouble(NBT_X), nbt.getDouble(NBT_Y), nbt.getDouble(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new Vector3d(nbt.getDoubleOr(NBT_X, 0.0D), nbt.getDoubleOr(NBT_Y, 0.0D), nbt.getDoubleOr(NBT_Z, 0.0D));
     }
 
     /**
      * Read a ChunkPos stored under {@code name} (stores x and z).
      */
     public static ChunkPos getNbtChunkPos(CompoundTag compound, String name) {
-        CompoundTag nbt = compound.getCompound(name);
-        return new ChunkPos(nbt.getInt(NBT_X), nbt.getInt(NBT_Z));
+        CompoundTag nbt = compound.getCompoundOrEmpty(name);
+        return new ChunkPos(nbt.getIntOr(NBT_X, 0), nbt.getIntOr(NBT_Z, 0));
     }
     
     /**
@@ -150,8 +150,8 @@ public final class NbtUtils {
      */
     public static void putNbtChunkPos(CompoundTag compound, String name, ChunkPos pos) {
         CompoundTag nbt = new CompoundTag();
-        nbt.putInt(NBT_X, pos.x);
-        nbt.putInt(NBT_Z, pos.z);
+        nbt.putInt(NBT_X, pos.x());
+        nbt.putInt(NBT_Z, pos.z());
         compound.put(name, nbt);
     }
 
@@ -164,10 +164,10 @@ public final class NbtUtils {
     }
 
     public static <K, V> Map<K, V> getMap(CompoundTag nbt, String key, Function<String, K> keyDeserializer, Function<CompoundTag, V> valueDeserializer) {
-        CompoundTag mapNbt = nbt.getCompound(key);
+        CompoundTag mapNbt = nbt.getCompoundOrEmpty(key);
         Map<K, V> map = new HashMap<>(mapNbt.size());
-        for (String k : mapNbt.getAllKeys()) {
-            map.put(keyDeserializer.apply(k), valueDeserializer.apply(mapNbt.getCompound(k)));
+        for (String k : mapNbt.keySet()) {
+            map.put(keyDeserializer.apply(k), valueDeserializer.apply(mapNbt.getCompoundOrEmpty(k)));
         }
         return map;
     }

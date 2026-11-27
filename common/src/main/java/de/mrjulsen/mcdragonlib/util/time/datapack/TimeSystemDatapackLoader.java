@@ -1,5 +1,7 @@
 package de.mrjulsen.mcdragonlib.util.time.datapack;
 
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.resources.FileToIdConverter;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,14 +17,16 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 
-public class TimeSystemDatapackLoader extends SimpleJsonResourceReloadListener {
+public class TimeSystemDatapackLoader extends SimpleJsonResourceReloadListener<JsonElement> {
 
     public static final String ID = "config";
     public static TimeSystemDatapackLoader instance;
     private DatapackTimeSystem system;
 
     public TimeSystemDatapackLoader() {
-        super(new Gson(), ID);
+        // NeoForge 26.2 port: the listener decodes with a codec and a file lister; ExtraCodecs.JSON keeps
+        // the raw JSON that DatapackTimeSystem.fromJson reads.
+        super(ExtraCodecs.JSON, FileToIdConverter.json(ID));
         instance = this;
     }
 

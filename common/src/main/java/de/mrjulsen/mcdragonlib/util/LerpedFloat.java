@@ -122,13 +122,13 @@ public class LerpedFloat {
 
 	public void fromNbt(CompoundTag compoundNBT, boolean clientPacket) {
 		if (!clientPacket || compoundNBT.contains("Force"))
-			startWithValue(compoundNBT.getFloat("Value"));
+			startWithValue(compoundNBT.getFloatOr("Value", 0.0F));
 		readChaser(compoundNBT);
 	}
 
 	protected void readChaser(CompoundTag compoundNBT) {
-		chaseSpeed = compoundNBT.getFloat("Speed");
-		chaseTarget = compoundNBT.getFloat("Target");
+		chaseSpeed = compoundNBT.getFloatOr("Speed", 0.0F);
+		chaseTarget = compoundNBT.getFloatOr("Target", 0.0F);
 	}
 
 	@FunctionalInterface

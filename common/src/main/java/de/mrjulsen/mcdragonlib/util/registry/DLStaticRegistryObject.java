@@ -19,7 +19,7 @@ public final record DLStaticRegistryObject<T>(Identifier id, Supplier<T> factory
     }
     
     public static <T> T load(CompoundTag tag, Function<Identifier, DLStaticRegistryObject<T>> registryGetter) {
-        Identifier typeId = DLUtils.resourceLocation(tag.getString(NBT_ID));
+        Identifier typeId = DLUtils.resourceLocation(tag.getStringOr(NBT_ID, ""));
         DLStaticRegistryObject<T> type = registryGetter.apply(typeId);
         if (type == null) return null;
         return type.get();

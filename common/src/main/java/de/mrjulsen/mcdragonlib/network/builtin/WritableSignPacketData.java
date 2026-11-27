@@ -44,7 +44,7 @@ public class WritableSignPacketData extends NetworkPacketData {
     @Override
     protected void read(CompoundTag nbt) {
         this.pos = NbtUtils.getNbtBlockPos(nbt, NBT_POS);
-        this.messages = nbt.getList(NBT_MESSAGES, Tag.TAG_STRING).stream().map(x -> ((StringTag)x).getAsString()).toArray(String[]::new);
+        this.messages = nbt.getListOrEmpty(NBT_MESSAGES).stream().map(x -> ((StringTag)x).value()).toArray(String[]::new);
     }
 
     public static void handler(WritableSignPacketData packet, NetworkPacketContext context) {

@@ -1,5 +1,7 @@
 package de.mrjulsen.mcdragonlib.util;
 
+import java.nio.file.Path;
+import java.nio.file.Files;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -41,7 +43,7 @@ public final class DLUtils {
 
     public static void giveAdvancement(ServerPlayer player, String modid, String name, String criteriaKey) {
         Identifier location = Identifier.fromNamespaceAndPath(modid, name);
-        AdvancementHolder adv = player.getServer().getAdvancements().get(location);
+        AdvancementHolder adv = player.level().getServer().getAdvancements().get(location);
         if (adv == null) {
             DragonLib.LOGGER.warn("Advancement does not exist: " + location);
             return;
@@ -51,7 +53,14 @@ public final class DLUtils {
 
     public static String textureToBase64(NativeImage image) {
         try {
-            return Base64.encodeBase64String(image.asByteArray());
+            // NeoForge 26.2 port: NativeImage#asByteArray is gone; writeToFile is the remaining PNG encoder.
+            Path file = Files.createTempFile("dragonlib", ".png");
+            try {
+                image.writeToFile(file);
+                return Base64.encodeBase64String(Files.readAllBytes(file));
+            } finally {
+                Files.deleteIfExists(file);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return "";
@@ -117,7 +126,7 @@ public final class DLUtils {
             for (Direction d : BlockStateProperties.HORIZONTAL_FACING.getPossibleValues()) {
                 final BlockPos otherPos = pos.relative(d);
                 final BlockState otherState = world.getBlockState(otherPos);
-                final BlockState nextState = newState.updateShape(d, otherState, world, pos, otherPos);
+                final BlockState nextState = newState.updateShape(world, world, pos, d, otherPos, otherState, world.getRandom());
                 if (nextState != newState) {
                     if (!nextState.isAir()) {
                         world.setBlockAndUpdate(pos, nextState);
@@ -131,7 +140,7 @@ public final class DLUtils {
             for (Direction d : BlockStateProperties.HORIZONTAL_FACING.getPossibleValues()) {
                 final BlockPos otherPos = pos.relative(d);
                 final BlockState otherState = world.getBlockState(otherPos);
-                final BlockState nextOther = otherState.updateShape(d.getOpposite(), newState, world, otherPos, pos);
+                final BlockState nextOther = otherState.updateShape(world, world, otherPos, d.getOpposite(), pos, newState, world.getRandom());
                 if (nextOther != otherState)
                     world.setBlockAndUpdate(otherPos, nextOther);
             }
@@ -153,7 +162,7 @@ public final class DLUtils {
     }
 
     public boolean isSectionInChunk(SectionPos section, ChunkPos chunk) {
-        return section.getX() == chunk.x && section.getZ() == chunk.z;
+        return section.getX() == chunk.x() && section.getZ() == chunk.z();
     }
 
     public ChunkPos getChunkOfSection(SectionPos section) {

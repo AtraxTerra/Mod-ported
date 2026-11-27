@@ -3,29 +3,16 @@ package de.mrjulsen.mcdragonlib.client.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3x2f;
+import org.joml.Matrix3x2fStack;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector2f;
 import org.joml.Vector3f;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.math.Axis;
-
 import de.mrjulsen.mcdragonlib.client.gui.widgets.util.EAlign;
-import de.mrjulsen.mcdragonlib.client.model.ModelContext;
-import de.mrjulsen.mcdragonlib.client.model.mesh.BasicMesh;
-import de.mrjulsen.mcdragonlib.client.model.mesh.DLModel;
-import de.mrjulsen.mcdragonlib.client.model.mesh.Mesh;
-import de.mrjulsen.mcdragonlib.client.model.mesh.DLModel.ModelType;
 import de.mrjulsen.mcdragonlib.data.ETextAlignment;
 import de.mrjulsen.mcdragonlib.data.ITranslatableEnum;
 import de.mrjulsen.mcdragonlib.util.DLColor;
@@ -34,13 +21,14 @@ import de.mrjulsen.mcdragonlib.util.math.Rectangle;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.render.TextureSetup;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.state.gui.TiledBlitRenderState;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -48,11 +36,10 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Utility class providing a collection of static helper methods for GUI rendering
@@ -68,6 +55,12 @@ import net.minecraft.world.level.block.state.BlockState;
  *
  * <p>All methods in this class are stateless and operate on provided graphics
  * contexts or global Minecraft client state.
+ *
+ * <p>NeoForge 26.2 port: the 26.2 GUI is retained-mode ({@link GuiGraphicsExtractor}); nothing binds
+ * textures, sets shader colors or toggles depth/blend state any more. The texture and tint set with
+ * {@link #setTexture} and {@link #setTint} are therefore kept here and applied by the drawing helpers of
+ * this class (the 1.21 shader color tinted every draw call, these helpers included). Scissor calls keep
+ * their 1.21 meaning (one clip rectangle, replaced by the next call) on top of the 26.2 scissor stack.
  */
 public class GuiUtils {
 
@@ -138,8 +131,23 @@ public class GuiUtils {
      * @param h height in GUI pixels
      */
     public static void enableScissor(DLGuiGraphics graphics, int x, int y, int w, int h) {
-        int scale = (int)Minecraft.getInstance().getWindow().getGuiScale();    
-        RenderSystem.enableScissor(x * scale, Minecraft.getInstance().getWindow().getHeight() - (y + h) * scale, w * scale, h * scale);   
+        // 1.21: RenderSystem.enableScissor in window pixels, replacing any active clip. 26.2 keeps a scissor
+        // stack in GUI coordinates, transformed by the current pose: push with an identity pose (the
+        // rectangle is already in screen space) and pop the previous DragonLib clip first.
+        GuiGraphicsExtractor g = graphics.graphics();
+        if (scissorOwner != g) {
+            scissorOwner = g;
+            scissorActive = false;
+        }
+        if (scissorActive) {
+            g.disableScissor();
+        }
+        Matrix3x2fStack pose = g.pose();
+        pose.pushMatrix();
+        pose.identity();
+        g.enableScissor(x, y, x + Math.max(0, w), y + Math.max(0, h));
+        pose.popMatrix();
+        scissorActive = true;
     }
 
     /**
@@ -148,8 +156,16 @@ public class GuiUtils {
      * @param graphics the DLGuiGraphics context (not modified)
      */
     public static void disableScissor(DLGuiGraphics graphics) {
-        RenderSystem.disableScissor();
+        GuiGraphicsExtractor g = graphics.graphics();
+        if (scissorOwner == g && scissorActive) {
+            g.disableScissor();
+            scissorActive = false;
+        }
     }
+
+    /** The extractor whose scissor stack holds DragonLib's current clip (a new extractor each frame). */
+    private static @Nullable GuiGraphicsExtractor scissorOwner;
+    private static boolean scissorActive;
 
     /**
      * Plays the standard UI button click sound at default pitch and volume.
@@ -216,7 +232,10 @@ public class GuiUtils {
      * @param maxWidth maximum width for tooltip text wrapping
      */
     public static void drawTooltip(DLGuiGraphics graphics, Font font, int x, int y, List<? extends FormattedText> lines, int maxWidth) {
-        graphics.graphics().renderTooltip(font, splitToFormattedCharSequences(font, lines, maxWidth), x, y);
+        // 26.2 draws tooltips at the end of the frame, in screen coordinates: map the local position
+        // through the current pose (1.21 drew the tooltip immediately, inside that pose).
+        Vector2f screen = graphics.graphics().pose().transformPosition(x, y, new Vector2f());
+        graphics.graphics().setTooltipForNextFrame(font, splitToFormattedCharSequences(font, lines, maxWidth), (int) screen.x(), (int) screen.y());
     }
 
     /**
@@ -262,7 +281,8 @@ public class GuiUtils {
      * @param texture the texture resource location to bind
      */
     public static void setTexture(Identifier texture) {
-        RenderSystem.setShaderTexture(0, texture);
+        currentTexture = texture;
+        currentDynamicTexture = null;
     }
 
     /**
@@ -270,8 +290,25 @@ public class GuiUtils {
      *
      * @param textureId the OpenGL texture id
      */
-    public static void setTexture(int textureId) {
-        RenderSystem.setShaderTexture(0, textureId);
+    public static void setTexture(AbstractTexture texture) {
+        currentDynamicTexture = texture;
+        currentTexture = null;
+    }
+
+    /** Texture set by {@link #setTexture}, used by {@link #renderTiledTexture(DLGuiGraphics, Runnable, int, int, int, int, float, float, float, float, int, int)}. */
+    private static @Nullable Identifier currentTexture;
+    private static @Nullable AbstractTexture currentDynamicTexture;
+    /** Tint set by {@link #setTint} (ARGB, white = none), applied by this class's drawing helpers. */
+    private static int tint = 0xFFFFFFFF;
+
+    /** The current tint (ARGB). */
+    public static int getTint() {
+        return tint;
+    }
+
+    /** {@code color} multiplied by the current tint. */
+    public static int tinted(int color) {
+        return tint == 0xFFFFFFFF ? color : ARGB.multiply(color, tint);
     }
 
     /**
@@ -280,18 +317,14 @@ public class GuiUtils {
      * @param color color used to set the shader color (including alpha)
      */
     public static void setTint(DLColor color) {
-        float a = color.getAlphaF();
-        float r = color.getRedF();
-        float g = color.getGreenF();
-        float b = color.getBlueF();
-        RenderSystem.setShaderColor(r, g, b, a);
+        tint = color.getAsARGB();
     }
 
     /**
      * Resets the shader color/tint to opaque white (no tint).
      */
     public static void resetTint() {
-        RenderSystem.setShaderColor(1, 1, 1, 1);
+        tint = 0xFFFFFFFF;
     }
 
     /**
@@ -311,59 +344,31 @@ public class GuiUtils {
      * @param texHeight full texture atlas height (for UV normalization)
      */
     public static void renderTiledTexture(DLGuiGraphics graphics, Runnable bindTexture, int x, int y, int w, int h, float u, float v, float uW, float vH, int texWidth, int texHeight) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        // 26.2: no texture binding; bindTexture selects the texture through setTexture.
         bindTexture.run();
-
-        float minU = u / texWidth;
-        float minV = v / texHeight;
-        float maxU = (u + uW) / texWidth;
-        float maxV = (v + vH) / texHeight;
-        float uSpan = maxU - minU;
-        float vSpan = maxV - minV;
-
-        Matrix4f matrix = graphics.poseStack().last().pose();
-        BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-
-        int fullXTiles = w / (int)uW;
-        int fullYTiles = h / (int)vH;
-        float restX = w % uW;
-        float restY = h % vH;
-
-        float offsetY = 0f;
-        boolean bufferUsed = false;
-        for (int yTile = 0; yTile <= fullYTiles; yTile++) {
-            float tileHeight = (yTile < fullYTiles) ? vH : restY;
-            if (tileHeight <= 0) break;
-
-            float offsetX = 0f;
-            for (int xTile = 0; xTile <= fullXTiles; xTile++) {
-                float tileWidth = (xTile < fullXTiles) ? uW : restX;
-                if (tileWidth <= 0) break;
-
-                float u0 = minU;
-                float v0 = minV;
-                float u1 = minU + uSpan * (tileWidth / uW);
-                float v1 = minV + vSpan * (tileHeight / vH);
-
-                float quadX0 = x + offsetX;
-                float quadY0 = y + offsetY;
-                float quadX1 = quadX0 + tileWidth;
-                float quadY1 = quadY0 + tileHeight;
-
-                buffer.addVertex(matrix, quadX0, quadY1, 0).setUv(u0, v1).setColor(1, 1, 1, 1);
-                buffer.addVertex(matrix, quadX1, quadY1, 0).setUv(u1, v1).setColor(1, 1, 1, 1);
-                buffer.addVertex(matrix, quadX1, quadY0, 0).setUv(u1, v0).setColor(1, 1, 1, 1);
-                buffer.addVertex(matrix, quadX0, quadY0, 0).setUv(u0, v0).setColor(1, 1, 1, 1);
-                bufferUsed = true;
-
-                offsetX += tileWidth;
-            }
-            offsetY += tileHeight;
+        AbstractTexture texture = currentDynamicTexture != null ? currentDynamicTexture
+            : currentTexture != null ? Minecraft.getInstance().getTextureManager().getTexture(currentTexture) : null;
+        if (texture != null) {
+            renderTiledTexture(graphics, texture, x, y, w, h, u, v, uW, vH, texWidth, texHeight);
         }
-        if (bufferUsed) {
-            BufferUploader.drawWithShader(buffer.buildOrThrow());
-        }
+    }
 
+    /** Tiled drawing of {@code texture}: whole tiles of the source region, then the cut remainder. */
+    public static void renderTiledTexture(DLGuiGraphics graphics, AbstractTexture texture, int x, int y, int w, int h, float u, float v, float uW, float vH, int texWidth, int texHeight) {
+        if (w <= 0 || h <= 0 || uW <= 0 || vH <= 0) {
+            return;
+        }
+        GuiGraphicsExtractor g = graphics.graphics();
+        g.submitGuiElementRenderState(new TiledBlitRenderState(
+            RenderPipelines.GUI_TEXTURED,
+            TextureSetup.singleTexture(texture.getTextureView(), texture.getSampler()),
+            new Matrix3x2f(g.pose()),
+            Math.max(1, (int) uW), Math.max(1, (int) vH),
+            x, y, x + w, y + h,
+            u / texWidth, (u + uW) / texWidth, v / texHeight, (v + vH) / texHeight,
+            tint,
+            g.peekScissorStack()
+        ));
     }
 
     /**
@@ -404,8 +409,8 @@ public class GuiUtils {
      */
     public static void drawTexture(Identifier texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode, int textureWidth, int textureHeight) {
         switch (mode) {
-            case TILE -> renderTiledTexture(graphics, () -> RenderSystem.setShaderTexture(0, texture), x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
-            default -> graphics.graphics().blit(texture, x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
+            case TILE -> renderTiledTexture(graphics, Minecraft.getInstance().getTextureManager().getTexture(texture), x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
+            default -> graphics.graphics().blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, w, h, uW, vH, textureWidth, textureHeight, tint);
         }
     }
 
@@ -426,12 +431,22 @@ public class GuiUtils {
      * @param textureWidth full texture atlas width for UV calculation
      * @param textureHeight full texture atlas height for UV calculation
      */
-    public static void drawTexture(int textureId, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode, int textureWidth, int textureHeight) {
+    public static void drawTexture(AbstractTexture texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode, int textureWidth, int textureHeight) {
+        // 1.21 took a raw OpenGL texture id here; 26.2 textures are GPU objects, so the texture itself.
         switch (mode) {
-            case TILE -> renderTiledTexture(graphics, () -> RenderSystem.setShaderTexture(0, textureId), x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
-            default -> blit(graphics.graphics(), textureId, x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
+            case TILE -> renderTiledTexture(graphics, texture, x, y, w, h, u, v, uW, vH, textureWidth, textureHeight);
+            default -> {
+                GuiVertexRecorder quad = GuiVertexRecorder.textured(graphics.graphics(), texture);
+                Matrix4f matrix = graphics.poseStack().last().pose();
+                float u0 = (float) u / textureWidth, u1 = (float) (u + uW) / textureWidth;
+                float v0 = (float) v / textureHeight, v1 = (float) (v + vH) / textureHeight;
+                quad.addVertex(matrix, x, y, 0).setUv(u0, v0).setColor(tint);
+                quad.addVertex(matrix, x, y + h, 0).setUv(u0, v1).setColor(tint);
+                quad.addVertex(matrix, x + w, y + h, 0).setUv(u1, v1).setColor(tint);
+                quad.addVertex(matrix, x + w, y, 0).setUv(u1, v0).setColor(tint);
+                quad.submit();
+            }
         }
-        
     }
 
     /**
@@ -450,10 +465,10 @@ public class GuiUtils {
      * @param mode fill mode (STRETCH or TILE)
      */
     public static void drawTexture(DLTexture texture, DLGuiGraphics graphics, int x, int y, int w, int h, int u, int v, int uW, int vH, TextureFillMode mode) {
-        if (texture.usesTextureId() || texture.getTexture().isEmpty()) {
-            drawTexture(texture.getTextureId(), graphics, x, y, w, h, u, v, uW, vH, mode, texture.width(), texture.height());
-        } else {            
+        if (texture.getTexture().isPresent()) {
             drawTexture(texture.getTexture().get(), graphics, x, y, w, h, u, v, uW, vH, mode, texture.width(), texture.height());
+        } else if (texture.getDynamicTexture().isPresent()) {
+            drawTexture(texture.getDynamicTexture().get(), graphics, x, y, w, h, u, v, uW, vH, mode, texture.width(), texture.height());
         }
     }
     
@@ -490,27 +505,7 @@ public class GuiUtils {
     }
 
 
-    /* COPY OF: GuiGraphics */
-    private static void innerBlit(PoseStack pose, int textureId, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV) {
-        RenderSystem.setShaderTexture(0, textureId);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        Matrix4f matrix4f = pose.last().pose();
-        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        bufferbuilder.addVertex(matrix4f, (float)pX1, (float)pY1, (float)pBlitOffset).setUv(pMinU, pMinV);
-        bufferbuilder.addVertex(matrix4f, (float)pX1, (float)pY2, (float)pBlitOffset).setUv(pMinU, pMaxV);
-        bufferbuilder.addVertex(matrix4f, (float)pX2, (float)pY2, (float)pBlitOffset).setUv(pMaxU, pMaxV);
-        bufferbuilder.addVertex(matrix4f, (float)pX2, (float)pY1, (float)pBlitOffset).setUv(pMaxU, pMinV);
-        BufferUploader.drawWithShader(bufferbuilder.buildOrThrow());
-    }
-    
-    private static void blit(GuiGraphics graphics, int textureId, int pX, int pY, int pWidth, int pHeight, float pUOffset, float pVOffset, int pUWidth, int pVHeight, int pTextureWidth, int pTextureHeight) {
-        blit(graphics, textureId, pX, pX + pWidth, pY, pY + pHeight, 0, pUWidth, pVHeight, pUOffset, pVOffset, pTextureWidth, pTextureHeight);
-    }
 
-    private static void blit(GuiGraphics graphics, int textureId, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, int pUWidth, int pVHeight, float pUOffset, float pVOffset, int pTextureWidth, int pTextureHeight) {
-        innerBlit(graphics.pose(), textureId, pX1, pX2, pY1, pY2, pBlitOffset, (pUOffset + 0.0F) / (float)pTextureWidth, (pUOffset + (float)pUWidth) / (float)pTextureWidth, (pVOffset + 0.0F) / (float)pTextureHeight, (pVOffset + (float)pVHeight) / (float)pTextureHeight);
-    }
-    /* END */
 
 
     /**
@@ -535,12 +530,7 @@ public class GuiUtils {
      * @param color color to fill with (including alpha)
      */
     public static void fill(DLGuiGraphics graphics, int x, int y, int w, int h, DLColor color) {
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        graphics.graphics().fill(x, y, x + w, y + h, color.getAsARGB());
-        RenderSystem.disableBlend();
+        graphics.graphics().fill(x, y, x + w, y + h, tinted(color.getAsARGB()));
     }
 
     /**
@@ -574,20 +564,13 @@ public class GuiUtils {
             vertexColors[(align.getOrder() + i) % vertexColors.length] = (i < 2 ? colorA : colorB);
         }
 
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        buffer.addVertex(graphics.poseStack().last().pose(), x + w, y, 0).setColor(vertexColors[0].getAsARGB());
-        buffer.addVertex(graphics.poseStack().last().pose(), x, y, 0).setColor(vertexColors[1].getAsARGB());
-        buffer.addVertex(graphics.poseStack().last().pose(), x, y + h, 0).setColor(vertexColors[2].getAsARGB());
-        buffer.addVertex(graphics.poseStack().last().pose(), x + w, y + h, 0).setColor(vertexColors[3].getAsARGB());
-        BufferUploader.drawWithShader(buffer.buildOrThrow());
-
-        RenderSystem.disableBlend();
+        GuiVertexRecorder buffer = GuiVertexRecorder.colored(graphics);
+        Matrix4f matrix = graphics.poseStack().last().pose();
+        buffer.addVertex(matrix, x + w, y, 0).setColor(tinted(vertexColors[0].getAsARGB()));
+        buffer.addVertex(matrix, x, y, 0).setColor(tinted(vertexColors[1].getAsARGB()));
+        buffer.addVertex(matrix, x, y + h, 0).setColor(tinted(vertexColors[2].getAsARGB()));
+        buffer.addVertex(matrix, x + w, y + h, 0).setColor(tinted(vertexColors[3].getAsARGB()));
+        buffer.submit();
     }
 
     /**
@@ -664,9 +647,7 @@ public class GuiUtils {
                 break;
         }
 
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        graphics.graphics().drawString(font, toFormattedCharSequence(text), x + offset, y, color.getAsARGB(), dropShadow);
+        graphics.graphics().text(font, toFormattedCharSequence(text), x + offset, y, tinted(color.getAsARGB()), dropShadow);
     }
 
     /**
@@ -694,12 +675,10 @@ public class GuiUtils {
     public static void renderItem(DLGuiGraphics graphics, ItemStack stack, int x, int y, float scale, boolean drawDecorations) {
         graphics.poseStack().pushPose();
         graphics.poseStack().translate(x, y, 0);
-        graphics.poseStack().scale(scale, scale, 1);        
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        graphics.graphics().renderItem(stack, 0, 0);
+        graphics.poseStack().scale(scale, scale, 1);
+        graphics.graphics().item(stack, 0, 0);
         if (drawDecorations) {
-            graphics.graphics().renderItemDecorations(Minecraft.getInstance().font, stack, 0, 0);
+            graphics.graphics().itemDecorations(Minecraft.getInstance().font, stack, 0, 0);
         }
         graphics.poseStack().popPose();
     }
@@ -718,10 +697,8 @@ public class GuiUtils {
     public static void renderItemDecoration(DLGuiGraphics graphics, ItemStack stack, int x, int y, float scale, String text) {
         graphics.poseStack().pushPose();
         graphics.poseStack().translate(x, y, 0);
-        graphics.poseStack().scale(scale, scale, 1);        
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        graphics.graphics().renderItemDecorations(Minecraft.getInstance().font, stack, 0, 0, text);
+        graphics.poseStack().scale(scale, scale, 1);
+        graphics.graphics().itemDecorations(Minecraft.getInstance().font, stack, 0, 0, text);
         graphics.poseStack().popPose();
     }
 
@@ -734,8 +711,11 @@ public class GuiUtils {
      * @param entity entity instance to render
      */
     public static void renderEntity(DLGuiGraphics graphics, int x, int y, LivingEntity entity) {
-        renderEntity(graphics, x, y, 1, entity, LightTexture.FULL_BRIGHT);
+        renderEntity(graphics, x, y, 1, entity, FULL_BRIGHT);
     }
+
+    /** Packed light for full brightness (LightTexture.FULL_BRIGHT in 1.21). */
+    public static final int FULL_BRIGHT = 0xF000F0;
 
     /**
      * Renders a living entity into GUI space with a custom scale and brightness.
@@ -766,28 +746,24 @@ public class GuiUtils {
      * @param cameraOrientation optional quaternion representing camera orientation (may be null)
      * @param light packed light to use for rendering
      */
-    @SuppressWarnings("deprecation")
     public static void renderEntity(DLGuiGraphics graphics, int x, int y, float scale, LivingEntity entity, Matrix4f transformation, @Nullable Quaternionf cameraOrientation, int light) {
-        float s = 16 * scale;
-        graphics.poseStack().pushPose();
-        graphics.poseStack().translate((double)x, (double)y, 16 * (scale + 1));
-        graphics.poseStack().mulPose((new Matrix4f()).scaling(s, s, -s));
-        graphics.poseStack().mulPose(transformation);
-        Lighting.setupForEntityInInventory();
-        EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-        if (cameraOrientation != null) {
-            cameraOrientation.conjugate();
-            entityRenderDispatcher.overrideCameraOrientation(cameraOrientation);
-        }
-
-        entityRenderDispatcher.setRenderShadow(false);
-        RenderSystem.runAsFancy(() -> {
-            entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0F, 1.0F, graphics.poseStack(), graphics.graphics().bufferSource(), light);
-        });
-        graphics.graphics().flush();
-        entityRenderDispatcher.setRenderShadow(true);
-        graphics.poseStack().popPose();
-        Lighting.setupFor3DItems();
+        // 26.2 renders GUI entities as pictures in picture: the entity's render state goes into a box,
+        // drawn later into its own texture. The box stands on (x, y), feet at its bottom edge; the box
+        // is placed with the current pose (1.21 drew straight into the GUI buffers inside that pose).
+        float size = 16 * scale;
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        EntityRenderer<? super LivingEntity, ?> renderer = dispatcher.getRenderer(entity);
+        EntityRenderState renderState = renderer.createRenderState(entity, 1.0F);
+        renderState.shadowPieces.clear();
+        renderState.outlineColor = 0;
+        int halfWidth = (int) Math.ceil(Math.max(renderState.boundingBoxWidth, 1) * size) + 2;
+        int height = (int) Math.ceil(Math.max(renderState.boundingBoxHeight, 1) * size) + 2;
+        Vector2f origin = graphics.graphics().pose().transformPosition(x, y, new Vector2f());
+        Quaternionf rotation = transformation.getNormalizedRotation(new Quaternionf());
+        Vector3f translation = new Vector3f(0, renderState.boundingBoxHeight / 2.0F, 0);
+        // The 26.2 entity picture renderer conjugates the camera orientation itself (1.21 callers did).
+        graphics.graphics().entity(renderState, size, translation, rotation, cameraOrientation,
+            (int) origin.x() - halfWidth, (int) origin.y() - height, (int) origin.x() + halfWidth, (int) origin.y());
     }
     
 
@@ -813,7 +789,7 @@ public class GuiUtils {
      * @param entity entity to render
      */
     public static void renderEntityFollowingMouse(DLGuiGraphics graphics, int x, int y, float scale, LivingEntity entity) {
-        renderEntityFollowingMouse(graphics, x, y, scale, (float)Minecraft.getInstance().mouseHandler.xpos(), (float)Minecraft.getInstance().mouseHandler.ypos(), entity, LightTexture.FULL_BRIGHT);
+        renderEntityFollowingMouse(graphics, x, y, scale, (float)Minecraft.getInstance().mouseHandler.xpos(), (float)Minecraft.getInstance().mouseHandler.ypos(), entity, FULL_BRIGHT);
     }
 
     /**
@@ -869,121 +845,7 @@ public class GuiUtils {
         entity.yHeadRotO = f5;
         entity.yHeadRot = f6;
     }
-    
 
-    /**
-     * Renders a block state as a simple flat model in GUI space using a generated mesh.
-     *
-     * @param graphics DLGuiGraphics used for rendering
-     * @param x x coordinate
-     * @param y y coordinate
-     * @param state block state to render
-     * @param renderType render layer to use when rendering the model
-     */
-    public static void renderBlockState(DLGuiGraphics graphics, int x, int y, BlockState state, RenderType renderType) {
-        renderBlockState(graphics, x, y, 1, state, renderType, new Matrix4f(), LightTexture.FULL_BRIGHT);
-    }
-
-    /**
-     * Renders a block state as a simple flat model in GUI space with custom scale and lighting.
-     *
-     * @param graphics DLGuiGraphics used for rendering
-     * @param x x coordinate
-     * @param y y coordinate
-     * @param scale uniform scale factor
-     * @param state block state to render
-     * @param renderType render layer to use when rendering the model
-     * @param light packed light for rendering
-     */
-    public static void renderBlockState(DLGuiGraphics graphics, int x, int y, float scale, BlockState state, RenderType renderType, int light) {
-        renderBlockState(graphics, x, y, scale, state, renderType, new Matrix4f(), light);
-    }
-
-    /**
-     * Renders a block state as a simple flat model in GUI space with transformation control.
-     *
-     * @param graphics DLGuiGraphics used for rendering
-     * @param x x coordinate
-     * @param y y coordinate
-     * @param scale uniform scale factor
-     * @param state block state to render
-     * @param renderType render layer to use when rendering the model
-     * @param transformation additional matrix to apply to the model
-     * @param light packed light for rendering
-     */
-    public static void renderBlockState(DLGuiGraphics graphics, int x, int y, float scale, BlockState state, RenderType renderType, Matrix4f transformation, int light) {
-        DLModel model = new DLModel() {
-            @Override
-            protected Mesh getMesh(ModelType type, BakedModel originalModel, BlockState state, RandomSource random, ModelContext context) {
-                Mesh mesh = BasicMesh.fromBlock(state, random);
-                mesh.rotate(Axis.ZP.rotationDegrees(180), new Vector3f(0.5f));
-                return mesh;
-            }
-        };
-        renderModel(graphics, x, y, scale, model, state, renderType, transformation, light);
-    }
-    
-
-    /**
-     * Renders a DLModel for a given block state at the default scale.
-     *
-     * @param graphics DLGuiGraphics used for rendering
-     * @param x x coordinate
-     * @param y y coordinate
-     * @param model model instance to render
-     * @param state block state to provide to the model
-     * @param renderType render layer to use
-     */
-    public static void renderModel(DLGuiGraphics graphics, int x, int y, DLModel model, BlockState state, RenderType renderType) {
-        renderModel(graphics, x, y, 1, model, state, renderType, new Matrix4f(), LightTexture.FULL_BRIGHT);
-    }
-
-    /**
-     * Renders a DLModel for a given block state with custom scale and lighting.
-     *
-     * @param graphics DLGuiGraphics used for rendering
-     * @param x x coordinate
-     * @param y y coordinate
-     * @param scale uniform scale factor
-     * @param model model instance to render
-     * @param state block state to provide to the model
-     * @param renderType render layer to use
-     * @param light packed light for rendering
-     */
-    public static void renderModel(DLGuiGraphics graphics, int x, int y, float scale, DLModel model, BlockState state, RenderType renderType, int light) {
-        renderModel(graphics, x, y, scale, model, state, renderType, new Matrix4f(), light);
-    }
-
-    /**
-     * Renders a DLModel for a given block state with full transformation control and lighting.
-     *
-     * @param graphics DLGuiGraphics used for rendering
-     * @param x x coordinate
-     * @param y y coordinate
-     * @param scale uniform scale factor
-     * @param model model instance to render
-     * @param state block state to provide to the model
-     * @param renderType render layer to use
-     * @param transformation additional transformation to apply
-     * @param light packed light for rendering
-     */
-    public static void renderModel(DLGuiGraphics graphics, int x, int y, float scale, DLModel model, BlockState state, RenderType renderType, Matrix4f transformation, int light) {
-        float s = scale * 16;
-        Lighting.setupForFlatItems();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(true);
-        PoseStack stack = graphics.poseStack();
-        stack.pushPose();
-        stack.scale(1, 1, -1);
-        stack.translate((double)x, (double)y, 16 * (scale + 1));
-        stack.mulPose((new Matrix4f()).scaling((float)s, (float)s, (float)(s)));
-        stack.mulPose(transformation);
-        MultiBufferSource.BufferSource buffersource = Minecraft.getInstance().renderBuffers().bufferSource();
-        model.render(graphics.poseStack().last(), buffersource.getBuffer(renderType), ModelType.BLOCK, state, ModelContext.EMPTY, DLColor.WHITE, LightTexture.FULL_BRIGHT, 0);
-        buffersource.endBatch();
-        stack.popPose();
-        Lighting.setupFor3DItems();
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-    }
+    // NeoForge 26.2 port: renderBlockState and renderModel draw through DragonLib's model framework
+    // (DLModel, BasicMesh), which is not ported to the 26.2 model pipeline yet. They come back with it.
 }

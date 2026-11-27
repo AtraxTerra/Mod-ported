@@ -1,5 +1,7 @@
 package de.mrjulsen.mcdragonlib.block;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import java.util.Arrays;
 
 import de.mrjulsen.mcdragonlib.client.gui.builtin.WritableSignScreen;
@@ -47,17 +49,17 @@ public abstract class DLWritableSignBlockEntity extends DLSyncedBlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(ValueInput tag) {
+        super.loadAdditional(tag);
         this.lines = new String[this.getRenderConfig().lineData().length];
         for (int i = 0; i < this.getRenderConfig().lineData().length; i++) {
-            this.lines[i] = tag.getString("line" + i);
+            this.lines[i] = tag.getStringOr("line" + i, "");
         }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(ValueOutput tag) {
+        super.saveAdditional(tag);
         if (this.lines != null) {
             for (int i = 0; i < this.getRenderConfig().lineData().length; i++) {
                 tag.putString("line" + i, this.lines[i]);

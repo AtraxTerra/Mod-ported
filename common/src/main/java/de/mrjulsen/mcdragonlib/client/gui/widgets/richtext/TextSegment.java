@@ -60,7 +60,7 @@ public class TextSegment {
     }
 
     public static TextSegment fromNbt(CompoundTag nbt) {
-        return new TextSegment(new StringBuilder(nbt.getString(NBT_TEXT)), TextStyle.fromNbt(nbt.getCompound(NBT_STYLE)));
+        return new TextSegment(new StringBuilder(nbt.getStringOr(NBT_TEXT, "")), TextStyle.fromNbt(nbt.getCompoundOrEmpty(NBT_STYLE)));
     }
 
     public Component toComponent() {

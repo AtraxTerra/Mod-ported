@@ -372,7 +372,7 @@ public final class MathUtils {
      * Check whether a section belongs to a given chunk.
      */
     public boolean isSectionInChunk(SectionPos section, ChunkPos chunk) {
-        return section.getX() == chunk.x && section.getZ() == chunk.z;
+        return section.getX() == chunk.x() && section.getZ() == chunk.z();
     }
 
     /**

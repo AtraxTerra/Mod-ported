@@ -62,15 +62,15 @@ public record TextStyle(
 
     public static TextStyle fromNbt(CompoundTag nbt) {
         return new Builder()
-                .bold(nbt.getBoolean(NBT_BOLD))
-                .italic(nbt.getBoolean(NBT_ITALIC))
-                .underlined(nbt.getBoolean(NBT_UNDERLINED))
-                .strikethrough(nbt.getBoolean(NBT_STRIKETHROUGH))
-                .obfuscated(nbt.getBoolean(NBT_OBFUSCATED))
-                .shadow(nbt.getBoolean(NBT_SHADOW))
-                .color(nbt.getInt(NBT_COLOR))
-                .size((int)(Minecraft.getInstance().font.lineHeight * nbt.getFloat(NBT_SCALE)))
-                .highlightColor(nbt.getInt(NBT_HIGHLIGHT_COLOR))
+                .bold(nbt.getBooleanOr(NBT_BOLD, false))
+                .italic(nbt.getBooleanOr(NBT_ITALIC, false))
+                .underlined(nbt.getBooleanOr(NBT_UNDERLINED, false))
+                .strikethrough(nbt.getBooleanOr(NBT_STRIKETHROUGH, false))
+                .obfuscated(nbt.getBooleanOr(NBT_OBFUSCATED, false))
+                .shadow(nbt.getBooleanOr(NBT_SHADOW, false))
+                .color(nbt.getIntOr(NBT_COLOR, 0))
+                .size((int)(Minecraft.getInstance().font.lineHeight * nbt.getFloatOr(NBT_SCALE, 0.0F)))
+                .highlightColor(nbt.getIntOr(NBT_HIGHLIGHT_COLOR, 0))
                 .build();
     }
 

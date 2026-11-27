@@ -40,9 +40,9 @@ public record DLStatus(byte flag, int code, String message) {
 
     public static DLStatus fromNbt(CompoundTag nbt) {
         return new DLStatus(
-                nbt.contains(NBT_FLAG) ? nbt.getByte(NBT_FLAG) : 0x0,
-                nbt.contains(NBT_CODE) ? nbt.getInt(NBT_CODE) : CODE_UNKNOWN,
-                nbt.contains(NBT_MESSAGE) ? nbt.getString(NBT_MESSAGE) : EMPTY_MSG);
+                nbt.getByteOr(NBT_FLAG, (byte) 0x0),
+                nbt.getIntOr(NBT_CODE, CODE_UNKNOWN),
+                nbt.getStringOr(NBT_MESSAGE, EMPTY_MSG));
     }
 
     public boolean isDone() {

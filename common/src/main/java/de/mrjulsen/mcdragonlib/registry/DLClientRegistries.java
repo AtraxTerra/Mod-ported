@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 public class DLClientRegistries {
     
     // NeoForge-only build: the call Architectury's @ExpectPlatform transformer generated.
-    public static <T extends BlockEntity> void register(BlockEntityType<T> type, BlockEntityRendererProvider<? super T> provider) {
+    public static <T extends BlockEntity> void register(BlockEntityType<T> type, BlockEntityRendererProvider<? super T, ?> provider) {
         de.mrjulsen.mcdragonlib.registry.neoforge.DLClientRegistriesImpl.register(type, provider);
     }
 }

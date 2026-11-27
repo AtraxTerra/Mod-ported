@@ -33,7 +33,7 @@ public class NetworkTest {
 
         @Override
         protected void read(CompoundTag nbt) {
-            this.txt = nbt.getString("txt");
+            this.txt = nbt.getStringOr("txt", "");
         }
 
     }

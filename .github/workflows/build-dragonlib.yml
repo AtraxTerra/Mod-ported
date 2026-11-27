@@ -48,6 +48,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew clean compileJava --console=plain 2>&1 | tee compile.log
+          ls -la build/moddev/artifacts || true
 
       - name: Summarise compile errors
         if: always()
@@ -73,6 +74,18 @@ jobs:
           echo "TOTAL_ERRORS=${total:-0}"
           grep -E '^/.*\.java:[0-9]+: error:' -A2 compile.log | sed "s|^${GITHUB_WORKSPACE}/||" || true
           sed -n '/What went wrong/,/^\* Get more help/p' compile.log | head -40 || true
+
+      # Port reference: the decompiled Minecraft 26.2 that ModDevGradle builds for the IDE, so the port
+      # reads the exact 26.2 API it compiles against. Workflow artifact (repository members only), kept
+      # one day; never published as a release asset.
+      - name: Upload the Minecraft sources used by this build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-26.2-sources-${{ github.sha }}
+          path: build/moddev/artifacts/*sources*.jar
+          if-no-files-found: warn
+          retention-days: 1
 
       - name: Upload the compile log
         if: always()

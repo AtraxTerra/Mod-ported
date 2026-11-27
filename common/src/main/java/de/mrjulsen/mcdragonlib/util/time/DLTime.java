@@ -110,7 +110,7 @@ public final class DLTime implements Comparable<DLTime> {
      * @param system the time system used to interpret the level's day time; must not be {@code null}
      */
     public DLTime(Level level, ITimeSystem system) {
-        this(level.getDayTime(), system);
+        this(level.getOverworldClockTime(), system);
     }
 
     /**

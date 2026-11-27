@@ -38,7 +38,7 @@ public class WorldLocation {
     }
 
     public WorldLocation(double x, double y, double z, Level level) {
-        this(x, y, z, level.dimension().location());
+        this(x, y, z, level.dimension().identifier());
     }
 
     public WorldLocation(Vec3i vec, Level level) {
@@ -94,10 +94,10 @@ public class WorldLocation {
 
     public static WorldLocation loadFromNbt(CompoundTag tag) {
         return new WorldLocation(
-            tag.getDouble(NBT_X),
-            tag.getDouble(NBT_Y),
-            tag.getDouble(NBT_Z),
-            DLUtils.resourceLocation(tag.getString(NBT_DIM))
+            tag.getDoubleOr(NBT_X, 0.0D),
+            tag.getDoubleOr(NBT_Y, 0.0D),
+            tag.getDoubleOr(NBT_Z, 0.0D),
+            DLUtils.resourceLocation(tag.getStringOr(NBT_DIM, ""))
         );
     }
 
