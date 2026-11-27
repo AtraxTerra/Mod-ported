@@ -8,7 +8,10 @@ import org.jetbrains.annotations.Nullable;
 import de.mrjulsen.mcdragonlib.client.util.DLGuiGraphics;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -20,17 +23,17 @@ public class DLScreen<M extends AbstractContainerMenu> extends Screen {
     @Deprecated(forRemoval = true)
     public <T extends DLWindow> DLScreen(@Nullable M menu, WindowBuilder<T> window) {
         super(TextUtils.empty());
-        final Screen previousScreen = Minecraft.getInstance().screen;
+        final Screen previousScreen = Minecraft.getInstance().gui.screen();
         this.root = new DLWindowManager(null, window, width, height, (mgr) -> {
-            Minecraft.getInstance().setScreen(mgr.shouldShowPreviousScreenOnClose() ? previousScreen : null);
+            Minecraft.getInstance().gui.setScreen(mgr.shouldShowPreviousScreenOnClose() ? previousScreen : null);
         });
     }
 
     public <T extends DLWindow> DLScreen(WindowBuilder<T> window) {
         super(TextUtils.empty());
-        final Screen previousScreen = Minecraft.getInstance().screen;
+        final Screen previousScreen = Minecraft.getInstance().gui.screen();
         this.root = new DLWindowManager(null, window, width, height, (mgr) -> {
-            Minecraft.getInstance().setScreen(mgr.shouldShowPreviousScreenOnClose() ? previousScreen : null);
+            Minecraft.getInstance().gui.setScreen(mgr.shouldShowPreviousScreenOnClose() ? previousScreen : null);
         });
     }
 
@@ -50,9 +53,10 @@ public class DLScreen<M extends AbstractContainerMenu> extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.2 extracts the screen background in its own stratum before this call, so the explicit
+        // renderBackground of 1.21 is gone (a second blur in one frame is an error now).
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         DLGuiGraphics graphics = new DLGuiGraphics(guiGraphics, guiGraphics.pose(), Minecraft.getInstance().font, partialTick);
         root.render(graphics, mouseX, mouseY);
     }
@@ -63,9 +67,11 @@ public class DLScreen<M extends AbstractContainerMenu> extends Screen {
         root.tick();
     }
 
+    // NeoForge 26.2 port: input arrives as event records. DragonLib's window manager keeps its 1.21
+    // signatures, so the events are unpacked here.
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return root.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        return root.mouseClicked(event.x(), event.y(), event.button()) || super.mouseClicked(event, doubleClick);
     }
 
     @Override
@@ -77,8 +83,8 @@ public class DLScreen<M extends AbstractContainerMenu> extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return root.mouseReleased(mouseX, mouseY, button) || super.mouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(MouseButtonEvent event) {
+        return root.mouseReleased(event.x(), event.y(), event.button()) || super.mouseReleased(event);
     }
 
     @Override
@@ -87,23 +93,29 @@ public class DLScreen<M extends AbstractContainerMenu> extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        return root.mouseDragged(mouseX, mouseY, button, dragX, dragY) || super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        return root.mouseDragged(event.x(), event.y(), event.button(), dragX, dragY) || super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return root.keyPressed(keyCode, scanCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyEvent event) {
+        return root.keyPressed(event.key(), event.scancode(), event.modifiers()) || super.keyPressed(event);
     }
 
     @Override
-    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        return root.keyReleased(keyCode, scanCode, modifiers) || super.keyReleased(keyCode, scanCode, modifiers);
+    public boolean keyReleased(KeyEvent event) {
+        return root.keyReleased(event.key(), event.scancode(), event.modifiers()) || super.keyReleased(event);
     }
 
     @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        return root.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers);
+    public boolean charTyped(CharacterEvent event) {
+        // 1.21 delivered UTF-16 units (a surrogate pair as two calls) with the modifiers; 26.2 sends the
+        // code point alone.
+        boolean handled = false;
+        for (char c : Character.toChars(event.codepoint())) {
+            handled |= root.charTyped(c, 0);
+        }
+        return handled || super.charTyped(event);
     }
 
     @Override

@@ -136,7 +136,9 @@ public class DragonLib {
             DLOverlayManager.init();
 
             ClientLifecycleEvent.CLIENT_SETUP.register(mc -> {
-                BlockEntityRendererRegistry.register(DRAGONLIB_BLOCK_ENTITY.get(), DragonLibBlockEntityRenderer::new);
+                // NeoForge 26.2 port: the dragon test block's renderer draws a DragonLib mesh, part of the
+                // model framework that is not ported yet (build.gradle.kts); it is registered again with it.
+                // BlockEntityRendererRegistry.register(DRAGONLIB_BLOCK_ENTITY.get(), DragonLibBlockEntityRenderer::new);
                 /*                
                 MenuScreens.register(ModMenuTypes.PLAYER_INVENTORY.get(), (PlayerInventoryContainerMenu.Base menu, Inventory inventory, Component title) -> {
                     DLScreenWrapper<PlayerInventoryContainerMenu.Base> wrapper = new DLScreenWrapper<>(menu, DLPlayerInventoryWindow::new);

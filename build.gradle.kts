@@ -27,6 +27,25 @@ val main: SourceSet = sourceSets.main.get()
 main.java.setSrcDirs(listOf("common/src/main/java", "neoforge/src/main/java"))
 main.resources.setSrcDirs(listOf("common/src/main/resources", "neoforge/src/main/resources"))
 
+// Not ported yet: DragonLib's model framework (OBJ and "advanced_json" model loaders, dynamic baked
+// models per block entity, model replacements, meshes, custom item renderers). It extends the 1.21
+// model pipeline (BakedModel, IGeometryLoader, ModelData, ModelResourceLocation, ItemRenderer) that
+// 26.2 replaced with BlockStateModel parts and item model definitions, so it needs its own port. No
+// consumer in this repository uses it (Create Railways Navigator does not). The sources stay in the
+// tree, excluded from the build until that port lands.
+main.java.exclude(
+    "de/mrjulsen/mcdragonlib/client/model/**",
+    "de/mrjulsen/mcdragonlib/neoforge/client/model/**",
+    "de/mrjulsen/mcdragonlib/neoforge/client/ClientEvents.java",
+    "de/mrjulsen/mcdragonlib/events/client/ModelEvents.java",
+    "de/mrjulsen/mcdragonlib/events/client/ModelReplacements.java",
+    "de/mrjulsen/mcdragonlib/mixin/ModelBakeryAccessor.java",
+    "de/mrjulsen/mcdragonlib/mixin/ItemRendererMixin.java",
+    "de/mrjulsen/mcdragonlib/client/render/ICustomItemRenderer.java",
+    "de/mrjulsen/mcdragonlib/internal/TestModel.java",
+    "de/mrjulsen/mcdragonlib/internal/DragonLibBlockEntityRenderer.java",
+)
+
 neoForge {
     version = property("neoforge_version") as String
     // Upstream's access widener (common/src/main/resources/dragonlib.accesswidener), as a NeoForge
