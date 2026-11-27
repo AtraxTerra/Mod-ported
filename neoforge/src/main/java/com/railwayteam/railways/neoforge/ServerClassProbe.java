@@ -41,24 +41,47 @@ public final class ServerClassProbe {
                     names.add(name.substring(0, name.length() - ".class".length()));
                 });
             }
-            int failed = 0;
+            int[] failed = new int[3];
             for (String name : names) {
                 if (name.contains(".mixin.") || name.contains(".fabric_mixin.") || name.endsWith("package-info"))
                     continue;
+                Class<?> type;
                 try {
-                    Class<?> type = Class.forName(name, false, ServerClassProbe.class.getClassLoader());
-                    // Reflection links the class first, which runs the verifier.
+                    type = Class.forName(name, false, ServerClassProbe.class.getClassLoader());
+                } catch (Throwable t) {
+                    // A superclass or an interface is missing: the class cannot exist on a server.
+                    report(failed, 0, "LOAD", name, t);
+                    continue;
+                }
+                try {
+                    // HotSpot links (and so verifies) a class before listing its members; constructors
+                    // rarely name client types, so a failure here is the verifier itself.
+                    type.getDeclaredConstructors();
+                } catch (Throwable t) {
+                    report(failed, 1, "LINK", name, t);
+                    continue;
+                }
+                try {
+                    // Only reflection resolves member signatures; a client type there is harmless at
+                    // run time unless something reflects on the class. Listed for information.
                     type.getDeclaredMethods();
                     type.getDeclaredFields();
                 } catch (Throwable t) {
-                    failed++;
-                    Railways.LOGGER.error("PROBE {} -> {}", name, t.toString());
+                    report(failed, 2, "SIG", name, t);
                 }
             }
-            Railways.LOGGER.error("PROBE done: {} classes, {} failed", names.size(), failed);
+            Railways.LOGGER.error("PROBE done: {} classes, LOAD {}, LINK {}, SIG {}", names.size(), failed[0], failed[1], failed[2]);
         } catch (Throwable t) {
             Railways.LOGGER.error("PROBE could not run", t);
         }
         Runtime.getRuntime().halt(0);
+    }
+
+    private static void report(int[] failed, int kind, String label, String name, Throwable t) {
+        failed[kind]++;
+        Throwable root = t;
+        while (root.getCause() != null && root.getCause() != root)
+            root = root.getCause();
+        Railways.LOGGER.error("PROBE {} {} missing={}", label, name, String.valueOf(root.getMessage()).replace('/', '.'));
     }
 }

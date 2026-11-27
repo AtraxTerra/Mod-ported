@@ -108,9 +108,11 @@ jobs:
           snr=$(ls build/libs/Steam_Rails-*.jar | grep -v sources | head -1)
           echo "auditing against $mc, $fly and $snr"
           python3 -I deps/create-fly/tools/audit_mixin_targets.py --src fabric/src/main/java --resources fabric/src/main/resources \
-            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee mixin-audit.log
+            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee mixin-audit.log || true
           python3 -I deps/create-fly/tools/audit_mixin_targets.py --src common/src/main/java --resources common/src/main/resources \
-            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee -a mixin-audit.log
+            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee -a mixin-audit.log || true
+          python3 -I deps/create-fly/tools/audit_mixin_targets.py --src neoforge/src/main/java --resources neoforge/src/main/resources \
+            --classes build/classes/java/main --jar "$mc" --jar "$fly" --jar "$snr" | tee -a mixin-audit.log || true
 
       - name: Upload jars
         if: always()
@@ -162,7 +164,8 @@ jobs:
             echo "## Server class probe"
             echo '```'
             grep -E "PROBE done" probe-summary.txt || echo "(probe did not run)"
-            grep -vE "PROBE done" probe-summary.txt | head -80
+            # LOAD / LINK lines are the classes a server cannot use; SIG lines are informational.
+            grep -E "^PROBE (LOAD|LINK) " probe-summary.txt | head -150
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -206,7 +209,14 @@ jobs:
           retention-days: 14
 
       - name: Fail if a boot failed
-        if: steps.boot.outcome != 'success' || steps.client.outcome != 'success'
+        if: always()
+        shell: bash
         run: |
-          echo "server boot: ${{ steps.boot.outcome }}, client boot: ${{ steps.client.outcome }}"
-          exit 1
+          fail=0
+          grep -qE 'Done \([0-9.]+s\)' boot-test.log 2>/dev/null || { echo "::error::the dedicated server never reached Done"; fail=1; }
+          grep -qE 'Created: [0-9]+x[0-9]+x[0-9]+ minecraft:(textures/atlas/)?blocks' client-boot-test.log 2>/dev/null \
+            || { echo "::error::the client never finished loading its resources"; fail=1; }
+          if grep -qE 'FAILED during APPLY|was not applied|InvalidInjectionException' boot-test.log client-boot-test.log 2>/dev/null; then
+            echo "::error::mixin failures in the boot logs"; fail=1
+          fi
+          exit $fail

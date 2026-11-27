@@ -23,6 +23,10 @@ config = "railways.mixins.json"
 [[mixins]]
 config = "railways-common.mixins.json"
 
+# The NeoForge port's own mixins (fixes to NeoForge behaviour the Fabric build never met).
+[[mixins]]
+config = "railways-neoforge.mixins.json"
+
 [[dependencies.railways]]
 modId = "neoforge"
 type = "required"
