@@ -1,5 +1,8 @@
 package de.mrjulsen.mcdragonlib.client.gui.container;
 
+import org.joml.Vector2f;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.input.MouseButtonEvent;
 import java.util.List;
 
 import net.minecraft.world.item.Item;
@@ -27,7 +30,7 @@ import net.minecraft.util.Util;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag.Default;
@@ -70,16 +73,24 @@ public class DLSlot extends DLGuiComponent {
         });
     }
 
+    /** 26.2 removed the touchscreen option; the touchscreen paths below are kept for reference only. */
+    private static final boolean TOUCHSCREEN = false;
+
+    /** Mouse button as the 26.2 event key mappings read (DragonLib's own events carry the button). */
+    private static MouseButtonEvent mouseEvent(int button) {
+        return new MouseButtonEvent(GuiUtils.mouseXOnScreen(), GuiUtils.mouseYOnScreen(), new MouseButtonInfo(button, 0));
+    }
+
     protected void handleMouseDownEvent(MouseDownEvent e) {        
         InventoryManager manager = getWindowManager().addManager(InventoryManager::new);
-        boolean pickItem = Minecraft.getInstance().options.keyPickItem.matchesMouse(e.button()) && Minecraft.getInstance().gameMode.hasInfiniteItems();
+        boolean pickItem = Minecraft.getInstance().options.keyPickItem.matchesMouse(mouseEvent(e.button())) && Minecraft.getInstance().player.hasInfiniteMaterials();
         Slot slot = menu.getSlot(slotIndex); 
         int slotIndex = slot.index;
         long clickTime = Util.getMillis();
         manager.setDoubleClick(manager.getLastClickedSlot() != null && manager.getLastClickedSlot().slot == slot && clickTime - manager.getLastClickTime() < 250L && manager.getLastClickButton() == e.button());
         manager.setSkipNextRelease(false);
 
-        if ((Boolean) Minecraft.getInstance().options.touchscreen().get()) {
+        if (TOUCHSCREEN) {
             if (slot != null && slot.hasItem()) {
                 manager.setSelectedSlot(this);
                 manager.setDraggingItem(ItemStack.EMPTY);
@@ -90,15 +101,15 @@ public class DLSlot extends DLGuiComponent {
         } else if (!manager.isQuickCrafting()) {
             if (manager.getHoldingItem().isEmpty()) {
                 if (pickItem) {
-                    this.slotClicked(slotIndex, e.button(), ClickType.CLONE);
+                    this.slotClicked(slotIndex, e.button(), ContainerInput.CLONE);
                 } else {
-                    boolean qickMoving = slotIndex != AbstractContainerMenu.SLOT_CLICKED_OUTSIDE && (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT));
-                    ClickType clickType = ClickType.PICKUP;
+                    boolean qickMoving = slotIndex != AbstractContainerMenu.SLOT_CLICKED_OUTSIDE && (InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT));
+                    ContainerInput clickType = ContainerInput.PICKUP;
                     if (qickMoving) {
                         manager.setLastQuickMoved(slot != null && slot.hasItem() ? slot.getItem().copy() : ItemStack.EMPTY);
-                        clickType = ClickType.QUICK_MOVE;
+                        clickType = ContainerInput.QUICK_MOVE;
                     } else if (slotIndex == AbstractContainerMenu.SLOT_CLICKED_OUTSIDE) {
-                        clickType = ClickType.THROW;
+                        clickType = ContainerInput.THROW;
                     }
                     this.slotClicked(slotIndex, e.button(), clickType);
                 }
@@ -141,12 +152,12 @@ public class DLSlot extends DLGuiComponent {
                 if (!manager.getQuickMovedItem().isEmpty()) {
                     for (Slot s : this.menu.slots) {
                         if (s != null && s.mayPickup(Minecraft.getInstance().player) && s.hasItem() && s.container == targetSlot.container && AbstractContainerMenu.canItemQuickReplace(s, manager.getQuickMovedItem(), true)) {
-                            this.slotClicked(s.index, e.button(), ClickType.QUICK_MOVE);
+                            this.slotClicked(s.index, e.button(), ContainerInput.QUICK_MOVE);
                         }
                     }
                 }
             } else {
-                this.slotClicked(targetSlotIndex, e.button(), ClickType.PICKUP_ALL);
+                this.slotClicked(targetSlotIndex, e.button(), ContainerInput.PICKUP_ALL);
             }
             manager.setSkipNextRelease(true);
         } else {
@@ -161,7 +172,7 @@ public class DLSlot extends DLGuiComponent {
             }
 
             boolean canQuickReplace;
-            if (manager.getSelectedSlot() != null && Minecraft.getInstance().options.touchscreen().get()) {
+            if (manager.getSelectedSlot() != null && TOUCHSCREEN) {
                 if (e.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT || e.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                     if (manager.getDraggingItem().isEmpty() && targetSlot != manager.getSelectedSlot().slot) {
                         manager.setDraggingItem(manager.getSelectedSlot().slot.getItem());
@@ -169,13 +180,13 @@ public class DLSlot extends DLGuiComponent {
                     canQuickReplace = AbstractContainerMenu.canItemQuickReplace(targetSlot, manager.getDraggingItem(), false);
                     
                     if (targetSlotIndex != -1 && !manager.getDraggingItem().isEmpty() && canQuickReplace) {                            
-                        this.slotClicked(manager.getSelectedSlot().slot.index, e.button(), ClickType.PICKUP);                            
-                        this.slotClicked(targetSlotIndex, 0, ClickType.PICKUP);
+                        this.slotClicked(manager.getSelectedSlot().slot.index, e.button(), ContainerInput.PICKUP);                            
+                        this.slotClicked(targetSlotIndex, 0, ContainerInput.PICKUP);
                         
                         if (this.menu.getCarried().isEmpty()) {
                             manager.setSnapbackItem(ItemStack.EMPTY);
                         } else {                                
-                            this.slotClicked(manager.getSelectedSlot().slot.index, e.button(), ClickType.PICKUP);
+                            this.slotClicked(manager.getSelectedSlot().slot.index, e.button(), ContainerInput.PICKUP);
                             manager.setSnapbackStartX(Mth.floor(e.mouseX() + getXOnScreen())); 
                             manager.setSnapbackStartY(Mth.floor(e.mouseY() + getYOnScreen()));
                             manager.setSnapbackEnd(manager.getSelectedSlot());
@@ -193,21 +204,21 @@ public class DLSlot extends DLGuiComponent {
                     this.clearDraggingState(manager);
                 }
             } else if (manager.isQuickCrafting() && !manager.getQuickCraftingSlots().isEmpty()) {
-                this.slotClicked(AbstractContainerMenu.SLOT_CLICKED_OUTSIDE, AbstractContainerMenu.getQuickcraftMask(AbstractContainerMenu.QUICKCRAFT_HEADER_START, manager.getQuickCraftingType()), ClickType.QUICK_CRAFT);
+                this.slotClicked(AbstractContainerMenu.SLOT_CLICKED_OUTSIDE, AbstractContainerMenu.getQuickcraftMask(AbstractContainerMenu.QUICKCRAFT_HEADER_START, manager.getQuickCraftingType()), ContainerInput.QUICK_CRAFT);
                 for (Slot s : manager.getQuickCraftingSlots()) {
-                    this.slotClicked(s.index, AbstractContainerMenu.getQuickcraftMask(AbstractContainerMenu.QUICKCRAFT_HEADER_CONTINUE, manager.getQuickCraftingType()), ClickType.QUICK_CRAFT);
+                    this.slotClicked(s.index, AbstractContainerMenu.getQuickcraftMask(AbstractContainerMenu.QUICKCRAFT_HEADER_CONTINUE, manager.getQuickCraftingType()), ContainerInput.QUICK_CRAFT);
                 }
-                this.slotClicked(AbstractContainerMenu.SLOT_CLICKED_OUTSIDE, AbstractContainerMenu.getQuickcraftMask(AbstractContainerMenu.QUICKCRAFT_HEADER_END, manager.getQuickCraftingType()), ClickType.QUICK_CRAFT);
+                this.slotClicked(AbstractContainerMenu.SLOT_CLICKED_OUTSIDE, AbstractContainerMenu.getQuickcraftMask(AbstractContainerMenu.QUICKCRAFT_HEADER_END, manager.getQuickCraftingType()), ContainerInput.QUICK_CRAFT);
             } else if (!this.menu.getCarried().isEmpty()) {
-                if (Minecraft.getInstance().options.keyPickItem.matchesMouse(e.button())) {
-                    this.slotClicked(targetSlotIndex, e.button(), ClickType.CLONE); 
+                if (Minecraft.getInstance().options.keyPickItem.matchesMouse(mouseEvent(e.button()))) {
+                    this.slotClicked(targetSlotIndex, e.button(), ContainerInput.CLONE); 
                 } else {
-                    canQuickReplace = targetSlotIndex != AbstractContainerMenu.SLOT_CLICKED_OUTSIDE && (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT));
+                    canQuickReplace = targetSlotIndex != AbstractContainerMenu.SLOT_CLICKED_OUTSIDE && (InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT));
                     if (canQuickReplace) {
                         manager.setLastQuickMoved(targetSlot != null && targetSlot.hasItem() ? targetSlot.getItem().copy() : ItemStack.EMPTY);
                     }
 
-                    this.slotClicked(targetSlotIndex, e.button(), canQuickReplace ? ClickType.QUICK_MOVE : ClickType.PICKUP); 
+                    this.slotClicked(targetSlotIndex, e.button(), canQuickReplace ? ContainerInput.QUICK_MOVE : ContainerInput.PICKUP); 
                 }
             }
         }
@@ -232,7 +243,7 @@ public class DLSlot extends DLGuiComponent {
 
         InventoryManager manager = getWindowManager().addManager(InventoryManager::new);
         ItemStack itemStack = this.menu.getCarried();
-        if (manager.getSelectedSlot() != null && (Boolean) Minecraft.getInstance().options.touchscreen().get()) {
+        if (manager.getSelectedSlot() != null && TOUCHSCREEN) {
             if (e.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT || e.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                 if (manager.getDraggingItem().isEmpty()) {
                     boolean stillOverOriginalSlot = (slot != null && slot == manager.getSelectedSlot());
@@ -244,9 +255,9 @@ public class DLSlot extends DLGuiComponent {
                     long l = Util.getMillis();
                     if (manager.getQuickdropSlot() == slot.slot) {
                         if (l - manager.getQuickdropTime() > 500L) {
-                            this.slotClicked(manager.getSelectedSlot().slot.index, 0, ClickType.PICKUP);
-                            this.slotClicked(slot.slotIndex, 1, ClickType.PICKUP);
-                            this.slotClicked(manager.getSelectedSlot().slot.index, 0, ClickType.PICKUP);
+                            this.slotClicked(manager.getSelectedSlot().slot.index, 0, ContainerInput.PICKUP);
+                            this.slotClicked(slot.slotIndex, 1, ContainerInput.PICKUP);
+                            this.slotClicked(manager.getSelectedSlot().slot.index, 0, ContainerInput.PICKUP);
                             manager.setQuickdropTime(l + 750L);
                             manager.getDraggingItem().shrink(1);
                         }
@@ -278,7 +289,7 @@ public class DLSlot extends DLGuiComponent {
                     int count = slotStack.isEmpty() ? 0 : slotStack.getCount();
                     int maxCount = Math.min(itemStack.getMaxStackSize(), slot.getMaxStackSize(itemStack));
                     int usedCount = Math.min(AbstractContainerMenu.getQuickCraftPlaceCount(
-                            manager.getQuickCraftingSlots(), manager.getQuickCraftingType(), itemStack) + count, maxCount);
+                            manager.getQuickCraftingSlots().size(), manager.getQuickCraftingType(), itemStack) + count, maxCount);
                     remainder -= usedCount - count;
                 }
                 manager.setQuickCraftingRemainder(remainder);
@@ -286,7 +297,7 @@ public class DLSlot extends DLGuiComponent {
         }
     }
 
-    protected void slotClicked(int slotId, int mouseButton, ClickType type) {
+    protected void slotClicked(int slotId, int mouseButton, ContainerInput type) {
         Minecraft.getInstance().gameMode.handleInventoryMouseClick(menu.containerId, slotId, mouseButton, type, Minecraft.getInstance().player);
     }
 
@@ -316,7 +327,7 @@ public class DLSlot extends DLGuiComponent {
                 renderHighlight = true;
                 int maxStackSize = Math.min(carriedStack.getMaxStackSize(), slot.getMaxStackSize(carriedStack));
                 int stackSize = slot.getItem().isEmpty() ? 0 : slot.getItem().getCount();
-                int count = AbstractContainerMenu.getQuickCraftPlaceCount(manager.getQuickCraftingSlots(), manager.getQuickCraftingType(), carriedStack) + stackSize;
+                int count = AbstractContainerMenu.getQuickCraftPlaceCount(manager.getQuickCraftingSlots().size(), manager.getQuickCraftingType(), carriedStack) + stackSize;
 
                 if (count > maxStackSize) {
                     count = maxStackSize;
@@ -375,7 +386,9 @@ public class DLSlot extends DLGuiComponent {
                 ItemStack itemstack = menu.getSlot(slotIndex).getItem();
                 if (!itemstack.isEmpty()) {
                     Minecraft mc = Minecraft.getInstance();
-                    graphics.graphics().renderTooltip(mc.font, getTooltipFromItem(itemstack), itemstack.getTooltipImage(), (int) mouseX, (int) mouseY);
+                    // 26.2 defers tooltips to the end of the frame, in screen coordinates.
+                    Vector2f screen = graphics.graphics().pose().transformPosition((float) mouseX, (float) mouseY, new Vector2f());
+                    graphics.graphics().setTooltipForNextFrame(mc.font, getTooltipFromItem(itemstack), itemstack.getTooltipImage(), itemstack, (int) screen.x(), (int) screen.y());
                 }
             }
         }

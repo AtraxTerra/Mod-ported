@@ -14,7 +14,10 @@ public final class ClientUtils {
     
     public static void setSectionDirty(SectionPos pos) {
         Minecraft.getInstance().execute(() -> {            
-            Minecraft.getInstance().levelRenderer.setSectionDirty(pos.getX(), pos.getY(), pos.getZ());
+            // 26.2: the client level marks sections for a rebuild (1.21: LevelRenderer#setSectionDirty).
+            if (Minecraft.getInstance().level != null) {
+                Minecraft.getInstance().level.setSectionRangeDirty(pos.getX(), pos.getY(), pos.getZ(), pos.getX(), pos.getY(), pos.getZ());
+            }
         });
     }
 

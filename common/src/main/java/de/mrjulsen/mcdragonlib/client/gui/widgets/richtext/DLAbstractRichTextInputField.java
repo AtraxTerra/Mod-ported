@@ -24,11 +24,11 @@ import de.mrjulsen.mcdragonlib.util.properties.ColorProperty;
 import de.mrjulsen.mcdragonlib.util.properties.NumberProperty;
 import de.mrjulsen.mcdragonlib.util.properties.Property;
 import net.minecraft.SharedConstants;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
 import net.minecraft.util.StringUtil;
@@ -102,7 +102,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
 
     @Override
     protected boolean onTextElementClicked(DLGuiComponent src, MouseDownEvent event) {
-        if (Screen.hasControlDown()) {
+        if (Minecraft.getInstance().hasControlDown()) {
             return super.onTextElementClicked(src, event);
         }
         return false;
@@ -334,7 +334,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
                 int curX = (int)(textCursorPos.x() - getScrollOffsetX() + getLayoutContentX());
                 int curY = (int)(textCursorPos.y() - (lineSpacing.get() / 2f) - getScrollOffsetY() + getLayoutContentY());
                 int curH = (int)(textCursorPos.lineHeight() + lineSpacing.get());
-                graphics.graphics().fill(RenderType.guiTextHighlight(), curX, curY, curX + cursorWidth.get(), curY + curH, 0xFF0000FF);
+                graphics.graphics().fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, curX, curY, curX + cursorWidth.get(), curY + curH, 0xFF0000FF);
             }
         }
 
@@ -353,8 +353,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
         final int minVisibleIdx = lowerMarkerY == null ? Integer.MIN_VALUE : lowerMarkerY.getValue().startIndex();
         final int maxVisibleIdx = upperMarkerY == null ? Integer.MAX_VALUE : upperMarkerY.getValue().startIndex();
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        // 26.2: blending comes with the GUI pipeline.
 
         for (TextRange range : ranges) {
             int selStart = range.start();
@@ -378,7 +377,6 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
             }
 
         }
-        RenderSystem.disableBlend();
         mcGraphics.poseStack().popPose();
     }
 
@@ -396,7 +394,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
             int clickedIndex = getIndexByPos((float)mouseX, (float)mouseY, true);
 
             //InteractiveElement element = text.get() != null ? text.get().getInteractiveElementAt(clickedIndex) : null;
-            //if (element != null && element.clickAction != null && Screen.hasControlDown()) {
+            //if (element != null && element.clickAction != null && Minecraft.getInstance().hasControlDown()) {
             //    element.clickAction.onClick();
             //    isDragging = false;
             //        return true;
@@ -419,7 +417,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
                 selectLineAt(globalCursorIndex);
                 clickCount = 0;
             } else {
-                setTextCursor(clickedIndex, !Screen.hasShiftDown());
+                setTextCursor(clickedIndex, !Minecraft.getInstance().hasShiftDown());
             }
         }
         return true;
@@ -430,7 +428,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
             int clickedIndex = getIndexByPos((float)mouseX, (float)mouseY, true);
 
             //InteractiveElement element = text.get() != null ? text.get().getInteractiveElementAt(clickedIndex) : null;
-            //if (element != null && element.clickAction != null && Screen.hasControlDown()) {
+            //if (element != null && element.clickAction != null && Minecraft.getInstance().hasControlDown()) {
             //    element.clickAction.onClick();
             //    isDragging = false;
             //        return true;
@@ -453,7 +451,7 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
                 selectLineAt(globalCursorIndex);
                 clickCount = 0;
             } else {
-                setTextCursor(clickedIndex, !Screen.hasShiftDown());
+                setTextCursor(clickedIndex, !Minecraft.getInstance().hasShiftDown());
             }
         }
         return true;
@@ -493,8 +491,8 @@ public abstract class DLAbstractRichTextInputField extends DLRichTextLabel {
 
     public boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
         if (isFocused() && text.get() != null) {
-            boolean controlDown = Screen.hasControlDown();
-            boolean shiftDown = Screen.hasShiftDown();
+            boolean controlDown = Minecraft.getInstance().hasControlDown();
+            boolean shiftDown = Minecraft.getInstance().hasShiftDown();
             boolean canModify = !readOnly.get();
 
             if (controlDown) {

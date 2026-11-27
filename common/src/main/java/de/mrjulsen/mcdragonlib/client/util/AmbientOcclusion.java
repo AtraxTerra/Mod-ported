@@ -3,7 +3,7 @@ package de.mrjulsen.mcdragonlib.client.util;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.BlockAndLightGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -18,7 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 final class AmbientOcclusion {
     private AmbientOcclusion() {}
 
-    static void calculate(BlockAndTintGetter level, BlockState state, BlockPos pos, Direction direction, float[] brightness, int[] lightmap) {
+    static void calculate(BlockAndLightGetter level, BlockState state, BlockPos pos, Direction direction, float[] brightness, int[] lightmap) {
         int light = LightCoordsUtil.getLightCoords(level, pos.relative(direction));
         for (int i = 0; i < 4; i++) {
             brightness[i] = 1.0F;

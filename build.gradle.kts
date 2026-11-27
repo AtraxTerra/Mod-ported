@@ -46,6 +46,14 @@ main.java.exclude(
     "de/mrjulsen/mcdragonlib/internal/DragonLibBlockEntityRenderer.java",
 )
 
+// Upstream mixins that do not apply to this build: TextureManagerMixin is Fabric only
+// (@PlatformOnly(FABRIC), stripped by Architectury on NeoForge), and DimensionDataStorageAccessor is
+// in no mixin config upstream and targets a class 26.2 removed. Neither is registered here.
+main.java.exclude(
+    "de/mrjulsen/mcdragonlib/mixin/TextureManagerMixin.java",
+    "de/mrjulsen/mcdragonlib/mixin/DimensionDataStorageAccessor.java",
+)
+
 neoForge {
     version = property("neoforge_version") as String
     // Upstream's access widener (common/src/main/resources/dragonlib.accesswidener), as a NeoForge

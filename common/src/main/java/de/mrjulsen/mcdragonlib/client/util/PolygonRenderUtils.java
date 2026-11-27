@@ -3,7 +3,6 @@ package de.mrjulsen.mcdragonlib.client.util;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import de.mrjulsen.mcdragonlib.util.DLColor;
-import net.minecraft.client.renderer.RenderType;
 
 import org.joml.Vector2f;
 import org.joml.Matrix4f;
@@ -96,7 +95,8 @@ public final class PolygonRenderUtils {
         if (points.size() < 2) return;
 
         Matrix4f matrix = graphics.poseStack().last().pose();
-        VertexConsumer vertexConsumer = graphics.graphics().bufferSource().getBuffer(RenderType.gui());
+        // 26.2: GUI geometry is recorded and submitted as one element (1.21: RenderType.gui() buffer).
+        GuiVertexRecorder vertexConsumer = GuiVertexRecorder.colored(graphics);
 
         float alpha = color.getAlphaF();
         float red   = color.getRedF();
@@ -152,7 +152,7 @@ public final class PolygonRenderUtils {
 
         }
 
-        graphics.graphics().flush();
+        vertexConsumer.submit();
     }
 
     private static boolean isCCW(Vector2f a, Vector2f b, Vector2f c) {
@@ -164,7 +164,8 @@ public final class PolygonRenderUtils {
             return;
 
         Matrix4f matrix = graphics.poseStack().last().pose();
-        VertexConsumer vertexConsumer = graphics.graphics().bufferSource().getBuffer(RenderType.gui());
+        // 26.2: GUI geometry is recorded and submitted as one element (1.21: RenderType.gui() buffer).
+        GuiVertexRecorder vertexConsumer = GuiVertexRecorder.colored(graphics);
 
         float a = color.getAlphaF();
         float r = color.getRedF();
@@ -198,7 +199,7 @@ public final class PolygonRenderUtils {
             vertexConsumer.addVertex(matrix, v0.x, v0.y, (float) z).setColor(r, g, b, a);
         }
 
-        graphics.graphics().flush();
+        vertexConsumer.submit();
     }
 
     private static float polygonArea(List<Vector2f> poly) {

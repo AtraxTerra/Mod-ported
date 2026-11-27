@@ -39,15 +39,16 @@ public class MapImage {
         this.centerPosOnMap = new Vec2(areaWidth / 2, areaHeight / 2);
     }
 
+    /** Creates the map texture if needed and selects it for GuiUtils' texture calls (26.2: no binding). */
     public void bindTexture() {
         if (this.texture == null)
-            this.texture = new DynamicTexture(this.createImage());
-        RenderSystem.setShaderTexture(0, this.texture.getId());
+            this.texture = new DynamicTexture(() -> "dragonlib map image", this.createImage());
+        GuiUtils.setTexture(this.texture);
     }
 
     public void render(DLGuiGraphics graphics, int x, int y) {
         bindTexture();
-        GuiUtils.drawTexture(this.texture.getId(), graphics, x, y, areaWidth * scale, areaHeight * scale, 0, 0, areaWidth, areaHeight, TextureFillMode.STRETCH, areaWidth, areaHeight);
+        GuiUtils.drawTexture(this.texture, graphics, x, y, areaWidth * scale, areaHeight * scale, 0, 0, areaWidth, areaHeight, TextureFillMode.STRETCH, areaWidth, areaHeight);
     }
 
     public int getWidth() {
@@ -139,7 +140,7 @@ public class MapImage {
                     blue = Math.max((int) (blue * 0.7), 0);
                 }
 
-                image.setPixelRGBA(x, z, (255 << 24) | (blue << 16) | (green << 8) | red);
+                image.setPixelABGR(x, z, (255 << 24) | (blue << 16) | (green << 8) | red);
             }
         }
 

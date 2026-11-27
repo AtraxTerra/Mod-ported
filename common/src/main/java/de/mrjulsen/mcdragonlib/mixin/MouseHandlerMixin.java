@@ -20,7 +20,7 @@ public abstract class MouseHandlerMixin {
 
     @Inject(method = "onMove", at = @At(value = "TAIL"))
     private void dragonlib$onMove(long windowPointer, double xpos, double ypos, CallbackInfo ci) {
-        if (windowPointer == Minecraft.getInstance().getWindow().getWindow()) {
+        if (windowPointer == Minecraft.getInstance().getWindow().handle()) {
             DLOverlayManager.mouseMoved(xpos, ypos);
         }
     }

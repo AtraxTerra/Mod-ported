@@ -26,7 +26,7 @@ public class DLTextureSheet {
         return Minecraft.getInstance().getResourceManager().getResource(location())
             .map(r -> {
                 try {
-                    return r.metadata().getSection(DLTextureSheetData.SERIALIZER).map(t -> {
+                    return r.metadata().getSection(DLTextureSheetData.SERIALIZER.TYPE).map(t -> {
                         t.setTextureLocation(location());
                         return t;
                     }).orElse(DLTextureSheetData.EMPTY);

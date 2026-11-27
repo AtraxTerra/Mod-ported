@@ -9,11 +9,31 @@ import com.google.gson.JsonObject;
 
 import de.mrjulsen.mcdragonlib.client.atlas.DLTextureSheetData.AbstractSprite;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.util.ScaleType;
-import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
+import com.mojang.serialization.DataResult;
+
+import net.minecraft.server.packs.metadata.MetadataSectionType;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.GsonHelper;
 
-public class DLGuiTextureDataSerializer implements MetadataSectionSerializer<DLTextureSheetData> {
-	@Override
+/**
+ * Reads the {@code "dragonlib-gui"} section of a texture's {@code .mcmeta}.
+ *
+ * <p>NeoForge 26.2 port: metadata sections are {@link MetadataSectionType}s (a name and a codec) instead
+ * of serializers; {@link #TYPE} decodes the section's JSON with the 1.21 reader below. The section is
+ * read-only (DragonLib never writes it), so encoding reports an error.
+ */
+public class DLGuiTextureDataSerializer {
+	public final MetadataSectionType<DLTextureSheetData> TYPE = new MetadataSectionType<>(getMetadataSectionName(), ExtraCodecs.JSON.flatXmap(
+		json -> {
+			try {
+				return DataResult.success(fromJson(GsonHelper.convertToJsonObject(json, getMetadataSectionName())));
+			} catch (RuntimeException e) {
+				return DataResult.error(() -> "Invalid " + getMetadataSectionName() + " section: " + e.getMessage());
+			}
+		},
+		data -> DataResult.error(() -> getMetadataSectionName() + " sections are read-only")
+	));
+
 	public DLTextureSheetData fromJson(JsonObject json) {
 		Map<String, DLTextureSheetData.AbstractSprite> result = new HashMap<>();
 		
@@ -90,7 +110,6 @@ public class DLGuiTextureDataSerializer implements MetadataSectionSerializer<DLT
 		return new DLTextureSheetData(result, textureSize);
 	}
 
-	@Override
 	public String getMetadataSectionName() {
 		return "dragonlib-gui";
 	}

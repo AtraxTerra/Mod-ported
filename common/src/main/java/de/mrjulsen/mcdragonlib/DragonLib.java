@@ -89,7 +89,7 @@ public class DragonLib {
 
     /** A sample block which is added by DragonLib to test stuff. Does nothing by default and can safely be used in your world. Think of it as a small ~~easter~~ dragon egg. 🐉*/
     public static final RegistrySupplier<Block> DRAGON_BLOCK = registerBlock("dragon", () -> new DragonLibBlock(BlockBehaviour.Properties.of().strength(1.5f)));
-    public static final RegistrySupplier<BlockEntityType<DragonLibBlockEntity>> DRAGONLIB_BLOCK_ENTITY = BLOCK_ENTITIES.register(DLUtils.resourceLocation(MODID, "dragonlib_block_entity"), () -> BlockEntityType.Builder.of(DragonLibBlockEntity::new, DragonLib.DRAGON_BLOCK.get()).build(null));
+    public static final RegistrySupplier<BlockEntityType<DragonLibBlockEntity>> DRAGONLIB_BLOCK_ENTITY = BLOCK_ENTITIES.register(DLUtils.resourceLocation(MODID, "dragonlib_block_entity"), () -> new BlockEntityType<>(DragonLibBlockEntity::new, DragonLib.DRAGON_BLOCK.get()));
 
     public static final DLNetworkManager DRAGONLIB_NETWORK = new DLNetworkManager(DLUtils.resourceLocation(MODID, "network"), "14");
     public static final NetworkPacketType.Send<NetworkDirection.C2S, WritableSignPacketData> UPDATE_SIGN_TEXT = DRAGONLIB_NETWORK.registerSendOnlyPacket("update_writable_sign", NetworkDirection.C2S, WritableSignPacketData::handler, WritableSignPacketData::new) ;
@@ -126,7 +126,7 @@ public class DragonLib {
         initialized = true;
 
         DragonLibCrossPlatform.registerConfig();        
-        ReloadListenerRegistry.register(PackType.SERVER_DATA, new TimeSystemDatapackLoader());
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, new TimeSystemDatapackLoader(), DLUtils.resourceLocation(MODID, "time_system"));
         NetworkTest.init();
         //ModMenuTypes.register();
 
@@ -200,7 +200,7 @@ public class DragonLib {
 
     public static long getCurrentWorldTime() {
         Level level = getPhysicalLevel();
-        return level == null ? 0 : level.getDayTime();
+        return level == null ? 0 : level.getOverworldClockTime();
     }
 
     /**
@@ -236,7 +236,7 @@ public class DragonLib {
             lines.add(border);
             lines.add(String.format("Loaded %s v%s by MrJulsen!", mod.getName(), mod.getVersion()));
             lines.add(String.format("Minecraft %s %s %s%s%s",
-                Platform.isNeoForge() ? "NeoForge" : (Platform.isFabric() ? "Fabric" : (Platform.isMinecraftForge() ? "Forge" : "")),
+                Platform.isNeoForge() ? "NeoForge" : (Platform.isFabric() ? "Fabric" : ""),
                 (Platform.getEnvironment() == Env.CLIENT ? "Client" : (Platform.getEnvironment() == Env.SERVER ? "Server" : "?")),
                 Platform.getMinecraftVersion(),
                 getModloaderVersion(),
@@ -279,8 +279,6 @@ public class DragonLib {
     private static String getModloaderVersion() {
         if (Platform.isNeoForge()) {
             return Platform.getOptionalMod("neoforge").map(x -> "-" + x.getVersion()).orElse("");
-        } else if (Platform.isMinecraftForge()) {
-            return Platform.getOptionalMod("forge").map(x -> "-" + x.getVersion()).orElse("");
         } else if (Platform.isFabric()) {
             return Platform.getOptionalMod("fabric").map(x -> "-" + x.getVersion()).orElse("");
         }

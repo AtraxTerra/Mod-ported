@@ -76,7 +76,7 @@ public final class RenderUtils {
     
     @SuppressWarnings("resources")
     public static void addQuadSide(Direction direction, VertexConsumer builder, DLGraphics graphics, float x0, float y0, float z0, float x1, float y1, float z1, float u0, float v0, float u1, float v1, float r, float g, float b, float a, int packedLight, boolean ambientOcclusion) {
-        if (!ambientOcclusion || !Minecraft.useAmbientOcclusion() || !(graphics instanceof BERGraphics<?> berGraphics) || berGraphics.blockEntity().getLevel() == null || berGraphics.blockEntity().getBlockPos() == null) {
+        if (!ambientOcclusion || !Minecraft.getInstance().options.ambientOcclusion().get() || !(graphics instanceof BERGraphics<?> berGraphics) || berGraphics.blockEntity().getLevel() == null || berGraphics.blockEntity().getBlockPos() == null) {
             try {
                 renderWithoutAO(builder, graphics, x0, y0, z0, x1, y1, z1, u0, v0, u1, v1, r, g, b, a, packedLight);
             } catch (Exception e2) {
@@ -236,7 +236,7 @@ public final class RenderUtils {
         final float lineHeight = Minecraft.getInstance().font.lineHeight * 1.5f;
         poseStack.pushPose();
         poseStack.translate(pos.x(), pos.y() + yOffset, pos.z());
-        poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
+        poseStack.mulPose(Minecraft.getInstance().gameRenderer.mainCamera().rotation());
         poseStack.scale(-0.0125F, -0.0125F, 0.0125F);
         Matrix4f matrix4f = poseStack.last().pose();
 

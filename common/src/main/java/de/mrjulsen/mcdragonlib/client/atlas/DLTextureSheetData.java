@@ -61,13 +61,16 @@ public class DLTextureSheetData {
 
         @Override
         public void render(DLGuiGraphics graphics, int x, int y, int w, int h) {
-            graphics.graphics().blit(
+            // Through GuiUtils so that the current tint applies (1.21: the shader color did).
+            GuiUtils.drawTexture(
                 metadata().location(),
+                graphics,
                 x, y, w, h,
                 u(),
                 v(),
                 width(),
                 height(),
+                TextureFillMode.STRETCH,
                 metadata().width(),
                 metadata().height()
             );
