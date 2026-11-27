@@ -6,9 +6,6 @@ import java.util.stream.IntStream;
 
 import org.joml.Vector3f;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 
 import de.mrjulsen.mcdragonlib.DragonLib;
 import de.mrjulsen.mcdragonlib.block.DLWritableSignBlockEntity;
@@ -18,14 +15,14 @@ import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.math.MathUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import de.mrjulsen.mcdragonlib.client.render.pip.GuiBlockStateRenderState;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec2;
@@ -101,11 +98,12 @@ public class WritableSignScreen extends Screen {
 
     protected void onDone() {
         DragonLib.UPDATE_SIGN_TEXT.send(NetworkDirection.toServer(), new WritableSignPacketData(this.sign.getBlockPos(), Arrays.stream(messages).map(x -> x.text).toArray(String[]::new)));
-        Minecraft.getInstance().setScreen(null);
+        Minecraft.getInstance().gui.setScreen(null);
     }
 
-    public boolean charTyped(char pCodePoint, int pModifiers) {
-        this.signTextField.charTyped(pCodePoint);
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        this.signTextField.charTyped(event);
         return true;
     }
 
@@ -113,13 +111,15 @@ public class WritableSignScreen extends Screen {
         this.onDone();
     }
 
-    public boolean keyPressed(int pKeyCode, int pScanCode, int pModifiers) {
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        int pKeyCode = event.key();
         if (pKeyCode == 265) {
             this.selectedLine = this.selectedLine - 1 & lineCount - 1;
             this.signTextField.setCursorToEnd();
             return true;
         } else if (pKeyCode != 264 && pKeyCode != 257 && pKeyCode != 335) {
-            return this.signTextField.keyPressed(pKeyCode) ? true : super.keyPressed(pKeyCode, pScanCode, pModifiers);
+            return this.signTextField.keyPressed(event) ? true : super.keyPressed(event);
         } else {
             this.selectedLine = this.selectedLine + 1 & lineCount - 1;
             this.signTextField.setCursorToEnd();
@@ -127,29 +127,27 @@ public class WritableSignScreen extends Screen {
         }
     }
 
-    protected void renderSignBackground(GuiGraphics graphics) {
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        PoseStack poseStack = graphics.pose();
-        graphics.pose().translate((float)this.width / 2.0F + config.scale / 2 + config.xCenterOffset * config.scale, config.y + config.scale / 2, 100);
-        poseStack.scale(-config.scale, -config.scale, -1);
-        poseStack.mulPose(Axis.YP.rotationDegrees(config.yRot()));
-
-        BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
-        blockRenderer.renderSingleBlock(blockState, graphics.pose(), bufferSource, 15728880, OverlayTexture.NO_OVERLAY);
+    protected void renderSignBackground(GuiGraphicsExtractor graphics) {
+        // 26.2: the block is drawn as a picture in picture (GuiBlockStateRenderer, registered by DragonLib),
+        // around the point 1.21 translated to, with the same scale and rotation.
+        int cx = (int)((float)this.width / 2.0F + config.scale / 2 + config.xCenterOffset * config.scale);
+        int cy = (int)(config.y + config.scale / 2);
+        int half = (int)Math.ceil(config.scale * 2);
+        graphics.submitPictureInPictureRenderState(new GuiBlockStateRenderState(blockState, config.yRot(), cx - half, cy - half, cx + half, cy + half, config.scale, graphics.peekScissorStack()));
     }
 
-    private void renderSignText(GuiGraphics pGuiGraphics) {
+    private void renderSignText(GuiGraphicsExtractor pGuiGraphics) {
         boolean flag = this.blinkFrame / 6 % 2 == 0;
         int cursorPos = this.signTextField.getCursorPos();
         int selectionPos = this.signTextField.getSelectionPos();
 
         for (int line = 0; line < this.messages.length; ++line) {
-            pGuiGraphics.pose().pushPose();
+            pGuiGraphics.pose().pushMatrix();
             ConfiguredLine configuredLine = this.messages[line];
 
             Vector3f vector3f = config.screenTextScale(font, config.scale(), configuredLine);
-            pGuiGraphics.pose().translate((float)this.width / 2.0F + configuredLine.data.xOffset() * config.scale(), config.y + configuredLine.data.yOffset() * config.scale - (int)(WritableSignScreen.DEFAULT_LINE_HEIGHT / 2 * config.lineData()[0].lineHeightScale()) + config.getLineHeightsUntil(line) + config.getLineOffset(line, vector3f.y), 105);
-            pGuiGraphics.pose().scale(vector3f.x(), vector3f.y(), vector3f.z());
+            pGuiGraphics.pose().translate((float)this.width / 2.0F + configuredLine.data.xOffset() * config.scale(), config.y + configuredLine.data.yOffset() * config.scale - (int)(WritableSignScreen.DEFAULT_LINE_HEIGHT / 2 * config.lineData()[0].lineHeightScale()) + config.getLineHeightsUntil(line) + config.getLineOffset(line, vector3f.y));
+            pGuiGraphics.pose().scale(vector3f.x(), vector3f.y());
 
             if (configuredLine != null) {
                 if (this.font.isBidirectional()) {
@@ -157,24 +155,24 @@ public class WritableSignScreen extends Screen {
                 }
 
                 int xCenter = -this.font.width(configuredLine.text) / 2;
-                pGuiGraphics.drawString(this.font, configuredLine.text, xCenter, 0, configuredLine.data.color(), false);
+                pGuiGraphics.text(this.font, configuredLine.text, xCenter, 0, configuredLine.data.color(), false);
                 if (line == this.selectedLine && cursorPos >= 0 && flag) {
                     int l1 = this.font.width(configuredLine.text.substring(0, Math.max(Math.min(cursorPos, configuredLine.text.length()), 0)));
                     int i2 = l1 - this.font.width(configuredLine.text) / 2;
                     if (cursorPos >= configuredLine.text.length()) {
-                        pGuiGraphics.drawString(this.font, "_", i2, 0, configuredLine.data.color(), false);
+                        pGuiGraphics.text(this.font, "_", i2, 0, configuredLine.data.color(), false);
                     }
                 }
             }
-            pGuiGraphics.pose().popPose();
+            pGuiGraphics.pose().popMatrix();
         }
 
         for (int lineHighlight = 0; lineHighlight < this.messages.length; ++lineHighlight) {
             ConfiguredLine configuredLineH = this.messages[lineHighlight];
-            pGuiGraphics.pose().pushPose();
+            pGuiGraphics.pose().pushMatrix();
             Vector3f vector3f = config.screenTextScale(font, config.scale(), configuredLineH);
-            pGuiGraphics.pose().translate((float)this.width / 2.0F + configuredLineH.data.xOffset() * config.scale(), config.y + configuredLineH.data.yOffset() * config.scale - (int)(WritableSignScreen.DEFAULT_LINE_HEIGHT / 2 * config.lineData()[0].lineHeightScale()) + config.getLineHeightsUntil(lineHighlight + 1) - config.halfLineHeight(lineHighlight) + config.getHalfLineHeightScales(lineHighlight, vector3f.y), 105);
-            pGuiGraphics.pose().scale(vector3f.x(), vector3f.y(), vector3f.z());
+            pGuiGraphics.pose().translate((float)this.width / 2.0F + configuredLineH.data.xOffset() * config.scale(), config.y + configuredLineH.data.yOffset() * config.scale - (int)(WritableSignScreen.DEFAULT_LINE_HEIGHT / 2 * config.lineData()[0].lineHeightScale()) + config.getLineHeightsUntil(lineHighlight + 1) - config.halfLineHeight(lineHighlight) + config.getHalfLineHeightScales(lineHighlight, vector3f.y));
+            pGuiGraphics.pose().scale(vector3f.x(), vector3f.y());
 
             float lineScale = config.lineData()[lineHighlight].lineHeightScale();
 
@@ -192,35 +190,34 @@ public class WritableSignScreen extends Screen {
                     int l2 = this.font.width(configuredLineH.text.substring(0, j2)) - this.font.width(configuredLineH.text) / 2;
                     int i3 = Math.min(k2, l2);
                     int j3 = Math.max(k2, l2);
-                    pGuiGraphics.fill(RenderType.guiTextHighlight(), i3, -(int)(DEFAULT_LINE_HEIGHT * (lineScale + 1) * 0.5F), j3, -(int)(DEFAULT_LINE_HEIGHT * (lineScale - 1) * 0.5F), -16776961);
+                    pGuiGraphics.fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, i3, -(int)(DEFAULT_LINE_HEIGHT * (lineScale + 1) * 0.5F), j3, -(int)(DEFAULT_LINE_HEIGHT * (lineScale - 1) * 0.5F), -16776961);
                 }
             }
-            pGuiGraphics.pose().popPose();
+            pGuiGraphics.pose().popMatrix();
         }
 
     }
 
-    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderTransparentBackground(guiGraphics);
+    @Override
+    public void extractBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.extractTransparentBackground(guiGraphics);
     }
 
-    public void renderSign(GuiGraphics graphics) {
-        graphics.pose().setIdentity();
-        graphics.pose().pushPose();
-        graphics.pose().pushPose();
+    public void renderSign(GuiGraphicsExtractor graphics) {
+        graphics.pose().identity();
+        graphics.pose().pushMatrix();
+        graphics.pose().pushMatrix();
         this.renderSignBackground(graphics);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
         this.renderSignText(graphics);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     @Override
-    public void render(GuiGraphics graphics, int pMouseX, int pMouseY, float pPartialTick) {
-        Lighting.setupForFlatItems();
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, 40, 16777215);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int pMouseX, int pMouseY, float pPartialTick) {
+        graphics.centeredText(this.font, this.title, this.width / 2, 40, 16777215);
         this.renderSign(graphics);
-        Lighting.setupFor3DItems();
-        super.render(graphics, pMouseX, pMouseY, pPartialTick);
+        super.extractRenderState(graphics, pMouseX, pMouseY, pPartialTick);
     }
 
     public static record WritableSignConfig(ConfiguredLineData[] lineData, boolean renderBack, float xCenterOffset, float y, float scale, float yRot, float berX, float berY, float berZ, Function<BlockState, Float> blockEntityRendererRotation, int berColor) {

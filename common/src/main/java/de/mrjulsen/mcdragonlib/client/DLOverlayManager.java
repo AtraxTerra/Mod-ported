@@ -43,29 +43,34 @@ public final class DLOverlayManager {
             root.render(graphics, (int)GuiUtils.mouseXOnScreen(), (int)GuiUtils.mouseYOnScreen());
         });
 
-        dev.architectury.event.events.client.ClientScreenInputEvent.CHAR_TYPED_POST.register((mc, screen, codePoint, modifiers) -> {
+        // NeoForge 26.2 port: Architectury hands over the 26.2 input events; the window manager keeps its
+        // 1.21 signatures, so they are unpacked here (a code point beyond the BMP as two UTF-16 units).
+        dev.architectury.event.events.client.ClientScreenInputEvent.CHAR_TYPED_POST.register((mc, screen, event) -> {
             if (!initialized()) return EventResult.pass();
-            boolean result = root.charTyped(codePoint, modifiers);
+            boolean result = false;
+            for (char c : Character.toChars(event.codepoint())) {
+                result |= root.charTyped(c, 0);
+            }
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
-        dev.architectury.event.events.client.ClientScreenInputEvent.KEY_PRESSED_POST.register((mc, screen, keyCode, scanCode, modifiers) -> {
+        dev.architectury.event.events.client.ClientScreenInputEvent.KEY_PRESSED_POST.register((mc, screen, event) -> {
             if (!initialized()) return EventResult.pass();
-            boolean result = root.keyPressed(keyCode, scanCode, modifiers);
+            boolean result = root.keyPressed(event.key(), event.scancode(), event.modifiers());
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
-        dev.architectury.event.events.client.ClientScreenInputEvent.KEY_RELEASED_POST.register((mc, screen, keyCode, scanCode, modifiers) -> {
+        dev.architectury.event.events.client.ClientScreenInputEvent.KEY_RELEASED_POST.register((mc, screen, event) -> {
             if (!initialized()) return EventResult.pass();
-            boolean result = root.keyReleased(keyCode, scanCode, modifiers);
+            boolean result = root.keyReleased(event.key(), event.scancode(), event.modifiers());
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
-        dev.architectury.event.events.client.ClientScreenInputEvent.MOUSE_CLICKED_POST.register((mc, screen, mouseX, mouseY, button) -> {
+        dev.architectury.event.events.client.ClientScreenInputEvent.MOUSE_CLICKED_POST.register((mc, screen, event, doubleClick) -> {
             if (!initialized()) return EventResult.pass();
-            boolean result = root.mouseClicked(mouseX, mouseY, button);            
+            boolean result = root.mouseClicked(event.x(), event.y(), event.button());
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
-        dev.architectury.event.events.client.ClientScreenInputEvent.MOUSE_DRAGGED_POST.register((mc, screen, mouseX, mouseY, button, dragX, dragY) -> {
+        dev.architectury.event.events.client.ClientScreenInputEvent.MOUSE_DRAGGED_POST.register((mc, screen, event, dragX, dragY) -> {
             if (!initialized()) return EventResult.pass();
-            boolean result = root.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            boolean result = root.mouseDragged(event.x(), event.y(), event.button(), dragX, dragY);
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
         ClientScreenInputEvent.MOUSE_SCROLLED_POST.register((mc, screen, mouseX, mouseY, scrollX, scrollY) -> {
@@ -73,9 +78,9 @@ public final class DLOverlayManager {
             boolean result = root.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
-        dev.architectury.event.events.client.ClientScreenInputEvent.MOUSE_RELEASED_PRE.register((mc, screen, mouseX, mouseY, button) -> {
+        dev.architectury.event.events.client.ClientScreenInputEvent.MOUSE_RELEASED_PRE.register((mc, screen, event) -> {
             if (!initialized()) return EventResult.pass();
-            boolean result = root.mouseReleased(mouseX, mouseY, button);
+            boolean result = root.mouseReleased(event.x(), event.y(), event.button());
             return result ? EventResult.interruptTrue() : EventResult.pass();
         });
         dev.architectury.event.events.client.ClientPlayerEvent.CLIENT_PLAYER_QUIT.register((mc) -> {

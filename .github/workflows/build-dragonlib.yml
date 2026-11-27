@@ -86,9 +86,13 @@ jobs:
           arch=$(find ~/.gradle/caches -name 'architectury-neoforge-*.jar' | grep -v sources | head -1)
           echo "minecraft: $mc  neoforge: $nf  architectury: $arch"
           set +e
-          grep -vE '^\s*(#|$)' .github/port/api-classes.txt | while read -r cls; do
+          mkdir -p api-parts
+          export CP="$mc:$nf:$arch"
+          grep -vE '^\s*(#|$)' .github/port/api-classes.txt | nl -nrz -w4 | \
+            xargs -P 8 -L 1 bash -c 'javap -public -cp "$CP" "$1" > "api-parts/$0.txt" 2>&1; true'
+          grep -vE '^\s*(#|$)' .github/port/api-classes.txt | nl -nrz -w4 | while read -r n cls; do
             echo "=== API $cls"
-            javap -public -cp "$mc:$nf:$arch" "$cls" 2>&1 | sed 's/^/API| /' || true
+            sed 's/^/API| /' "api-parts/$n.txt"
           done > api-reference.txt
           wc -l api-reference.txt
           cat api-reference.txt

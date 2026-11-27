@@ -143,3 +143,7 @@ net.minecraft.client.renderer.block.dispatch.BlockStateModelPart
 net.minecraft.client.renderer.block.dispatch.BlockStateModel
 net.minecraft.client.resources.model.ModelManager
 net.minecraft.client.renderer.block.BlockModelShaper
+com.mojang.blaze3d.platform.Lighting
+com.mojang.blaze3d.platform.Lighting$Entry
+net.minecraft.client.renderer.block.BlockStateModelSet
+net.minecraft.world.entity.player.Player

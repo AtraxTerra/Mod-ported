@@ -298,7 +298,7 @@ public class DLSlot extends DLGuiComponent {
     }
 
     protected void slotClicked(int slotId, int mouseButton, ContainerInput type) {
-        Minecraft.getInstance().gameMode.handleInventoryMouseClick(menu.containerId, slotId, mouseButton, type, Minecraft.getInstance().player);
+        Minecraft.getInstance().gameMode.handleContainerInput(menu.containerId, slotId, mouseButton, type, Minecraft.getInstance().player);
     }
 
     public void clearDraggingState(InventoryManager manager) {
