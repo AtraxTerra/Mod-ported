@@ -1,0 +1,112 @@
+package dev.chaevsfe.trackwright.mixin;
+
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.zurrtum.create.AllHandle;
+import com.zurrtum.create.infrastructure.packet.c2s.CurvedTrackDestroyPacket;
+import com.zurrtum.create.infrastructure.packet.c2s.CurvedTrackSelectionPacket;
+import com.zurrtum.create.foundation.blockEntity.behaviour.ValueSettingsHandleBehaviour;
+import com.zurrtum.create.foundation.blockEntity.behaviour.scrollValue.ServerScrollValueBehaviour;
+import com.zurrtum.create.infrastructure.packet.c2s.ScheduleEditPacket;
+import com.zurrtum.create.infrastructure.packet.c2s.ValueSettingsPacket;
+import dev.chaevsfe.trackwright.actors.RollerTerrainBehaviour;
+import dev.chaevsfe.trackwright.schedule.ActorSteps;
+import dev.chaevsfe.trackwright.track.ConnectionLength;
+import dev.chaevsfe.trackwright.track.TrackItems;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+
+import java.util.function.Predicate;
+
+@Mixin(AllHandle.class)
+public abstract class AllHandleMixin {
+    @WrapOperation(
+        method = "onCurvedTrackDestroy",
+        at = @At(value = "INVOKE", target = "Lcom/zurrtum/create/AllHandle;onBlockEntityConfiguration(Lnet/minecraft/server/network/ServerGamePacketListenerImpl;Lnet/minecraft/core/BlockPos;ILjava/util/function/Predicate;)V")
+    )
+    private static void trackwright$reachAlongDestroyedCurve(
+        ServerGamePacketListenerImpl listener,
+        BlockPos pos,
+        int distance,
+        Predicate<BlockEntity> predicate,
+        Operation<Void> original,
+        @Local(argsOnly = true) CurvedTrackDestroyPacket packet
+    ) {
+        trackwright$withCurveReach(listener, pos, packet.targetPos(), distance, predicate, original);
+    }
+
+    @WrapOperation(
+        method = "onCurvedTrackSelection",
+        at = @At(value = "INVOKE", target = "Lcom/zurrtum/create/AllHandle;onBlockEntityConfiguration(Lnet/minecraft/server/network/ServerGamePacketListenerImpl;Lnet/minecraft/core/BlockPos;ILjava/util/function/Predicate;)V")
+    )
+    private static void trackwright$reachAlongSelectedCurve(
+        ServerGamePacketListenerImpl listener,
+        BlockPos pos,
+        int distance,
+        Predicate<BlockEntity> predicate,
+        Operation<Void> original,
+        @Local(argsOnly = true) CurvedTrackSelectionPacket packet
+    ) {
+        trackwright$withCurveReach(listener, pos, packet.targetPos(), distance, predicate, original);
+    }
+
+    @WrapMethod(method = "onScheduleEdit")
+    private static void trackwright$keepActorSteps(ServerGamePacketListenerImpl listener, ScheduleEditPacket packet, Operation<Void> original) {
+        if (!ActorSteps.refuseEdit(listener.player)) {
+            original.call(listener, packet);
+        }
+    }
+
+    @WrapMethod(method = "handleValueSettings")
+    private static boolean trackwright$rollerTerrainBox(
+        ServerPlayer player,
+        ValueSettingsHandleBehaviour behaviour,
+        ValueSettingsPacket packet,
+        Operation<Boolean> original
+    ) {
+        if (packet.behaviourIndex() == RollerTerrainBehaviour.NET_ID && behaviour instanceof ServerScrollValueBehaviour scroll) {
+            RollerTerrainBehaviour terrain = scroll.blockEntity.getBehaviour(RollerTerrainBehaviour.TYPE);
+            if (terrain != null) {
+                return original.call(player, terrain, packet);
+            }
+        }
+        return original.call(player, behaviour, packet);
+    }
+
+    @Unique
+    private static void trackwright$withCurveReach(
+        ServerGamePacketListenerImpl listener,
+        BlockPos pos,
+        BlockPos target,
+        int distance,
+        Predicate<BlockEntity> predicate,
+        Operation<Void> original
+    ) {
+        int reach = ConnectionLength.curveLength(listener.player.level(), pos, target);
+        if (reach + ConnectionLength.CURVE_REACH_MARGIN <= distance) {
+            original.call(listener, pos, distance, predicate);
+            return;
+        }
+        Integer previous = ConnectionLength.enterCurveReach(reach);
+        try {
+            original.call(listener, pos, reach + ConnectionLength.CURVE_REACH_MARGIN, predicate);
+        } finally {
+            ConnectionLength.exitCurveReach(previous);
+        }
+    }
+
+    @WrapOperation(method = "onPlaceExtendedCurve", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/tags/TagKey;)Z"))
+    private static boolean trackwright$extendCurveByBlockTag(ItemStack stack, TagKey<Item> tag, Operation<Boolean> original) {
+        return TrackItems.is(stack, tag, original.call(stack, tag));
+    }
+}

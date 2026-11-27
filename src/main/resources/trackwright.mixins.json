@@ -1,0 +1,33 @@
+{
+  "required": true,
+  "package": "dev.chaevsfe.trackwright.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "minVersion": "0.8.3",
+  "mixins": [
+    "AllHandleMixin",
+    "BlockBreakingKineticBlockEntityMixin",
+    "BlockBreakingMovementBehaviourMixin",
+    "CarriageAccessor",
+    "CarriageContraptionEntityMixin",
+    "ConfigValueMixin",
+    "ContraptionColliderMixin",
+    "ContraptionMixin",
+    "LivingEntityMixin",
+    "NavigationMixin",
+    "PlacementInfoMixin",
+    "RollerBlockEntityMixin",
+    "RollerMovementBehaviourMixin",
+    "SeatMovementBehaviourMixin",
+    "ServerGamePacketListenerImplMixin",
+    "StationBlockEntityMixin",
+    "TrackBlockEntityMixin",
+    "TrackBlockItemMixin",
+    "TrackBlockMixin",
+    "TrackPaverMixin",
+    "TrackPlacementMixin",
+    "TrackTargetingBlockItemMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,83 @@
+package dev.chaevsfe.trackwright;
+
+import dev.chaevsfe.trackwright.actors.TrainControls;
+import dev.chaevsfe.trackwright.config.ServerConfig;
+import dev.chaevsfe.trackwright.markers.Markers;
+import dev.chaevsfe.trackwright.network.TrackwrightNetwork;
+import dev.chaevsfe.trackwright.schedule.ActorSteps;
+import dev.chaevsfe.trackwright.track.BoreProfiles;
+import dev.chaevsfe.trackwright.track.ClearBed;
+import dev.chaevsfe.trackwright.track.PassengerResync;
+import dev.chaevsfe.trackwright.undo.UndoCommand;
+import dev.chaevsfe.trackwright.undo.UndoJournal;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public final class Trackwright implements ModInitializer {
+    public static final String MOD_ID = "trackwright";
+    public static final Logger LOGGER = LoggerFactory.getLogger("Trackwright");
+
+    @Override
+    public void onInitialize() {
+        loadHookedClasses(
+            "com.zurrtum.create.AllHandle",
+            "com.zurrtum.create.catnip.config.ConfigBase$CValue",
+            "com.zurrtum.create.content.contraptions.Contraption",
+            "com.zurrtum.create.content.contraptions.ContraptionCollider",
+            "com.zurrtum.create.content.contraptions.actors.roller.RollerBlockEntity",
+            "com.zurrtum.create.content.contraptions.actors.roller.RollerMovementBehaviour",
+            "com.zurrtum.create.content.contraptions.actors.seat.SeatMovementBehaviour",
+            "com.zurrtum.create.content.kinetics.base.BlockBreakingKineticBlockEntity",
+            "com.zurrtum.create.content.kinetics.base.BlockBreakingMovementBehaviour",
+            "com.zurrtum.create.content.trains.entity.Carriage",
+            "com.zurrtum.create.content.trains.entity.CarriageContraptionEntity",
+            "com.zurrtum.create.content.trains.entity.Navigation",
+            "com.zurrtum.create.content.trains.station.StationBlockEntity",
+            "com.zurrtum.create.content.trains.track.TrackBlock",
+            "com.zurrtum.create.content.trains.track.TrackBlockEntity",
+            "com.zurrtum.create.content.trains.track.TrackBlockItem",
+            "com.zurrtum.create.content.trains.track.TrackPaver",
+            "com.zurrtum.create.content.trains.track.TrackPlacement",
+            "com.zurrtum.create.content.trains.track.TrackPlacement$PlacementInfo",
+            "com.zurrtum.create.content.trains.track.TrackTargetingBlockItem",
+            "net.minecraft.server.network.ServerGamePacketListenerImpl",
+            "net.minecraft.world.entity.LivingEntity"
+        );
+        TrackwrightNetwork.register();
+        ClearBed.register();
+        ActorSteps.register();
+        Markers.register();
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> ServerConfig.reload());
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> PassengerResync.clear());
+        ServerTickEvents.END_SERVER_TICK.register(PassengerResync::tick);
+        ServerTickEvents.END_SERVER_TICK.register(UndoJournal::tick);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> UndoJournal.clearAll());
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> UndoJournal.forget(handler.player.getUUID()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BoreProfiles.forget(handler.player.getUUID()));
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> BoreProfiles.clearAll());
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> TrainControls.clearAll());
+        ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> UndoJournal.clear(player));
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> UndoCommand.register(dispatcher));
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
+            ServerConfig.reload();
+            TrackwrightNetwork.sendToAll(server);
+        });
+    }
+
+    public static void loadHookedClasses(String... names) {
+        ClassLoader loader = Trackwright.class.getClassLoader();
+        for (String name : names) {
+            try {
+                Class.forName(name, false, loader);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("Trackwright cannot find " + name + " in this Create Fly build", e);
+            }
+        }
+    }
+}

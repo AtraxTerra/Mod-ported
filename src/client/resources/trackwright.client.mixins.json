@@ -1,0 +1,30 @@
+{
+  "required": true,
+  "package": "dev.chaevsfe.trackwright.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "minVersion": "0.8.3",
+  "client": [
+    "AbstractVisualMixin",
+    "ContraptionHandlerClientMixin",
+    "LevelExtractorMixin",
+    "MinecraftUseItemMixin",
+    "MouseHandlerMixin",
+    "ScheduleScreenMixin",
+    "ScreenEffectRendererMixin",
+    "ScrollInputAccessor",
+    "ScrollValueRendererAccessor",
+    "ScrollValueRendererMixin",
+    "TrackBlockItemClientMixin",
+    "TrackGraphMixin",
+    "TrackPlacementAccessor",
+    "TrackPlacementClientAccessor",
+    "TrackPlacementClientMixin",
+    "TrackPlacementOverlayMixin",
+    "TrackRendererMixin",
+    "TrackVisualMixin",
+    "ValueSettingsInputHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
